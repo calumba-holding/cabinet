@@ -1,5 +1,7 @@
 # Progress
 
+[2026-04-09] Added hash-based URL routing and localStorage persistence. Navigation state (current page, section, agent) is now synced to the URL hash (e.g. `#/page/folder/name`, `#/agents`, `#/settings`). Refreshing the browser restores the same view. Opening the app without a hash restores the last visited route from localStorage. Back/forward browser buttons work.
+
 [2026-04-09] Fixed sidebar collapse overlap bug. The toggle button now hovers over content (z-20), and each page's header bar slides right via a CSS variable (`--sidebar-toggle-offset`) with a 200ms transition. Applied to Header, WebsiteViewer, PdfViewer, CsvViewer, SettingsPage, AgentsWorkspace, and JobsManager top bars.
 
 [2026-04-09] Added delete conversation support to the agents workspace. Conversations can be removed via a trash icon (appears after 1s hover in list) or Delete button in detail header. Replaced plain-text metadata line in detail header with styled pill tags: agent name (clickable, navigates to settings), trigger type (colored with icon — green/clock for job, pink/heartpulse for heartbeat, sky/bot for manual), and status (green for completed, red for failed, primary for running). Settings button now only shows for job-triggered conversations. Backend: added `deleteConversation()` to conversation-store and DELETE handler on `/api/agents/conversations/[id]`.

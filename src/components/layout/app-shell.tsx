@@ -18,6 +18,7 @@ import { StatusBar } from "@/components/layout/status-bar";
 import { OnboardingWizard } from "@/components/onboarding/onboarding-wizard";
 import { UpdateDialog } from "@/components/layout/update-dialog";
 import { useCabinetUpdate } from "@/hooks/use-cabinet-update";
+import { useHashRoute } from "@/hooks/use-hash-route";
 import { useTreeStore } from "@/stores/tree-store";
 import { useAppStore } from "@/stores/app-store";
 import type { TreeNode } from "@/types";
@@ -58,6 +59,9 @@ export function AppShell() {
     openDataDir,
     applyUpdate,
   } = useCabinetUpdate({ autoRefresh: true });
+
+  // Sync navigation state with URL hash + localStorage
+  useHashRoute();
 
   // Onboarding wizard state
   const [showWizard, setShowWizard] = useState<boolean | null>(null);
