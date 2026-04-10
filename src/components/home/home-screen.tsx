@@ -99,14 +99,14 @@ function CabinetCard({ cabinet }: { cabinet: Cabinet }) {
   const colorClass = DOMAIN_COLORS[cabinet.domain] || "bg-muted text-muted-foreground";
 
   return (
-    <div className="flex-shrink-0 w-64 rounded-xl border border-border bg-card p-4 space-y-3 cursor-default select-none">
+    <div className="flex-shrink-0 w-64 h-36 rounded-xl border border-border bg-card p-4 flex flex-col cursor-default select-none">
       <h3 className="text-sm font-medium text-foreground leading-tight">
         {cabinet.name}
       </h3>
-      <p className="text-xs text-muted-foreground leading-relaxed">
+      <p className="text-xs text-muted-foreground leading-relaxed mt-2">
         {cabinet.description}
       </p>
-      <div className="flex items-center justify-between">
+      <div className="flex items-center justify-between mt-auto pt-3">
         <span className={cn("text-[10px] font-medium px-2 py-0.5 rounded-full", colorClass)}>
           {cabinet.domain}
         </span>

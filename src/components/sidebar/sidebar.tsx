@@ -120,11 +120,12 @@ export function Sidebar() {
       >
         <div className="sidebar-header flex items-center justify-between px-4 py-3">
           <div className="flex items-center gap-2">
-            <span
-              className="font-logo text-[22px] italic tracking-[-0.01em] text-foreground"
+            <button
+              onClick={() => setSection({ type: "home" })}
+              className="font-logo text-[22px] italic tracking-[-0.01em] text-foreground hover:text-foreground/80 transition-colors"
             >
               cabinet
-            </span>
+            </button>
           </div>
           <Button
             variant="ghost"
