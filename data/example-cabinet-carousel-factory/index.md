@@ -116,7 +116,13 @@ This is a one-person operation augmented by AI agents:
     
 -   **Competitor Analysis** → `competitors.csv` — updated daily by cron
     
--   **Content Calendar** → interactive app (full-screen)
+-   **Content Calendar** → interactive full-screen app
+    
+-   **Posts Editor** → carousel post editor with slide previews and prompts
+    
+-   **Brand Kit** → embedded color/type/voice reference widget
+    
+-   **Media Kit** → `media-kit.pdf` — one-pager for press and partners
     
 
 ---
