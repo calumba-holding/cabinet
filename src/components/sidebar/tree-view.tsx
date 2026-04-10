@@ -98,6 +98,9 @@ const itemClass = (active: boolean) =>
     active && "bg-accent text-accent-foreground font-medium"
   );
 
+const sectionClass =
+  "flex items-center gap-2 w-full text-left py-1.5 px-3 text-[13px] rounded-md transition-colors text-foreground/80 hover:bg-accent/50";
+
 export function TreeView() {
   const { nodes, loading, selectedPath } = useTreeStore();
   const selectPage = useTreeStore((s) => s.selectPage);
@@ -181,8 +184,11 @@ export function TreeView() {
       <div className="py-1">
         {/* ── Cabinet (depth 0) ───────────────────────────── */}
         <button
-          onClick={() => setCabinetExpanded(!cabinetExpanded)}
-          className={itemClass(false)}
+          onClick={() => {
+            setCabinetExpanded(!cabinetExpanded);
+            setSection({ type: "home" });
+          }}
+          className={itemClass(section.type === "home")}
           style={pad(0)}
         >
           <ChevronRight
@@ -202,17 +208,17 @@ export function TreeView() {
                 setAgentsExpanded(!agentsExpanded);
                 setSection({ type: "agents" });
               }}
-              className={itemClass(isAgentsSection)}
+              className="text-[10px] font-semibold uppercase tracking-wider text-muted-foreground px-3 pt-2 pb-1 w-full text-left flex items-center gap-1.5 hover:text-foreground/80 transition-colors"
               style={pad(1)}
             >
+              <Users className="h-3.5 w-3.5 shrink-0" />
+              Agents
               <ChevronRight
                 className={cn(
-                  "h-3.5 w-3.5 shrink-0 text-muted-foreground/70 transition-transform duration-150",
+                  "h-3 w-3 shrink-0 text-muted-foreground/50 transition-transform duration-150 ml-auto",
                   agentsExpanded && "rotate-90"
                 )}
               />
-              <Users className="h-4 w-4 shrink-0 text-muted-foreground" />
-              Agents
             </button>
 
             {agentsExpanded && (
@@ -265,7 +271,10 @@ export function TreeView() {
               </>
             )}
 
-            {/* ── Knowledge Base (depth 1) ─────────────────── */}
+            {/* ── Divider ──────────────────────────────────── */}
+            <div className="mx-3 my-1.5 border-t border-border" />
+
+            {/* ── Knowledge Base label ──────────────────────── */}
             <ContextMenu>
               <ContextMenuTrigger>
                 <button
@@ -275,17 +284,17 @@ export function TreeView() {
                     loadPage("");
                     setSection({ type: "page" });
                   }}
-                  className={itemClass(section.type === "page" && selectedPath === "")}
+                  className="text-[10px] font-semibold uppercase tracking-wider text-muted-foreground px-3 pt-2 pb-1 w-full text-left flex items-center gap-1.5 hover:text-foreground/80 transition-colors"
                   style={pad(1)}
                 >
+                  <BookOpen className="h-3.5 w-3.5 shrink-0" />
+                  Knowledge Base
                   <ChevronRight
                     className={cn(
-                      "h-3.5 w-3.5 shrink-0 text-muted-foreground/70 transition-transform duration-150",
+                      "h-3 w-3 shrink-0 text-muted-foreground/50 transition-transform duration-150 ml-auto",
                       kbExpanded && "rotate-90"
                     )}
                   />
-                  <BookOpen className="h-4 w-4 shrink-0 text-muted-foreground" />
-                  Knowledge Base
                 </button>
               </ContextMenuTrigger>
               <ContextMenuContent>
