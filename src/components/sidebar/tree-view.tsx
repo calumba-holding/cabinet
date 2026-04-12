@@ -273,11 +273,11 @@ export function TreeView() {
         {activeCabinet && parentCabinet ? (
           <button
             onClick={openParentCabinet}
-            className="flex w-full items-center gap-1.5 px-3 pt-2 pb-1 text-left text-[10px] font-semibold uppercase tracking-wider text-muted-foreground transition-colors hover:text-foreground/80"
+            className="flex w-full items-center gap-1 px-3 pt-2 pb-1 text-left text-[9px] font-medium uppercase tracking-wider text-muted-foreground/60 transition-colors hover:text-foreground/80"
             style={pad(0)}
             title={`Back to ${parentCabinet.frontmatter?.title || parentCabinet.name}`}
           >
-            <CornerLeftUp className="h-3.5 w-3.5 shrink-0" />
+            <CornerLeftUp className="h-2.5 w-2.5 shrink-0 relative -top-px" />
             Back
           </button>
         ) : null}
@@ -285,21 +285,10 @@ export function TreeView() {
         {/* ── Cabinet (depth 0) ───────────────────────────── */}
         <div className="flex items-center gap-1.5 px-3 pt-2 pb-1 w-full" style={pad(0)}>
           <button
-            onClick={() => setCabinetExpanded(!cabinetExpanded)}
-            className="shrink-0 text-muted-foreground/50 hover:text-foreground/80 transition-colors"
-          >
-            <ChevronRight
-              className={cn(
-                "h-3 w-3 shrink-0 transition-transform duration-150",
-                cabinetExpanded && "rotate-90"
-              )}
-            />
-          </button>
-          <button
             onClick={() => openCabinetOverview(activeCabinet?.path || cabinetPath)}
             className="text-[10px] font-semibold uppercase tracking-wider text-muted-foreground flex min-w-0 flex-1 items-center gap-1.5 text-left hover:text-foreground/80 transition-colors"
           >
-            <Archive className="h-3.5 w-3.5 shrink-0" />
+            <Archive className="h-3.5 w-3.5 shrink-0 text-amber-400" />
             {activeCabinet
               ? activeCabinet.frontmatter?.title || activeCabinet.name
               : "Cabinet"}
@@ -311,7 +300,7 @@ export function TreeView() {
 
             {/* ── Agents (depth 1) ─────────────────────────── */}
             <div
-              className="group flex items-center gap-1.5 px-3 pt-2 pb-1 w-full"
+              className="group flex items-center gap-1.5 px-3 pt-4 pb-1 w-full"
               style={pad(0)}
             >
               <button
@@ -342,16 +331,7 @@ export function TreeView() {
                 <Users className="h-3.5 w-3.5 shrink-0" />
                 Agents
               </button>
-              {activeCabinet ? (
-                <span className="ml-auto truncate text-[10px] text-muted-foreground/60">
-                  {[
-                    cabinetAgentScopeName ||
-                      activeCabinet.frontmatter?.title ||
-                      activeCabinet.name,
-                    cabinetVisibilityModeLabel(cabinetVisibilityMode),
-                  ].join(" · ")}
-                </span>
-              ) : (
+              {activeCabinet ? null : (
                 <button
                   onClick={(e) => {
                     e.stopPropagation();

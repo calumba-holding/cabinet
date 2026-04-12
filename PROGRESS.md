@@ -1,5 +1,11 @@
 # Progress
 
+[2026-04-12] Made BACK button icon smaller (2.5) and nudged it up to align with the center of the letter height.
+
+[2026-04-12] Removed scope/visibility label text next to AGENTS in sidebar (e.g. "Cabinet · Include two cabinet levels") and added more spacing between CABINET header and AGENTS sub-item.
+
+[2026-04-12] Sidebar cleanup: removed chevron from main cabinet header (always expanded, no collapse needed), made cabinet icon amber/yellow to match child cabinet icons, and toned down the BACK button (smaller text, lighter color, smaller icon).
+
 [2026-04-12] Removed inline Job editor panel from the agent settings jobs view. The jobs list now fills the full width. Clicking a job opens the styled New Job popup (now context-aware: "Edit Job" title, Run + Delete in footer, "Save job" button when editing an existing job).
 
 [2026-04-12] Redesigned "New Job" popup to match the "Edit Agent" dialog style exactly: two-column layout with the prompt textarea on the left (60vh tall, bg-muted/60 borderless), fields grid on the right (uppercase tracking labels, muted-fill inputs), and a proper footer with Starter Library ghost button on the left and Cancel + Create on the right.
