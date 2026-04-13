@@ -36,6 +36,7 @@ import { getNvmNodeBin } from "../src/lib/agents/nvm-path";
 import {
   appendConversationTranscript,
   finalizeConversation,
+  listConversationMetas,
   parseCabinetBlock,
   readConversationMeta,
   readConversationTranscript,
@@ -918,6 +919,37 @@ async function reloadSchedules(): Promise<void> {
   console.log(`Discovered ${cabinets.length} cabinet(s). Scheduled ${jobCount} jobs and ${heartbeatCount} heartbeats.`);
 }
 
+/**
+ * On startup: find any conversations still marked "running" from a previous
+ * daemon session and finalize them as failed. This prevents permanently-stuck
+ * spinners when the daemon crashes or is force-killed.
+ */
+async function cleanupStaleRunningConversations(): Promise<void> {
+  const cabinets = discoverAllCabinets();
+  let cleaned = 0;
+  for (const cabinet of cabinets) {
+    const cabinetPath = cabinet.relPath || undefined;
+    try {
+      const metas = await listConversationMetas({ status: "running", cabinetPath, limit: 1000 });
+      for (const meta of metas) {
+        // Only finalize if there is no live PTY session managing it
+        if (sessions.has(meta.id)) continue;
+        await finalizeConversation(
+          meta.id,
+          { status: "failed", exitCode: 1 },
+          cabinetPath
+        ).catch(() => {});
+        cleaned++;
+      }
+    } catch {
+      // Skip cabinets that fail to read
+    }
+  }
+  if (cleaned > 0) {
+    console.log(`Cleaned up ${cleaned} stale running conversation(s) from previous session.`);
+  }
+}
+
 function queueScheduleReload(): void {
   if (scheduleReloadTimer) {
     clearTimeout(scheduleReloadTimer);
@@ -1082,7 +1114,7 @@ const server = http.createServer(async (req, res) => {
     return;
   }
 
-  // DELETE /session/:id — kill a running PTY session
+  // POST /session/:id/stop — kill a running PTY session
   const stopMatch = url.pathname.match(/^\/session\/([^/]+)\/stop$/);
   if (stopMatch && req.method === "POST") {
     const sessionId = stopMatch[1];
@@ -1093,7 +1125,14 @@ const server = http.createServer(async (req, res) => {
       return;
     }
     try {
+      // SIGTERM first, then SIGKILL after 2s if still alive
       session.pty.kill();
+      const fallback = setTimeout(() => {
+        if (!session.exited) {
+          try { session.pty.kill("SIGKILL"); } catch {}
+        }
+      }, 2000);
+      session.pty.onExit(() => clearTimeout(fallback));
       res.writeHead(200, { "Content-Type": "application/json" });
       res.end(JSON.stringify({ ok: true, sessionId }));
     } catch (err) {
@@ -1255,11 +1294,12 @@ server.listen(PORT, () => {
   console.log(`  Working directory: ${DATA_DIR}`);
 
   void reloadSchedules();
+  void cleanupStaleRunningConversations();
 });
 
 // ===== Graceful Shutdown =====
 
-process.on("SIGINT", () => {
+function shutdown(): void {
   console.log("\nShutting down...");
   for (const [, task] of scheduledJobs) {
     task.stop();
@@ -1274,7 +1314,10 @@ process.on("SIGINT", () => {
   closeDb();
   server.close();
   process.exit(0);
-});
+}
+
+process.on("SIGINT", shutdown);
+process.on("SIGTERM", shutdown);
 
 wssPty.on("error", (err) => {
   console.error("PTY WebSocket error:", err.message);
