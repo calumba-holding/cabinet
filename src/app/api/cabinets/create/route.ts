@@ -3,11 +3,15 @@ import path from "path";
 import fs from "fs/promises";
 import yaml from "js-yaml";
 import {
-  DATA_DIR,
   resolveContentPath,
   sanitizeFilename,
 } from "@/lib/storage/path-utils";
-import { PROJECT_ROOT } from "@/lib/runtime/runtime-config";
+import {
+  MANDATORY_AGENT_SLUGS,
+  mergeMandatoryAgentSlugs,
+  resolveAgentLibraryDir,
+} from "@/lib/agents/library-manager";
+import { ensureAgentScaffold } from "@/lib/agents/scaffold";
 
 interface CreateCabinetRequest {
   name: string;
@@ -16,12 +20,19 @@ interface CreateCabinetRequest {
   selectedAgents?: string[];
 }
 
-const LIBRARY_DIR = path.join(PROJECT_ROOT, "src", "lib", "agents", "library");
-
 export async function POST(req: NextRequest) {
   try {
     const body = (await req.json()) as CreateCabinetRequest;
     const { name, parentPath = "", description = "", selectedAgents = [] } = body;
+    const normalizedSelectedAgents = mergeMandatoryAgentSlugs(selectedAgents);
+    const libraryDir = await resolveAgentLibraryDir();
+
+    if (!libraryDir) {
+      return NextResponse.json(
+        { error: "Agent library is unavailable" },
+        { status: 500 }
+      );
+    }
 
     if (!name?.trim()) {
       return NextResponse.json({ error: "Name is required" }, { status: 400 });
@@ -90,13 +101,19 @@ export async function POST(req: NextRequest) {
     await fs.writeFile(path.join(targetDir, "index.md"), indexContent, "utf-8");
 
     // Copy selected agents from library
-    for (const agentSlug of selectedAgents) {
-      const templateDir = path.join(LIBRARY_DIR, agentSlug);
+    for (const agentSlug of normalizedSelectedAgents) {
+      const templateDir = path.join(libraryDir, agentSlug);
       const agentTargetDir = path.join(targetDir, ".agents", agentSlug);
 
       try {
         await fs.access(templateDir);
       } catch {
+        if (MANDATORY_AGENT_SLUGS.includes(agentSlug as (typeof MANDATORY_AGENT_SLUGS)[number])) {
+          return NextResponse.json(
+            { error: `Required agent template "${agentSlug}" is unavailable` },
+            { status: 500 }
+          );
+        }
         continue; // Template doesn't exist, skip
       }
 
@@ -108,11 +125,7 @@ export async function POST(req: NextRequest) {
       }
 
       await copyDir(templateDir, agentTargetDir);
-
-      // Create standard subdirectories
-      for (const subdir of ["jobs", "skills", "sessions", "memory"]) {
-        await fs.mkdir(path.join(agentTargetDir, subdir), { recursive: true });
-      }
+      await ensureAgentScaffold(agentTargetDir);
     }
 
     return NextResponse.json(

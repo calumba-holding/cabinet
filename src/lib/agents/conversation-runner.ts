@@ -10,6 +10,7 @@ import {
   readConversationMeta,
 } from "./conversation-store";
 import { createDaemonSession, getDaemonSessionOutput } from "./daemon-client";
+import { readLibraryPersona } from "./library-manager";
 import { readPersona, type AgentPersona } from "./persona-manager";
 import { getDefaultProviderId } from "./provider-runtime";
 
@@ -128,6 +129,7 @@ export async function buildEditorConversationPrompt(input: {
   pagePath: string;
   userMessage: string;
   mentionedPaths?: string[];
+  cabinetPath?: string;
 }): Promise<{
   prompt: string;
   title: string;
@@ -135,15 +137,19 @@ export async function buildEditorConversationPrompt(input: {
   mentionedPaths: string[];
   providerId: string;
 }> {
-  const persona = await readPersona("editor");
+  const persona =
+    (await readPersona("editor", input.cabinetPath)) ||
+    (await readPersona("editor")) ||
+    (await readLibraryPersona("editor", input.cabinetPath));
   const combinedMentionedPaths = Array.from(
     new Set([input.pagePath, ...(input.mentionedPaths || [])])
   );
   const mentionContext = await buildMentionContext(combinedMentionedPaths);
+  const baseCwd = input.cabinetPath ? path.join(DATA_DIR, input.cabinetPath) : DATA_DIR;
   const cwd =
     persona?.workdir && persona.workdir !== "/data"
       ? `${DATA_DIR}/${persona.workdir.replace(/^\/+/, "")}`
-      : DATA_DIR;
+      : baseCwd;
 
   const prompt = [
     buildAgentContextHeader(persona, "editor"),

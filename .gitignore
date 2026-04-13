@@ -71,9 +71,6 @@ data/vc-os/intelligence/.agents/.conversations/
 data/vc-os/intelligence/.agents/.messages/
 data/vc-os/intelligence/.agents/.memory/
 data/vc-os/intelligence/.agents/.history/
-!data/.agents/
-!data/.agents/editor/
-!data/.agents/editor/persona.md
 !data/index.md
 !data/CLAUDE.md
 data/**/.DS_Store

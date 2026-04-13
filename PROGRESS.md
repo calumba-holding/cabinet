@@ -1,5 +1,7 @@
 # Progress
 
+[2026-04-14] Fixed onboarding to comply with cabinet protocol: `POST /api/onboarding/setup` now creates the root `.cabinet` YAML manifest (schemaVersion, id, name, kind, version, description, entry), `index.md` entry point, and `.cabinet-state/` runtime directory — all three were previously missing from root cabinet initialization.
+
 [2026-04-13] Fix job cards in ScheduleList not opening when agent lookup fails — removed agentRef guard from click handler, falls back to slug/name/emoji already on the item.
 
 [2026-04-13] Fixed Warp Ventures OS cabinet protocol compliance: added .cabinet identity files (root + 3 child cabinets: deal-flow, portfolio, intelligence), .cabinet-state/.gitkeep in all 4 cabinets, 4 agent personas (.agents/managing-partner, analyst, portfolio-manager, deal-scout), description fields and correct ownerAgent/agentSlug assignments across all 9 job YAMLs, and quoted cron schedule strings.
@@ -257,6 +259,6 @@
 
 [2026-04-13] AI Editor panel now shows optimistic "starting" sessions immediately after submit and promotes one selected live session to a visible stream area, even when work is running on another page. Added page/agent context chips, "Open Page" jump action, and background-mounted hidden terminals for non-selected sessions so streaming stays alive while the UI feels responsive.
 
-[2026-04-13] Editor prompt now always includes `getting-started` as built-in reference context and explicitly tells the editor to use it as source of truth for supported Cabinet file types and UI handling. This keeps the edited page first in `mentionedPaths`, so editor session labels still point at the actual target page.
+[2026-04-13] Moved editor file-type and Cabinet-structure knowledge out of `data/getting-started` and into the canonical editor library template at `src/lib/agents/library/editor/persona.md`. New cabinet creation and onboarding now resolve agent templates from the seeded library or source fallback, enforce mandatory `ceo` + `editor`, and create full agent scaffolds including `workspace/`.
 
-[2026-04-13] Moved editor file-type and Cabinet-structure knowledge out of `data/getting-started` and into a real root editor persona at `data/.agents/editor/persona.md`, which is the persona the editor runtime actually reads. Removed the hidden `getting-started` prompt injection and replaced it with explicit prompt guidance to follow the target's real file type instead of assuming markdown.
+[2026-04-13] AI editor runs now use the owning cabinet's `editor` persona when editing a page inside a cabinet, fall back to the shared editor template when needed, and default their working directory to the owning cabinet instead of the global data root. Electron packaging now seeds `.agents/.library` from `src/lib/agents/library` so fresh managed data directories can install agents correctly.

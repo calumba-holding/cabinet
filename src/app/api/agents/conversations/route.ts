@@ -120,6 +120,7 @@ export async function POST(req: NextRequest) {
             pagePath,
             userMessage,
             mentionedPaths,
+            cabinetPath: editorCabinetPath,
           })
         : await buildManualConversationPrompt({
             agentSlug,
