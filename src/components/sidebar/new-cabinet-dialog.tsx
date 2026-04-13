@@ -2,7 +2,7 @@
 
 import { useState, useCallback, useEffect } from "react";
 import { createPortal } from "react-dom";
-import { Archive, X } from "lucide-react";
+import { Archive, X, LayoutTemplate } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { useTreeStore } from "@/stores/tree-store";
@@ -154,32 +154,50 @@ function NewCabinetOverlay({
             <p className="text-sm text-destructive">{error}</p>
           )}
 
-          {/* Footer */}
-          <div className="flex items-center justify-between pt-2 border-t border-border">
-            <button
-              type="button"
-              onClick={() => {
-                onOpenChange(false);
-                setSection({ type: "registry" });
-              }}
-              disabled={creating}
-              className="text-sm text-primary hover:text-primary/80 transition-colors disabled:opacity-50"
-            >
-              or import a pre-made team &rarr;
-            </button>
-            <div className="flex items-center gap-3">
-              <Button
-                type="button"
-                variant="outline"
-                onClick={() => onOpenChange(false)}
-                disabled={creating}
-              >
-                Cancel
-              </Button>
-              <Button type="submit" disabled={!name.trim() || creating}>
-                {creating ? "Creating..." : "Create Cabinet"}
-              </Button>
+          {/* Import option */}
+          <div className="relative">
+            <div className="absolute inset-0 flex items-center">
+              <span className="w-full border-t border-border" />
             </div>
+            <div className="relative flex justify-center">
+              <span className="bg-card px-3 text-xs text-muted-foreground">or</span>
+            </div>
+          </div>
+
+          <button
+            type="button"
+            onClick={() => {
+              onOpenChange(false);
+              setSection({ type: "registry" });
+            }}
+            disabled={creating}
+            className="group flex w-full items-center gap-4 rounded-xl border border-border bg-muted/30 px-5 py-4 text-left transition-colors hover:bg-muted/60 hover:border-primary/30 disabled:opacity-50"
+          >
+            <div className="flex h-10 w-10 shrink-0 items-center justify-center rounded-lg border border-border bg-background group-hover:border-primary/30 transition-colors">
+              <LayoutTemplate className="h-5 w-5 text-muted-foreground group-hover:text-primary transition-colors" />
+            </div>
+            <div className="flex-1 min-w-0">
+              <p className="text-sm font-medium text-foreground">Import a pre-made cabinet</p>
+              <p className="text-xs text-muted-foreground mt-0.5">
+                Browse ready-to-use teams from the registry
+              </p>
+            </div>
+            <span className="text-sm text-muted-foreground group-hover:text-primary transition-colors">→</span>
+          </button>
+
+          {/* Footer */}
+          <div className="flex items-center justify-end gap-3 pt-2 border-t border-border">
+            <Button
+              type="button"
+              variant="outline"
+              onClick={() => onOpenChange(false)}
+              disabled={creating}
+            >
+              Cancel
+            </Button>
+            <Button type="submit" disabled={!name.trim() || creating}>
+              {creating ? "Creating..." : "Create Cabinet"}
+            </Button>
           </div>
         </form>
       </div>

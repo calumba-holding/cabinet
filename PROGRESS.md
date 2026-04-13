@@ -1,5 +1,7 @@
 # Progress
 
+[2026-04-13] Constrain Jobs & heartbeats calendar to 600px height with a scrollbar. MonthView grid is now scrollable within a flex-1 overflow-y-auto wrapper; the section no longer grows to full content height.
+
 [2026-04-13] Paper theme updated to exact warm parchment palette from runcabinet.com: background #FAF6F1, card #FFFFFF, sidebar #F3EDE4, primary/ring #8B5E3C, secondary #F5E6D3, muted #FAF2EA, foreground #3B2F2F, muted-foreground #A89888, border #E8DDD0. All values converted to OKLCh. Accent preview color updated to #8B5E3C.
 
 [2026-04-13] Registry import: fix GitHub 403 rate-limit error on large templates (e.g. career-ops). Replaced recursive per-directory API calls with a single Git Trees API call (GET /git/trees/HEAD?recursive=1), then download files via raw.githubusercontent.com which has no API rate limit. Reduces GitHub API usage from O(directories) to 1 call per import.
@@ -224,3 +226,5 @@
 [2026-04-13] Cabinet scheduler controls: replace alarming red/green split-button with neutral muted styling; add pulsing green "Live" indicator when agents are active; unify button sizing (same height, icon size, padding).
 
 [2026-04-13] Fix split button separation: wrap main+chevron in a shared flex container so they render as one joined control.
+
+[2026-04-13] New Cabinet dialog: replace tiny "import a pre-made team →" text link with a full-width card button featuring icon, title, description, and arrow — separated from the create form by an "or" divider.
