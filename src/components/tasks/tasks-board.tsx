@@ -42,6 +42,7 @@ import { flattenTree } from "@/lib/tree-utils";
 import { ComposerInput } from "@/components/composer/composer-input";
 import { useComposer, type MentionableItem } from "@/hooks/use-composer";
 import { ScheduleCalendar, type CalendarMode } from "@/components/cabinets/schedule-calendar";
+import { ScheduleList } from "@/components/cabinets/schedule-list";
 import { SchedulePicker } from "@/components/mission-control/schedule-picker";
 import type { ScheduleEvent } from "@/lib/agents/cron-compute";
 import type { HumanInboxDraft, AgentListItem } from "@/types/agents";
@@ -247,20 +248,45 @@ function DraftStatusIcon() {
   return <Circle className="size-4 text-amber-600" />;
 }
 
+const CREATE_DRAFT_PLACEHOLDERS = [
+  "Write a blog post about our Q2 results...",
+  "Analyze user churn and suggest three concrete improvements...",
+  "Review last week's metrics and flag anything unusual...",
+  "Draft a partnership proposal for the Acme integration...",
+  "Summarize key insights from customer discovery interviews...",
+  "Prepare a competitive landscape update for the board...",
+  "Create a rollout plan for the new onboarding flow...",
+  "Audit our pricing page and suggest A/B test ideas...",
+];
+
 function CreateDraftDialog({
   open,
   onOpenChange,
   effectiveCabinetPath,
   visibleAgents,
   onCreated,
+  onStarted,
 }: {
   open: boolean;
   onOpenChange: (open: boolean) => void;
   effectiveCabinetPath?: string;
   visibleAgents: VisibleAgent[];
   onCreated: () => void;
+  onStarted: () => void;
 }) {
   const treeNodes = useTreeStore((s) => s.nodes);
+  const [startingNow, setStartingNow] = useState(false);
+
+  const placeholder = useMemo(
+    () => CREATE_DRAFT_PLACEHOLDERS[Math.floor(Math.random() * CREATE_DRAFT_PLACEHOLDERS.length)],
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+    [open]
+  );
+
+  const ceoAgent = useMemo(
+    () => visibleAgents.find((a) => a.slug === "ceo"),
+    [visibleAgents]
+  );
 
   const mentionItems: MentionableItem[] = [
     ...visibleAgents.map((a) => ({
@@ -280,11 +306,14 @@ function CreateDraftDialog({
 
   const composer = useComposer({
     items: mentionItems,
+    initialMentionedAgents: ceoAgent ? [ceoAgent.slug] : [],
     onSubmit: async ({ message, mentionedPaths, mentionedAgents }) => {
       const lines = message.split("\n");
       const title = lines[0].trim();
       const description = lines.slice(1).join("\n").trim();
-      const assignedAgent = mentionedAgents.length > 0 ? mentionedAgents[0] : undefined;
+      const assignedAgent = mentionedAgents.length > 0
+        ? mentionedAgents[0]
+        : (ceoAgent?.slug ?? undefined);
 
       const response = await fetch("/api/agents/inbox-drafts", {
         method: "POST",
@@ -306,24 +335,82 @@ function CreateDraftDialog({
     },
   });
 
+  async function handleStartNow() {
+    const message = composer.input.trim();
+    if (!message || startingNow || composer.submitting) return;
+
+    const firstMentionedSlug = composer.mentions.agents[0];
+    const resolvedAgent = firstMentionedSlug
+      ? (visibleAgents.find((a) => a.slug === firstMentionedSlug) ?? ceoAgent)
+      : ceoAgent;
+
+    if (!resolvedAgent) return;
+
+    setStartingNow(true);
+    try {
+      const response = await fetch("/api/agents/conversations", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({
+          agentSlug: resolvedAgent.slug,
+          userMessage: message,
+          cabinetPath: resolvedAgent.cabinetPath || effectiveCabinetPath,
+        }),
+      });
+
+      if (!response.ok) throw new Error("Failed to start conversation");
+
+      onOpenChange(false);
+      onStarted();
+    } finally {
+      setStartingNow(false);
+    }
+  }
+
+  function handleKeyDown(e: React.KeyboardEvent<HTMLTextAreaElement>) {
+    if (e.key === "Enter" && (e.metaKey || e.ctrlKey)) {
+      e.preventDefault();
+      void handleStartNow();
+    }
+  }
+
+  const keyHints = (
+    <div className="flex items-center justify-end gap-5 px-4 py-2.5 text-[11px] text-muted-foreground/50">
+      <span className="flex items-center gap-1.5">
+        <kbd className="rounded border border-border/50 bg-muted/50 px-1 py-0.5 font-mono text-[10px]">↵</kbd>
+        Add to inbox
+      </span>
+      <span className="flex items-center gap-1.5">
+        <kbd className="rounded border border-border/50 bg-muted/50 px-1 py-0.5 font-mono text-[10px]">⌘↵</kbd>
+        Start now
+      </span>
+    </div>
+  );
+
   return (
     <Dialog open={open} onOpenChange={onOpenChange}>
       <DialogContent className="sm:max-w-xl p-0 gap-0 overflow-visible">
         <DialogHeader className="px-5 pt-5 pb-3">
-          <DialogTitle>What needs to get done?</DialogTitle>
-          <DialogDescription>
-            Describe the task. Use @ to attach pages or assign an agent.
-          </DialogDescription>
+          <DialogTitle className="text-xl font-semibold">What needs to get done?</DialogTitle>
         </DialogHeader>
         <ComposerInput
           composer={composer}
-          placeholder="Write a blog post about our Q2 results..."
+          placeholder={placeholder}
           submitLabel="Add to inbox"
           variant="inline"
           items={mentionItems}
           autoFocus
           minHeight="100px"
           maxHeight="260px"
+          showKeyHint={false}
+          onKeyDown={handleKeyDown}
+          secondaryAction={{
+            label: "Start now",
+            onClick: () => void handleStartNow(),
+            loading: startingNow,
+            disabled: !ceoAgent && composer.mentions.agents.length === 0,
+          }}
+          footer={keyHints}
         />
       </DialogContent>
     </Dialog>
@@ -1228,6 +1315,211 @@ export function TasksBoard({
       ? `${scopeLabel}. ${drafts.length} inbox draft${drafts.length === 1 ? "" : "s"} and ${runsLabel} across ${visibleAgents.length} visible agent${visibleAgents.length === 1 ? "" : "s"}.`
       : `${drafts.length} inbox draft${drafts.length === 1 ? "" : "s"} and ${runsLabel} across ${visibleAgents.length} visible agent${visibleAgents.length === 1 ? "" : "s"} in all cabinets.`;
 
+  const jobCount = overview?.jobs.length ?? 0;
+  const heartbeatCount = overview?.agents.filter((a) => a.heartbeat).length ?? 0;
+
+  /* ─── Schedule view (full page) ─── */
+  if (boardView === "schedule") {
+    return (
+      <div className={cn(
+        "flex min-h-0 flex-1 flex-col overflow-hidden",
+        calendarFullscreen && "fixed inset-0 z-50 bg-background"
+      )}>
+        {/* Header — matches cabinet page style */}
+        <div className="border-b border-border/70 bg-background/95 px-4 py-5 sm:px-6">
+          <div className="flex items-start justify-between gap-4">
+            <div className="min-w-0">
+              <h1 className="font-body-serif text-[1.9rem] leading-none tracking-tight text-foreground sm:text-[2.2rem]">
+                Jobs & heartbeats
+              </h1>
+              <p className="pt-2 text-sm leading-6 text-muted-foreground">
+                {jobCount} scheduled job{jobCount === 1 ? "" : "s"} and {heartbeatCount} heartbeat{heartbeatCount === 1 ? "" : "s"}{resolvedWorkspaceMode === "cabinet" ? ` in ${cabinetName}` : " across all cabinets"}.
+              </p>
+            </div>
+            <div className="flex shrink-0 items-center gap-3">
+              <Button variant="outline" size="sm" className="h-7" onClick={() => void refreshBoard()} disabled={refreshing}>
+                <RefreshCw data-icon="inline-start" className={cn(refreshing && "animate-spin")} />
+                Refresh
+              </Button>
+            </div>
+          </div>
+
+          <div className="mt-4 flex flex-wrap items-center gap-2">
+            {/* Calendar / List toggle */}
+            <div className="flex items-center rounded-lg border border-border/60 p-0.5">
+              <button onClick={() => setScheduleView("calendar")} className={cn("flex items-center gap-1.5 rounded-md px-2.5 py-1 text-[11px] font-medium transition-colors", scheduleView === "calendar" ? "bg-foreground text-background" : "text-muted-foreground hover:text-foreground")}>
+                <Calendar className="h-3.5 w-3.5" />
+                Calendar
+              </button>
+              <button onClick={() => setScheduleView("list")} className={cn("flex items-center gap-1.5 rounded-md px-2.5 py-1 text-[11px] font-medium transition-colors", scheduleView === "list" ? "bg-foreground text-background" : "text-muted-foreground hover:text-foreground")}>
+                <LayoutList className="h-3.5 w-3.5" />
+                List
+              </button>
+            </div>
+
+            {/* Calendar sub-controls */}
+            {scheduleView === "calendar" && (
+              <>
+                <div className="flex items-center rounded-lg border border-border/60 p-0.5">
+                  {(["day", "week", "month"] as CalendarMode[]).map((m) => (
+                    <button key={m} onClick={() => setCalendarMode(m)} className={cn("rounded-md px-2.5 py-1 text-[11px] font-medium capitalize transition-colors", calendarMode === m ? "bg-foreground text-background" : "text-muted-foreground hover:text-foreground")}>
+                      {m}
+                    </button>
+                  ))}
+                </div>
+
+                <div className="flex items-center gap-1">
+                  <button onClick={() => navigateCalendar(-1)} className="flex h-7 w-7 items-center justify-center rounded-md text-muted-foreground transition-colors hover:bg-muted/50 hover:text-foreground"><ChevronLeft className="h-4 w-4" /></button>
+                  <button onClick={() => navigateCalendar(0)} className="rounded-md px-2 py-1 text-[11px] font-medium text-muted-foreground transition-colors hover:bg-muted/50 hover:text-foreground">Today</button>
+                  <button onClick={() => navigateCalendar(1)} className="flex h-7 w-7 items-center justify-center rounded-md text-muted-foreground transition-colors hover:bg-muted/50 hover:text-foreground"><ChevronRight className="h-4 w-4" /></button>
+                </div>
+
+                <span className="text-sm font-medium text-foreground">{calendarLabel}</span>
+
+                <button onClick={() => setCalendarFullscreen((v) => !v)} className="flex h-7 w-7 items-center justify-center rounded-md text-muted-foreground transition-colors hover:bg-muted/50 hover:text-foreground" title={calendarFullscreen ? "Exit full screen" : "Full screen"}>
+                  {calendarFullscreen ? <Minimize2 className="h-3.5 w-3.5" /> : <Maximize2 className="h-3.5 w-3.5" />}
+                </button>
+              </>
+            )}
+
+            {/* Back to board */}
+            <div className="ml-auto flex items-center gap-2">
+              <div className="flex items-center rounded-lg border border-border/60 p-0.5">
+                <button onClick={() => setBoardView("board")} className={cn("flex items-center gap-1.5 rounded-md px-2.5 py-1 text-[11px] font-medium transition-colors", boardView === "board" ? "bg-foreground text-background" : "text-muted-foreground hover:text-foreground")}>
+                  <KanbanSquare className="h-3.5 w-3.5" />
+                  Board
+                </button>
+                <button onClick={() => setBoardView("schedule")} className={cn("flex items-center gap-1.5 rounded-md px-2.5 py-1 text-[11px] font-medium transition-colors", boardView === "schedule" ? "bg-foreground text-background" : "text-muted-foreground hover:text-foreground")}>
+                  <Calendar className="h-3.5 w-3.5" />
+                  Schedule
+                </button>
+              </div>
+            </div>
+          </div>
+        </div>
+
+        {/* Content */}
+        <div className="min-h-0 flex-1 overflow-y-auto px-4 py-6 sm:px-6">
+          {scheduleView === "calendar" ? (
+            <ScheduleCalendar
+              mode={calendarMode}
+              anchor={calendarAnchor}
+              agents={overview?.agents || []}
+              jobs={overview?.jobs || []}
+              fullscreen={calendarFullscreen}
+              onEventClick={handleScheduleEventClick}
+              onDayClick={(date) => { setCalendarMode("day"); setCalendarAnchor(date); }}
+            />
+          ) : (
+            <ScheduleList
+              agents={overview?.agents || []}
+              jobs={overview?.jobs || []}
+              onJobClick={(job, agent) => {
+                setScheduleJobDialog({
+                  agentSlug: agent.slug, agentName: agent.name,
+                  cabinetPath: agent.cabinetPath || effectiveCabinetPath,
+                  draft: { id: job.id, name: job.name, schedule: job.schedule, prompt: job.prompt || "", enabled: job.enabled },
+                });
+              }}
+              onHeartbeatClick={(agent) => {
+                setScheduleHeartbeatDialog({
+                  agentSlug: agent.slug, agentName: agent.name,
+                  cabinetPath: agent.cabinetPath || effectiveCabinetPath,
+                  heartbeat: agent.heartbeat || "0 9 * * 1-5", active: agent.active,
+                });
+              }}
+            />
+          )}
+        </div>
+
+        {/* Job dialog */}
+        {scheduleJobDialog ? (
+          <Dialog open onOpenChange={(open) => { if (!open) setScheduleJobDialog(null); }}>
+            <DialogContent className="sm:max-w-2xl">
+              <DialogHeader>
+                <div className="flex items-center justify-between gap-3 pr-10">
+                  <DialogTitle className="flex items-center gap-2">
+                    <Clock3 className="h-4 w-4 text-emerald-400" />
+                    {scheduleJobDialog.draft.name || "Job"}
+                    <span className="text-[11px] font-normal text-muted-foreground">· {scheduleJobDialog.agentName}</span>
+                  </DialogTitle>
+                  <Button variant="outline" size="sm" className="h-8 gap-1 text-xs" onClick={() => void runScheduleJob()} disabled={scheduleDialogBusy}>
+                    {scheduleDialogBusy ? <Loader2 className="h-3.5 w-3.5 animate-spin" /> : <Zap className="h-3.5 w-3.5" />}
+                    Run now
+                  </Button>
+                </div>
+              </DialogHeader>
+              <div className="space-y-3">
+                <div className="space-y-1.5">
+                  <span className="text-[10px] uppercase tracking-[0.08em] text-muted-foreground">Schedule</span>
+                  <SchedulePicker value={scheduleJobDialog.draft.schedule || "0 9 * * 1-5"} onChange={(cron) => setScheduleJobDialog((p) => p ? { ...p, draft: { ...p.draft, schedule: cron } } : p)} />
+                </div>
+                <div className="space-y-1.5">
+                  <span className="text-[10px] uppercase tracking-[0.08em] text-muted-foreground">Prompt</span>
+                  <textarea value={scheduleJobDialog.draft.prompt} onChange={(e) => setScheduleJobDialog((p) => p ? { ...p, draft: { ...p.draft, prompt: e.target.value } } : p)} className="h-48 w-full resize-none rounded-lg bg-muted/60 px-3 py-2 text-[13px] text-foreground outline-none transition-colors placeholder:text-muted-foreground/70 focus:bg-muted" placeholder="What should this job do?" />
+                </div>
+                <div className="flex items-center justify-between border-t border-border pt-3">
+                  <label className="flex cursor-pointer items-center gap-2 text-[12px] text-muted-foreground">
+                    <input type="checkbox" checked={scheduleJobDialog.draft.enabled} onChange={(e) => setScheduleJobDialog((p) => p ? { ...p, draft: { ...p.draft, enabled: e.target.checked } } : p)} />
+                    Enabled
+                  </label>
+                  <div className="flex gap-2">
+                    <Button variant="ghost" size="sm" className="h-8 text-xs" onClick={() => setScheduleJobDialog(null)}>Cancel</Button>
+                    <Button size="sm" className="h-8 gap-1 text-xs" onClick={() => void saveScheduleJob()} disabled={scheduleDialogSaving}>
+                      <Save className="h-3.5 w-3.5" />
+                      {scheduleDialogSaving ? "Saving..." : "Save"}
+                    </Button>
+                  </div>
+                </div>
+              </div>
+            </DialogContent>
+          </Dialog>
+        ) : null}
+
+        {/* Heartbeat dialog */}
+        {scheduleHeartbeatDialog ? (
+          <Dialog open onOpenChange={(open) => { if (!open) setScheduleHeartbeatDialog(null); }}>
+            <DialogContent className="sm:max-w-md">
+              <DialogHeader>
+                <div className="flex items-center justify-between gap-3 pr-10">
+                  <DialogTitle className="flex items-center gap-2">
+                    <HeartPulse className="h-4 w-4 text-pink-400" />
+                    Heartbeat
+                    <span className="text-[11px] font-normal text-muted-foreground">· {scheduleHeartbeatDialog.agentName}</span>
+                  </DialogTitle>
+                  <Button variant="outline" size="sm" className="h-8 gap-1 text-xs" onClick={() => void runScheduleHeartbeat()} disabled={scheduleDialogBusy}>
+                    {scheduleDialogBusy ? <Loader2 className="h-3.5 w-3.5 animate-spin" /> : <Zap className="h-3.5 w-3.5" />}
+                    Run now
+                  </Button>
+                </div>
+              </DialogHeader>
+              <div className="space-y-3">
+                <div className="space-y-1.5">
+                  <span className="text-[10px] uppercase tracking-[0.08em] text-muted-foreground">Schedule</span>
+                  <SchedulePicker value={scheduleHeartbeatDialog.heartbeat} onChange={(cron) => setScheduleHeartbeatDialog((p) => p ? { ...p, heartbeat: cron } : p)} />
+                </div>
+                <div className="flex items-center justify-between border-t border-border pt-3">
+                  <label className="flex cursor-pointer items-center gap-2 text-[12px] text-muted-foreground">
+                    <input type="checkbox" checked={scheduleHeartbeatDialog.active} onChange={(e) => setScheduleHeartbeatDialog((p) => p ? { ...p, active: e.target.checked } : p)} className="h-3.5 w-3.5 cursor-pointer appearance-none rounded-sm border border-border bg-background transition-colors checked:border-primary checked:bg-primary focus:outline-none focus:ring-1 focus:ring-ring focus:ring-offset-1" />
+                    Active
+                  </label>
+                  <div className="flex gap-2">
+                    <Button variant="ghost" size="sm" className="h-8 text-xs" onClick={() => setScheduleHeartbeatDialog(null)}>Cancel</Button>
+                    <Button size="sm" className="h-8 gap-1 text-xs" onClick={() => void saveScheduleHeartbeat()} disabled={scheduleDialogSaving}>
+                      <Save className="h-3.5 w-3.5" />
+                      {scheduleDialogSaving ? "Saving..." : "Save"}
+                    </Button>
+                  </div>
+                </div>
+              </div>
+            </DialogContent>
+          </Dialog>
+        ) : null}
+      </div>
+    );
+  }
+
+  /* ─── Board view (default) ─── */
   return (
     <div className="flex min-h-0 flex-1 flex-col overflow-hidden">
       <div className="border-b border-border/70 bg-background/95 px-4 py-5 sm:px-6">
@@ -1372,6 +1664,7 @@ export function TasksBoard({
         effectiveCabinetPath={effectiveCabinetPath}
         visibleAgents={visibleAgents}
         onCreated={() => void refreshDrafts()}
+        onStarted={() => void Promise.all([refreshDrafts(), refreshConversations()])}
       />
 
       <AssignDraftDialog
@@ -1390,7 +1683,6 @@ export function TasksBoard({
         onStartNow={() => void handleStartFromDialog()}
       />
 
-      {boardView === "board" ? (
       <div className="min-h-0 flex-1 overflow-x-auto">
           {loading ? (
             <div className="flex h-full items-center justify-center gap-3 text-sm text-muted-foreground">
@@ -1553,149 +1845,6 @@ export function TasksBoard({
             </div>
           )}
         </div>
-      ) : (
-        <div className={cn(
-          calendarFullscreen
-            ? "fixed inset-0 z-50 overflow-y-auto bg-background px-6 py-6"
-            : "min-h-0 flex-1 overflow-y-auto px-4 py-6 sm:px-6"
-        )}>
-          {/* Calendar controls */}
-          <div className="mb-4 flex flex-wrap items-center gap-2">
-            <div className="flex items-center rounded-lg border border-border/60 p-0.5">
-              {(["day", "week", "month"] as CalendarMode[]).map((m) => (
-                <button
-                  key={m}
-                  onClick={() => setCalendarMode(m)}
-                  className={cn(
-                    "rounded-md px-2.5 py-1 text-[11px] font-medium capitalize transition-colors",
-                    calendarMode === m
-                      ? "bg-foreground text-background"
-                      : "text-muted-foreground hover:text-foreground"
-                  )}
-                >
-                  {m}
-                </button>
-              ))}
-            </div>
-
-            <div className="flex items-center gap-1">
-              <button onClick={() => navigateCalendar(-1)} className="flex h-7 w-7 items-center justify-center rounded-md text-muted-foreground transition-colors hover:bg-muted/50 hover:text-foreground">
-                <ChevronLeft className="h-4 w-4" />
-              </button>
-              <button onClick={() => navigateCalendar(0)} className="rounded-md px-2 py-1 text-[11px] font-medium text-muted-foreground transition-colors hover:bg-muted/50 hover:text-foreground">
-                Today
-              </button>
-              <button onClick={() => navigateCalendar(1)} className="flex h-7 w-7 items-center justify-center rounded-md text-muted-foreground transition-colors hover:bg-muted/50 hover:text-foreground">
-                <ChevronRight className="h-4 w-4" />
-              </button>
-            </div>
-
-            <span className="text-sm font-medium text-foreground">{calendarLabel}</span>
-
-            <button
-              onClick={() => setCalendarFullscreen((v) => !v)}
-              className="ml-auto flex h-7 w-7 items-center justify-center rounded-md text-muted-foreground transition-colors hover:bg-muted/50 hover:text-foreground"
-              title={calendarFullscreen ? "Exit full screen" : "Full screen"}
-            >
-              {calendarFullscreen ? <Minimize2 className="h-3.5 w-3.5" /> : <Maximize2 className="h-3.5 w-3.5" />}
-            </button>
-          </div>
-
-          <ScheduleCalendar
-            mode={calendarMode}
-            anchor={calendarAnchor}
-            agents={overview?.agents || []}
-            jobs={overview?.jobs || []}
-            fullscreen={calendarFullscreen}
-            onEventClick={handleScheduleEventClick}
-            onDayClick={(date) => { setCalendarMode("day"); setCalendarAnchor(date); }}
-          />
-        </div>
-      )}
-
-      {/* Schedule job dialog */}
-      {scheduleJobDialog ? (
-        <Dialog open onOpenChange={(open) => { if (!open) setScheduleJobDialog(null); }}>
-          <DialogContent className="sm:max-w-2xl">
-            <DialogHeader>
-              <div className="flex items-center justify-between gap-3 pr-10">
-                <DialogTitle className="flex items-center gap-2">
-                  <Clock3 className="h-4 w-4 text-emerald-400" />
-                  {scheduleJobDialog.draft.name || "Job"}
-                  <span className="text-[11px] font-normal text-muted-foreground">· {scheduleJobDialog.agentName}</span>
-                </DialogTitle>
-                <Button variant="outline" size="sm" className="h-8 gap-1 text-xs" onClick={() => void runScheduleJob()} disabled={scheduleDialogBusy}>
-                  {scheduleDialogBusy ? <Loader2 className="h-3.5 w-3.5 animate-spin" /> : <Zap className="h-3.5 w-3.5" />}
-                  Run now
-                </Button>
-              </div>
-            </DialogHeader>
-            <div className="space-y-3">
-              <div className="space-y-1.5">
-                <span className="text-[10px] uppercase tracking-[0.08em] text-muted-foreground">Schedule</span>
-                <SchedulePicker value={scheduleJobDialog.draft.schedule || "0 9 * * 1-5"} onChange={(cron) => setScheduleJobDialog((p) => p ? { ...p, draft: { ...p.draft, schedule: cron } } : p)} />
-              </div>
-              <div className="space-y-1.5">
-                <span className="text-[10px] uppercase tracking-[0.08em] text-muted-foreground">Prompt</span>
-                <textarea value={scheduleJobDialog.draft.prompt} onChange={(e) => setScheduleJobDialog((p) => p ? { ...p, draft: { ...p.draft, prompt: e.target.value } } : p)} className="h-48 w-full resize-none rounded-lg bg-muted/60 px-3 py-2 text-[13px] text-foreground outline-none transition-colors placeholder:text-muted-foreground/70 focus:bg-muted" placeholder="What should this job do?" />
-              </div>
-              <div className="flex items-center justify-between border-t border-border pt-3">
-                <label className="flex cursor-pointer items-center gap-2 text-[12px] text-muted-foreground">
-                  <input type="checkbox" checked={scheduleJobDialog.draft.enabled} onChange={(e) => setScheduleJobDialog((p) => p ? { ...p, draft: { ...p.draft, enabled: e.target.checked } } : p)} />
-                  Enabled
-                </label>
-                <div className="flex gap-2">
-                  <Button variant="ghost" size="sm" className="h-8 text-xs" onClick={() => setScheduleJobDialog(null)}>Cancel</Button>
-                  <Button size="sm" className="h-8 gap-1 text-xs" onClick={() => void saveScheduleJob()} disabled={scheduleDialogSaving}>
-                    <Save className="h-3.5 w-3.5" />
-                    {scheduleDialogSaving ? "Saving..." : "Save"}
-                  </Button>
-                </div>
-              </div>
-            </div>
-          </DialogContent>
-        </Dialog>
-      ) : null}
-
-      {/* Schedule heartbeat dialog */}
-      {scheduleHeartbeatDialog ? (
-        <Dialog open onOpenChange={(open) => { if (!open) setScheduleHeartbeatDialog(null); }}>
-          <DialogContent className="sm:max-w-md">
-            <DialogHeader>
-              <div className="flex items-center justify-between gap-3 pr-10">
-                <DialogTitle className="flex items-center gap-2">
-                  <HeartPulse className="h-4 w-4 text-pink-400" />
-                  Heartbeat
-                  <span className="text-[11px] font-normal text-muted-foreground">· {scheduleHeartbeatDialog.agentName}</span>
-                </DialogTitle>
-                <Button variant="outline" size="sm" className="h-8 gap-1 text-xs" onClick={() => void runScheduleHeartbeat()} disabled={scheduleDialogBusy}>
-                  {scheduleDialogBusy ? <Loader2 className="h-3.5 w-3.5 animate-spin" /> : <Zap className="h-3.5 w-3.5" />}
-                  Run now
-                </Button>
-              </div>
-            </DialogHeader>
-            <div className="space-y-3">
-              <div className="space-y-1.5">
-                <span className="text-[10px] uppercase tracking-[0.08em] text-muted-foreground">Schedule</span>
-                <SchedulePicker value={scheduleHeartbeatDialog.heartbeat} onChange={(cron) => setScheduleHeartbeatDialog((p) => p ? { ...p, heartbeat: cron } : p)} />
-              </div>
-              <div className="flex items-center justify-between border-t border-border pt-3">
-                <label className="flex cursor-pointer items-center gap-2 text-[12px] text-muted-foreground">
-                  <input type="checkbox" checked={scheduleHeartbeatDialog.active} onChange={(e) => setScheduleHeartbeatDialog((p) => p ? { ...p, active: e.target.checked } : p)} className="h-3.5 w-3.5 cursor-pointer appearance-none rounded-sm border border-border bg-background transition-colors checked:border-primary checked:bg-primary focus:outline-none focus:ring-1 focus:ring-ring focus:ring-offset-1" />
-                  Active
-                </label>
-                <div className="flex gap-2">
-                  <Button variant="ghost" size="sm" className="h-8 text-xs" onClick={() => setScheduleHeartbeatDialog(null)}>Cancel</Button>
-                  <Button size="sm" className="h-8 gap-1 text-xs" onClick={() => void saveScheduleHeartbeat()} disabled={scheduleDialogSaving}>
-                    <Save className="h-3.5 w-3.5" />
-                    {scheduleDialogSaving ? "Saving..." : "Save"}
-                  </Button>
-                </div>
-              </div>
-            </div>
-          </DialogContent>
-        </Dialog>
-      ) : null}
     </div>
   );
 }
