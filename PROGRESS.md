@@ -1,5 +1,7 @@
 # Progress
 
+[2026-04-13] Added depth dropdown to the sidebar header next to the "CABINET" label. The compact Select shows Own/+1/+2/All options controlling which agents from child cabinets are visible in the sidebar. Reuses existing visibility infrastructure from app-store and works at both root and sub-cabinet levels, syncing with the cabinet page depth pills.
+
 [2026-04-13] Added right-click context menu to the Cabinet header in the sidebar. Shows: Rename (disabled with "coming soon" tooltip), Copy Relative Path (nested cabinets only), Copy Full Path, Open in Finder, and Delete (nested cabinets only, with confirmation). Root cabinet hides Rename-breaking and destructive options.
 
 [2026-04-13] Composer hint bar: moved quick action chips below the composer on the home screen. Added grey hints below all composer cards — "use @ to mention" on the left and "Shift + Enter new line" on the right (responsive, hidden on small screens). Send button stays inside the card. Also added hints to cabinet-specific page composer (cabinet-view.tsx) and standardized its keyboard to Shift+Enter for newline.

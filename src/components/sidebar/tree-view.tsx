@@ -10,11 +10,14 @@ import {
   ContextMenu,
   ContextMenuContent,
   ContextMenuItem,
+  ContextMenuSeparator,
   ContextMenuTrigger,
 } from "@/components/ui/context-menu";
 import {
   Dialog,
   DialogContent,
+  DialogDescription,
+  DialogFooter,
   DialogHeader,
   DialogTitle,
 } from "@/components/ui/dialog";
@@ -34,6 +37,8 @@ import {
   FolderOpen,
   GitBranch,
   ClipboardCopy,
+  Copy,
+  Trash2,
   Archive,
   Crown,
   Megaphone,
@@ -61,9 +66,20 @@ import {
   findRootCabinetNode,
 } from "@/lib/cabinets/tree";
 import { ROOT_CABINET_PATH } from "@/lib/cabinets/paths";
-import { cabinetVisibilityModeLabel } from "@/lib/cabinets/visibility";
+import {
+  cabinetVisibilityModeLabel,
+  CABINET_VISIBILITY_OPTIONS,
+} from "@/lib/cabinets/visibility";
 import { getDataDir } from "@/lib/data-dir-cache";
-import type { CabinetOverview } from "@/types/cabinets";
+import type { CabinetOverview, CabinetVisibilityMode } from "@/types/cabinets";
+import {
+  Select,
+  SelectContent,
+  SelectGroup,
+  SelectItem,
+  SelectTrigger,
+  SelectValue,
+} from "@/components/ui/select";
 
 interface AgentSummary {
   scopedId?: string;
@@ -125,10 +141,12 @@ export function TreeView() {
   const { nodes, loading } = useTreeStore();
   const selectPage = useTreeStore((s) => s.selectPage);
   const createPage = useTreeStore((s) => s.createPage);
+  const deletePage = useTreeStore((s) => s.deletePage);
   const loadPage = useEditorStore((s) => s.loadPage);
   const section = useAppStore((s) => s.section);
   const setSection = useAppStore((s) => s.setSection);
   const cabinetVisibilityModes = useAppStore((s) => s.cabinetVisibilityModes);
+  const setCabinetVisibilityMode = useAppStore((s) => s.setCabinetVisibilityMode);
 
   const [cabinetExpanded, setCabinetExpanded] = useState(true);
   const [agentsExpanded, setAgentsExpanded] = useState(true);
@@ -137,6 +155,7 @@ export function TreeView() {
   const [cabinetAgentScopeName, setCabinetAgentScopeName] = useState<string | null>(null);
   const [kbSubPageOpen, setKbSubPageOpen] = useState(false);
   const [kbSubPageTitle, setKbSubPageTitle] = useState("");
+  const [cabinetDeleteOpen, setCabinetDeleteOpen] = useState(false);
   const [kbCreating, setKbCreating] = useState(false);
   const [linkRepoOpen, setLinkRepoOpen] = useState(false);
 
@@ -150,9 +169,9 @@ export function TreeView() {
     if (!activeCabinet) return null;
     return findParentCabinetNode(nodes, activeCabinet.path);
   }, [activeCabinet, nodes]);
-  const cabinetVisibilityMode = activeCabinet
-    ? cabinetVisibilityModes[activeCabinet.path] || "own"
-    : "own";
+  const effectiveCabinetPath = activeCabinet?.path || ROOT_CABINET_PATH;
+  const cabinetVisibilityMode =
+    cabinetVisibilityModes[effectiveCabinetPath] || (activeCabinet ? "own" : "all");
   const visibleTreeNodes = activeCabinet?.children || rootCabinet?.children || nodes;
   const kbSectionLabel = activeCabinet ? "Data" : "Knowledge Base";
 
@@ -162,7 +181,7 @@ export function TreeView() {
     try {
       const params = new URLSearchParams({
         path: activeCabinet?.path || ROOT_CABINET_PATH,
-        visibility: activeCabinet ? cabinetVisibilityMode : "all",
+        visibility: cabinetVisibilityMode,
       });
       const res = await fetch(`/api/cabinets/overview?${params.toString()}`, {
         cache: "no-store",
@@ -284,6 +303,8 @@ export function TreeView() {
 
         {/* ── Cabinet (depth 0) ───────────────────────────── */}
         <div className="flex items-center gap-1.5 px-3 pt-2 pb-1 w-full" style={pad(0)}>
+          <ContextMenu>
+          <ContextMenuTrigger>
           <button
             onClick={() => openCabinetOverview(activeCabinet?.path || cabinetPath)}
             className="text-[10px] font-semibold uppercase tracking-wider text-muted-foreground flex min-w-0 flex-1 items-center gap-1.5 text-left hover:text-foreground/80 transition-colors"
@@ -293,6 +314,91 @@ export function TreeView() {
               ? activeCabinet.frontmatter?.title || activeCabinet.name
               : "Cabinet"}
           </button>
+          </ContextMenuTrigger>
+          <ContextMenuContent>
+            <ContextMenuItem disabled className="flex-col items-start gap-0">
+              <span className="flex items-center">
+                <Pencil className="h-4 w-4 mr-2" />
+                Rename
+              </span>
+              <span className="text-[10px] text-muted-foreground/60 ml-6">
+                Coming soon
+              </span>
+            </ContextMenuItem>
+            {cabinetPath !== ROOT_CABINET_PATH && (
+              <ContextMenuItem onClick={() => navigator.clipboard.writeText(cabinetPath)}>
+                <Copy className="h-4 w-4 mr-2" />
+                Copy Relative Path
+              </ContextMenuItem>
+            )}
+            <ContextMenuItem onClick={async () => {
+              const dir = await getDataDir();
+              navigator.clipboard.writeText(
+                cabinetPath === ROOT_CABINET_PATH ? dir : `${dir}/${cabinetPath}`
+              );
+            }}>
+              <ClipboardCopy className="h-4 w-4 mr-2" />
+              Copy Full Path
+            </ContextMenuItem>
+            <ContextMenuItem onClick={() => {
+              fetch("/api/system/open-data-dir", {
+                method: "POST",
+                headers: { "Content-Type": "application/json" },
+                body: JSON.stringify({
+                  subpath: cabinetPath === ROOT_CABINET_PATH ? "" : cabinetPath,
+                }),
+              });
+            }}>
+              <FolderOpen className="h-4 w-4 mr-2" />
+              Open in Finder
+            </ContextMenuItem>
+            {cabinetPath !== ROOT_CABINET_PATH && (
+              <>
+                <ContextMenuSeparator />
+                <ContextMenuItem
+                  className="text-destructive"
+                  onClick={() => setCabinetDeleteOpen(true)}
+                >
+                  <Trash2 className="h-4 w-4 mr-2" />
+                  Delete
+                </ContextMenuItem>
+              </>
+            )}
+          </ContextMenuContent>
+          </ContextMenu>
+
+          <Select
+            items={CABINET_VISIBILITY_OPTIONS.map((opt) => ({
+              label: opt.shortLabel,
+              value: opt.value,
+            }))}
+            value={cabinetVisibilityMode}
+            onValueChange={(value) =>
+              setCabinetVisibilityMode(
+                effectiveCabinetPath,
+                value as CabinetVisibilityMode
+              )
+            }
+          >
+            <SelectTrigger
+              size="sm"
+              className="ml-auto h-5 min-w-0 w-auto gap-0.5 rounded border-none bg-transparent px-1.5 py-0 text-[10px] font-medium uppercase tracking-wider text-muted-foreground/60 shadow-none hover:text-foreground/80 focus-visible:ring-0"
+            >
+              <SelectValue placeholder="Own" />
+            </SelectTrigger>
+            <SelectContent align="end" className="min-w-[200px]">
+              <SelectGroup>
+                {CABINET_VISIBILITY_OPTIONS.map((opt) => (
+                  <SelectItem key={opt.value} value={opt.value}>
+                    <span className="font-medium">{opt.shortLabel}</span>
+                    <span className="ml-1.5 text-xs text-muted-foreground">
+                      {opt.label}
+                    </span>
+                  </SelectItem>
+                ))}
+              </SelectGroup>
+            </SelectContent>
+          </Select>
         </div>
 
         {cabinetExpanded && (
@@ -670,6 +776,32 @@ export function TreeView() {
     </Dialog>
 
     <LinkRepoDialog open={linkRepoOpen} onOpenChange={setLinkRepoOpen} />
+
+    <Dialog open={cabinetDeleteOpen} onOpenChange={setCabinetDeleteOpen}>
+      <DialogContent className="sm:max-w-md">
+        <DialogHeader>
+          <DialogTitle>Delete Cabinet</DialogTitle>
+          <DialogDescription>
+            This will permanently delete &ldquo;{activeCabinet?.frontmatter?.title || activeCabinet?.name || cabinetPath}&rdquo; and all its contents, including pages, agents, jobs, and tasks.
+          </DialogDescription>
+        </DialogHeader>
+        <DialogFooter>
+          <Button variant="outline" onClick={() => setCabinetDeleteOpen(false)}>
+            Cancel
+          </Button>
+          <Button
+            variant="destructive"
+            onClick={async () => {
+              await deletePage(cabinetPath);
+              setCabinetDeleteOpen(false);
+              setSection({ type: "home" });
+            }}
+          >
+            Delete
+          </Button>
+        </DialogFooter>
+      </DialogContent>
+    </Dialog>
 
     </>
   );
