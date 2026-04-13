@@ -470,14 +470,6 @@ function DraftRow({
               </div>
             </div>
 
-            <span
-              className={cn(
-                "mt-0.5 shrink-0 rounded-full px-1.5 py-0.5 text-[9px] font-semibold uppercase tracking-[0.16em]",
-                priorityTone(draft.priority)
-              )}
-            >
-              {priorityLabel(draft.priority)}
-            </span>
           </div>
 
           {draft.description ? (
