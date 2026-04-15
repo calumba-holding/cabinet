@@ -87,6 +87,8 @@ Key commits:
   - structured adapters become the default path
   - legacy CLI execution remains an escape hatch
   - legacy should be treated as optional / experimental, not as the core runtime model
+- `WebTerminal` is also being preserved intentionally as a product capability for interactive sessions and future terminal-native features such as Cabinet-managed tmux-like workflows.
+- The migration is away from **terminal-first task execution**, not away from the terminal itself.
 
 Current default direction:
 
@@ -183,10 +185,12 @@ Selection and configuration surfaces:
 
 The migration is not fully complete yet. Important next steps:
 
-- extend the native live-session renderer to the remaining `WebTerminal`-based conversation surfaces such as:
+- decide surface-by-surface which experiences should be transcript-first and which should remain terminal-first
+- extend the native live-session renderer to the remaining `WebTerminal`-based conversation surfaces where interactivity is not actually required, such as:
   - `src/components/agents/agent-detail.tsx`
   - `src/components/agents/agent-live-panel.tsx`
-  - `src/components/ai-panel/ai-panel.tsx`
+  - any non-interactive portions of `src/components/ai-panel/ai-panel.tsx`
+- keep evolving `WebTerminal` as a dedicated interactive subsystem for direct CLI usage, debugging, and future tmux-like Cabinet workflows
 - add more providers on top of the adapter system
 - make the legacy runtime clearly labeled as optional / experimental in every relevant UI surface
 - add more integration coverage around adapter selection and structured session lifecycle
