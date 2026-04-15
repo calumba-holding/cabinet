@@ -14,6 +14,17 @@ test("normalizeJobConfig derives the current default adapter type from the selec
   assert.equal(normalized.prompt, "Summarize yesterday.");
 });
 
+test("normalizeJobConfig uses the structured codex adapter by default", () => {
+  const normalized = normalizeJobConfig({
+    name: "Daily Digest",
+    provider: "codex-cli",
+    prompt: "Summarize yesterday.",
+  });
+
+  assert.equal(normalized.provider, "codex-cli");
+  assert.equal(normalized.adapterType, "codex_local");
+});
+
 test("normalizeJobConfig preserves explicit adapter settings", () => {
   const normalized = normalizeJobConfig({
     name: "Review Queue",

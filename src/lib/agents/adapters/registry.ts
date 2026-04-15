@@ -6,6 +6,7 @@ import type {
   AgentExecutionAdapter,
 } from "./types";
 import { claudeLocalAdapter } from "./claude-local";
+import { codexLocalAdapter } from "./codex-local";
 import { providerStatusToEnvironmentTest } from "./environment";
 
 export const LEGACY_ADAPTER_BY_PROVIDER_ID: Record<string, string> = {
@@ -15,7 +16,7 @@ export const LEGACY_ADAPTER_BY_PROVIDER_ID: Record<string, string> = {
 
 export const DEFAULT_ADAPTER_BY_PROVIDER_ID: Record<string, string> = {
   "claude-code": claudeLocalAdapter.type,
-  "codex-cli": "codex_cli_legacy",
+  "codex-cli": codexLocalAdapter.type,
 };
 
 export const LEGACY_PROVIDER_ID_BY_ADAPTER: Record<string, string> = Object.fromEntries(
@@ -97,6 +98,7 @@ class AgentAdapterRegistry {
 export const agentAdapterRegistry = new AgentAdapterRegistry();
 
 agentAdapterRegistry.register(claudeLocalAdapter);
+agentAdapterRegistry.register(codexLocalAdapter);
 agentAdapterRegistry.register(legacyClaudeCodeAdapter);
 agentAdapterRegistry.register(legacyCodexCliAdapter);
 
