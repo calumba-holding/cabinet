@@ -182,11 +182,24 @@ d399c4c  feat(tasks): artifact rows as KB page cards                            
 
 ## Follow-ups still open
 
-- **Structured `<ask_user>` tool** — replace the `?`-terminated heuristic with an explicit convention in the agent system prompt so the awaiting-input flag doesn't false-positive.
-- **Auto-summary via Haiku** — swap `deriveSummary` heuristic for a real LLM call when an agent turn has no `SUMMARY:` trailer.
+- **Auto-summary via Haiku** — swap `deriveSummary` heuristic for a real LLM call when an agent turn has no `SUMMARY:` trailer. Adds per-turn API cost; heuristic already works for most cases.
 - **Migration script** — codify the `.agents/.tasks.v1-retired` rename as an opt-in migrator once we have real user data to move.
-- **TasksBoard convergence** — the kanban section (`TasksBoard`) still uses its own fetch cycle. Switch to the global SSE and route cards through `setSection({ type: "task" })` to keep a single click-through model.
-- **Diff + Logs tabs** — both still placeholders. Diff would render a unified diff of `meta.artifactPaths`; Logs would render raw adapter stdout/stderr per turn.
+- **Token accounting audit** — adapterUsage is captured from daemon continues but the initial `startConversationRun` daemon path doesn't propagate it to `meta.tokens` today. Multi-turn token bar works; first-turn is still 0 until a continue lands.
+
+## Shipped after phase 7
+
+- ✅ **Session-expired fallback** (resume error → replay retry)
+- ✅ **Daemon-backed continues** (`continueConversationRun` → `createDaemonSession`, survives HMR)
+- ✅ **Adapter session capture** (Claude session_id persisted for real `--resume`)
+- ✅ **Runtime picker on `/tasks/new`**
+- ✅ **`/compact` action** (header button + 80/95% nudge banner)
+- ✅ **Global SSE stream** (sidebar + `/tasks` index auto-refresh)
+- ✅ **Cabinet trailer strip** (no `SUMMARY:` leaking into chat bubbles)
+- ✅ **Streaming partial content** (debounced 700ms writes to pending turn)
+- ✅ **Logs tab** (events.log + raw transcript, color-coded)
+- ✅ **Diff tab** (git history per artifact, unified diff rendering)
+- ✅ **TasksBoard convergence** (SSE + in-shell routing)
+- ✅ **Structured `<ask_user>` marker** (deterministic awaiting-input; `?`-heuristic kept as fallback)
 
 ## Follow-ups shipped this session
 
