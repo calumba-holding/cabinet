@@ -1,7 +1,6 @@
 "use client";
 
 import { type Editor } from "@tiptap/react";
-import { Toggle } from "@/components/ui/toggle";
 import { Separator } from "@/components/ui/separator";
 import {
   Bold,
@@ -34,67 +33,188 @@ import {
   ImageIcon,
   Video as VideoIcon,
   Sparkles,
+  ChevronLeft,
+  ChevronRight,
 } from "lucide-react";
 import { useEditorStore } from "@/stores/editor-store";
-import { useState, useRef, useEffect } from "react";
+import { useCallback, useEffect, useRef, useState } from "react";
 import { ColorPalette } from "./color-palette";
 import { TEXT_COLORS, HIGHLIGHT_COLORS } from "./extensions/color-highlight";
 import { MediaPopover, type MediaKind } from "./media-popover";
 import { EmbedPopover } from "./embed-popover";
+import { LinkPopover } from "./link-popover";
 import { cn } from "@/lib/utils";
 
 interface EditorToolbarProps {
   editor: Editor | null;
 }
 
-type Popover = null | "color" | "highlight";
-type MediaPop =
+type PopoverKind =
   | null
-  | { type: "media"; kind: MediaKind }
-  | { type: "embed" };
+  | { type: "color"; anchor: { top: number; left: number }; range: { from: number; to: number } }
+  | { type: "highlight"; anchor: { top: number; left: number }; range: { from: number; to: number } }
+  | { type: "link"; anchor: { top: number; left: number }; range: { from: number; to: number }; existing: string }
+  | { type: "media"; kind: MediaKind; anchor: { top: number; left: number } }
+  | { type: "embed"; anchor: { top: number; left: number } };
+
+interface ToolButtonProps {
+  label: string;
+  icon: React.ComponentType<{ className?: string }>;
+  active?: boolean;
+  disabled?: boolean;
+  style?: React.CSSProperties;
+  onAction: (event: React.MouseEvent<HTMLButtonElement>) => void;
+}
+
+/**
+ * Plain toolbar button that preserves the editor selection via mousedown
+ * preventDefault, then invokes the action on click.
+ */
+function ToolButton({ label, icon: Icon, active, disabled, style, onAction }: ToolButtonProps) {
+  return (
+    <button
+      type="button"
+      aria-label={label}
+      title={label}
+      disabled={disabled}
+      style={style}
+      onMouseDown={(e) => {
+        e.preventDefault();
+      }}
+      onClick={(e) => {
+        e.preventDefault();
+        onAction(e);
+      }}
+      className={cn(
+        "h-8 w-8 shrink-0 inline-flex items-center justify-center rounded-md text-foreground/80 hover:bg-accent transition-colors disabled:opacity-40",
+        active && "bg-accent text-foreground"
+      )}
+    >
+      <Icon className="h-4 w-4" />
+    </button>
+  );
+}
 
 export function EditorToolbar({ editor }: EditorToolbarProps) {
   const frontmatter = useEditorStore((s) => s.frontmatter);
   const updateFrontmatter = useEditorStore((s) => s.updateFrontmatter);
   const pagePath = useEditorStore((s) => s.currentPath);
   const isRtl = frontmatter?.dir === "rtl";
-  const [popover, setPopover] = useState<Popover>(null);
-  const [mediaPop, setMediaPop] = useState<MediaPop>(null);
-  const [mediaAnchor, setMediaAnchor] = useState<{ top: number; left: number } | null>(null);
-  const popRef = useRef<HTMLDivElement | null>(null);
+
+  const [popover, setPopover] = useState<PopoverKind>(null);
+  const scrollRef = useRef<HTMLDivElement | null>(null);
+  const [canScrollLeft, setCanScrollLeft] = useState(false);
+  const [canScrollRight, setCanScrollRight] = useState(false);
+
+  const updateScrollState = useCallback(() => {
+    const el = scrollRef.current;
+    if (!el) return;
+    setCanScrollLeft(el.scrollLeft > 4);
+    setCanScrollRight(el.scrollLeft + el.clientWidth < el.scrollWidth - 4);
+  }, []);
 
   useEffect(() => {
-    if (!popover) return;
-    const handle = (e: MouseEvent) => {
-      if (popRef.current && !popRef.current.contains(e.target as Node)) setPopover(null);
+    updateScrollState();
+    const el = scrollRef.current;
+    if (!el) return;
+    const onResize = () => updateScrollState();
+    window.addEventListener("resize", onResize);
+    el.addEventListener("scroll", updateScrollState);
+    return () => {
+      window.removeEventListener("resize", onResize);
+      el.removeEventListener("scroll", updateScrollState);
     };
-    window.addEventListener("mousedown", handle);
-    return () => window.removeEventListener("mousedown", handle);
-  }, [popover]);
+  }, [updateScrollState]);
+
+  // Translate vertical wheel to horizontal scroll
+  const onWheel = (e: React.WheelEvent<HTMLDivElement>) => {
+    const el = scrollRef.current;
+    if (!el) return;
+    // Only intercept vertical deltas; respect native horizontal wheel devices
+    if (Math.abs(e.deltaY) > Math.abs(e.deltaX)) {
+      el.scrollLeft += e.deltaY;
+    }
+  };
+
+  const scrollBy = (dir: -1 | 1) => {
+    const el = scrollRef.current;
+    if (!el) return;
+    el.scrollBy({ left: dir * Math.max(160, el.clientWidth * 0.6), behavior: "smooth" });
+  };
 
   if (!editor) return null;
 
   const currentColor = editor.getAttributes("textStyle")?.color ?? null;
   const currentHighlight = editor.getAttributes("highlight")?.color ?? null;
 
-  const setLink = () => {
-    const existing = editor.getAttributes("link")?.href ?? "";
-    const url = window.prompt("URL:", existing);
-    if (url === null) return;
-    if (url === "") editor.chain().focus().unsetLink().run();
-    else editor.chain().focus().extendMarkRange("link").setLink({ href: url }).run();
+  const captureRange = () => {
+    const { from, to } = editor.state.selection;
+    return { from, to };
   };
 
-  const openMediaFromButton = (
+  const applyToRange = (range: { from: number; to: number }, run: () => void) => {
+    editor.chain().focus().setTextSelection(range).run();
+    run();
+  };
+
+  const openPopoverFromButton = (
     e: React.MouseEvent<HTMLElement>,
-    next: NonNullable<MediaPop>
+    build: (anchor: { top: number; left: number }, range: { from: number; to: number }) => PopoverKind
   ) => {
     const btn = e.currentTarget.getBoundingClientRect();
-    setMediaAnchor({ top: btn.bottom + 6, left: btn.left });
-    setMediaPop(next);
+    const anchor = { top: btn.bottom + 6, left: btn.left };
+    const range = captureRange();
+    setPopover(build(anchor, range));
   };
 
-  const insertMedia = (kind: MediaKind, payload: { url: string; alt?: string; mimeType?: string }) => {
+  const toggleLink = (e: React.MouseEvent<HTMLButtonElement>) => {
+    const existing = editor.getAttributes("link")?.href ?? "";
+    openPopoverFromButton(e, (anchor, range) => ({
+      type: "link",
+      anchor,
+      range,
+      existing,
+    }));
+  };
+
+  const applyColor = (v: string | null) => {
+    if (popover?.type !== "color") return;
+    applyToRange(popover.range, () => {
+      if (v == null) editor.chain().focus().unsetColor().run();
+      else editor.chain().focus().setColor(v).run();
+    });
+    setPopover(null);
+  };
+
+  const applyHighlight = (v: string | null) => {
+    if (popover?.type !== "highlight") return;
+    applyToRange(popover.range, () => {
+      if (v == null) editor.chain().focus().unsetHighlight().run();
+      else editor.chain().focus().setHighlight({ color: v }).run();
+    });
+    setPopover(null);
+  };
+
+  const applyLink = (url: string) => {
+    if (popover?.type !== "link") return;
+    applyToRange(popover.range, () => {
+      editor.chain().focus().extendMarkRange("link").setLink({ href: url }).run();
+    });
+    setPopover(null);
+  };
+
+  const removeLink = () => {
+    if (popover?.type !== "link") return;
+    applyToRange(popover.range, () => {
+      editor.chain().focus().unsetLink().run();
+    });
+    setPopover(null);
+  };
+
+  const insertMedia = (
+    kind: MediaKind,
+    payload: { url: string; alt?: string; mimeType?: string }
+  ) => {
     const { url, alt, mimeType } = payload;
     const type = mimeType ?? "";
     const isImage = kind === "image" || type.startsWith("image/") || /\.(png|jpe?g|gif|webp|svg|avif)(\?|$)/i.test(url);
@@ -109,25 +229,25 @@ export function EditorToolbar({ editor }: EditorToolbarProps) {
     } else {
       editor.chain().focus().insertContent(`<a href="${url}">${alt ?? url}</a>`).run();
     }
-    setMediaPop(null);
+    setPopover(null);
   };
 
   const insertEmbed = (url: string) => {
     editor.commands.setEmbed({ url });
-    setMediaPop(null);
+    setPopover(null);
   };
 
-  type Item =
+  type ButtonSpec =
     | { separator: true }
     | {
         icon: React.ComponentType<{ className?: string }>;
-        action: () => void;
+        action: (e: React.MouseEvent<HTMLButtonElement>) => void;
         isActive: boolean;
         label: string;
         style?: React.CSSProperties;
       };
 
-  const items: Item[] = [
+  const items: ButtonSpec[] = [
     { icon: Heading1, action: () => editor.chain().focus().toggleHeading({ level: 1 }).run(), isActive: editor.isActive("heading", { level: 1 }), label: "Heading 1" },
     { icon: Heading2, action: () => editor.chain().focus().toggleHeading({ level: 2 }).run(), isActive: editor.isActive("heading", { level: 2 }), label: "Heading 2" },
     { icon: Heading3, action: () => editor.chain().focus().toggleHeading({ level: 3 }).run(), isActive: editor.isActive("heading", { level: 3 }), label: "Heading 3" },
@@ -136,17 +256,33 @@ export function EditorToolbar({ editor }: EditorToolbarProps) {
     { icon: Italic, action: () => editor.chain().focus().toggleItalic().run(), isActive: editor.isActive("italic"), label: "Italic" },
     { icon: UnderlineIcon, action: () => editor.chain().focus().toggleUnderline().run(), isActive: editor.isActive("underline"), label: "Underline" },
     { icon: Strikethrough, action: () => editor.chain().focus().toggleStrike().run(), isActive: editor.isActive("strike"), label: "Strikethrough" },
-    { icon: Code, action: () => editor.chain().focus().toggleCode().run(), isActive: editor.isActive("code"), label: "Inline Code" },
-    { icon: LinkIcon, action: setLink, isActive: editor.isActive("link"), label: "Link" },
+    { icon: Code, action: () => editor.chain().focus().toggleCode().run(), isActive: editor.isActive("code"), label: "Inline code" },
+    { icon: LinkIcon, action: toggleLink, isActive: editor.isActive("link"), label: "Link" },
+    {
+      icon: Baseline,
+      action: (e) =>
+        openPopoverFromButton(e, (anchor, range) => ({ type: "color", anchor, range })),
+      isActive: currentColor != null,
+      label: "Text color",
+      style: currentColor ? { color: currentColor } : undefined,
+    },
+    {
+      icon: Highlighter,
+      action: (e) =>
+        openPopoverFromButton(e, (anchor, range) => ({ type: "highlight", anchor, range })),
+      isActive: currentHighlight != null || editor.isActive("highlight"),
+      label: "Highlight",
+      style: currentHighlight ? { backgroundColor: currentHighlight } : undefined,
+    },
     { separator: true },
     { icon: SuperIcon, action: () => editor.chain().focus().toggleSuperscript().run(), isActive: editor.isActive("superscript"), label: "Superscript" },
     { icon: SubIcon, action: () => editor.chain().focus().toggleSubscript().run(), isActive: editor.isActive("subscript"), label: "Subscript" },
     { separator: true },
-    { icon: List, action: () => editor.chain().focus().toggleBulletList().run(), isActive: editor.isActive("bulletList"), label: "Bullet List" },
-    { icon: ListOrdered, action: () => editor.chain().focus().toggleOrderedList().run(), isActive: editor.isActive("orderedList"), label: "Ordered List" },
+    { icon: List, action: () => editor.chain().focus().toggleBulletList().run(), isActive: editor.isActive("bulletList"), label: "Bullet list" },
+    { icon: ListOrdered, action: () => editor.chain().focus().toggleOrderedList().run(), isActive: editor.isActive("orderedList"), label: "Ordered list" },
     { icon: Quote, action: () => editor.chain().focus().toggleBlockquote().run(), isActive: editor.isActive("blockquote"), label: "Blockquote" },
     { icon: CheckSquare, action: () => editor.chain().focus().toggleTaskList().run(), isActive: editor.isActive("taskList"), label: "Checklist" },
-    { icon: FileCode, action: () => editor.chain().focus().toggleCodeBlock().run(), isActive: editor.isActive("codeBlock"), label: "Code Block" },
+    { icon: FileCode, action: () => editor.chain().focus().toggleCodeBlock().run(), isActive: editor.isActive("codeBlock"), label: "Code block" },
     { icon: Minus, action: () => editor.chain().focus().setHorizontalRule().run(), isActive: false, label: "Divider" },
     { separator: true },
     { icon: AlignLeft, action: () => editor.chain().focus().setTextAlign("left").run(), isActive: editor.isActive({ textAlign: "left" }), label: "Align left" },
@@ -154,151 +290,186 @@ export function EditorToolbar({ editor }: EditorToolbarProps) {
     { icon: AlignRight, action: () => editor.chain().focus().setTextAlign("right").run(), isActive: editor.isActive({ textAlign: "right" }), label: "Align right" },
     { icon: AlignJustify, action: () => editor.chain().focus().setTextAlign("justify").run(), isActive: editor.isActive({ textAlign: "justify" }), label: "Justify" },
     { separator: true },
+    {
+      icon: ImageIcon,
+      action: (e) =>
+        openPopoverFromButton(e, (anchor) => ({ type: "media", kind: "image", anchor })),
+      isActive: false,
+      label: "Insert image (upload, URL, or paste/drop)",
+    },
+    {
+      icon: VideoIcon,
+      action: (e) =>
+        openPopoverFromButton(e, (anchor) => ({ type: "media", kind: "video", anchor })),
+      isActive: false,
+      label: "Insert video",
+    },
+    {
+      icon: Sparkles,
+      action: (e) => openPopoverFromButton(e, (anchor) => ({ type: "embed", anchor })),
+      isActive: false,
+      label: "Embed — YouTube, X, Vimeo, Loom, TikTok, Spotify…",
+    },
+    { separator: true },
     { icon: Undo, action: () => editor.chain().focus().undo().run(), isActive: false, label: "Undo" },
     { icon: Redo, action: () => editor.chain().focus().redo().run(), isActive: false, label: "Redo" },
     { separator: true },
-    { icon: isRtl ? PilcrowLeft : PilcrowRight, action: () => updateFrontmatter({ dir: isRtl ? undefined : "rtl" }), isActive: isRtl, label: isRtl ? "Switch to LTR" : "Switch to RTL" },
+    {
+      icon: isRtl ? PilcrowLeft : PilcrowRight,
+      action: () => updateFrontmatter({ dir: isRtl ? undefined : "rtl" }),
+      isActive: isRtl,
+      label: isRtl ? "Switch to LTR" : "Switch to RTL",
+    },
   ];
 
   return (
     <>
-    <div className="flex items-center gap-0.5 border-b border-border px-2 py-1 bg-background/50 overflow-x-auto scrollbar-none relative">
-      {items.map((item, i) => {
-        if ("separator" in item) {
-          return <Separator key={i} orientation="vertical" className="mx-1 h-6" />;
-        }
-        const Icon = item.icon;
-        return (
-          <Toggle
-            key={i}
-            size="sm"
-            pressed={item.isActive}
-            onPressedChange={() => item.action()}
-            aria-label={item.label}
-            title={item.label}
-            className="h-8 w-8 p-0"
-            style={item.style}
+      <div className="relative border-b border-border bg-background/50">
+        {/* Scroll indicator arrows */}
+        {canScrollLeft && (
+          <button
+            type="button"
+            aria-label="Scroll toolbar left"
+            onMouseDown={(e) => e.preventDefault()}
+            onClick={() => scrollBy(-1)}
+            className="absolute left-0 top-0 bottom-0 w-6 z-10 flex items-center justify-start pl-0.5 bg-gradient-to-r from-background via-background/80 to-transparent text-muted-foreground hover:text-foreground transition-colors"
           >
-            <Icon className="h-4 w-4" />
-          </Toggle>
-        );
-      })}
-      {/* Color picker button */}
-      <div className="relative">
-        <Toggle
-          size="sm"
-          pressed={currentColor != null}
-          onPressedChange={() => setPopover((p) => (p === "color" ? null : "color"))}
-          aria-label="Text color"
-          title="Text color"
-          className={cn("h-8 w-8 p-0")}
-          style={currentColor ? { color: currentColor } : undefined}
-        >
-          <Baseline className="h-4 w-4" />
-        </Toggle>
-        {popover === "color" && (
-          <div ref={popRef} className="absolute top-full left-0 mt-1 z-50 bg-popover border border-border rounded-md shadow-lg">
-            <ColorPalette
-              title="Text color"
-              palette={TEXT_COLORS}
-              current={currentColor}
-              swatchType="text"
-              onSelect={(v) => {
-                if (v == null) editor.chain().focus().unsetColor().run();
-                else editor.chain().focus().setColor(v).run();
-                setPopover(null);
-              }}
-            />
-          </div>
+            <ChevronLeft className="h-4 w-4" />
+          </button>
         )}
-      </div>
-      {/* Highlight picker button */}
-      <div className="relative">
-        <Toggle
-          size="sm"
-          pressed={currentHighlight != null || editor.isActive("highlight")}
-          onPressedChange={() => setPopover((p) => (p === "highlight" ? null : "highlight"))}
-          aria-label="Highlight"
-          title="Highlight"
-          className={cn("h-8 w-8 p-0")}
-          style={currentHighlight ? { backgroundColor: currentHighlight } : undefined}
-        >
-          <Highlighter className="h-4 w-4" />
-        </Toggle>
-        {popover === "highlight" && (
-          <div ref={popRef} className="absolute top-full left-0 mt-1 z-50 bg-popover border border-border rounded-md shadow-lg">
-            <ColorPalette
-              title="Background"
-              palette={HIGHLIGHT_COLORS}
-              current={currentHighlight}
-              swatchType="background"
-              onSelect={(v) => {
-                if (v == null) editor.chain().focus().unsetHighlight().run();
-                else editor.chain().focus().setHighlight({ color: v }).run();
-                setPopover(null);
-              }}
-            />
-          </div>
+        {canScrollRight && (
+          <button
+            type="button"
+            aria-label="Scroll toolbar right"
+            onMouseDown={(e) => e.preventDefault()}
+            onClick={() => scrollBy(1)}
+            className="absolute right-0 top-0 bottom-0 w-6 z-10 flex items-center justify-end pr-0.5 bg-gradient-to-l from-background via-background/80 to-transparent text-muted-foreground hover:text-foreground transition-colors"
+          >
+            <ChevronRight className="h-4 w-4" />
+          </button>
         )}
+        <div
+          ref={scrollRef}
+          onWheel={onWheel}
+          className="flex items-center gap-0.5 px-2 py-1 overflow-x-auto overflow-y-hidden scrollbar-none"
+        >
+          {items.map((item, i) => {
+            if ("separator" in item) {
+              return (
+                <Separator key={i} orientation="vertical" className="mx-1 h-6 shrink-0" />
+              );
+            }
+            return (
+              <ToolButton
+                key={i}
+                label={item.label}
+                icon={item.icon}
+                active={item.isActive}
+                style={item.style}
+                onAction={item.action}
+              />
+            );
+          })}
+        </div>
       </div>
 
-      <Separator orientation="vertical" className="mx-1 h-6" />
+      {popover && (popover.type === "color" || popover.type === "highlight") && (
+        <div
+          data-editor-popover="true"
+          style={{ position: "fixed", top: popover.anchor.top, left: popover.anchor.left, zIndex: 60 }}
+        >
+          <div className="bg-popover border border-border rounded-md shadow-lg">
+            {popover.type === "color" ? (
+              <ColorPalette
+                title="Text color"
+                palette={TEXT_COLORS}
+                current={currentColor}
+                swatchType="text"
+                onSelect={applyColor}
+              />
+            ) : (
+              <ColorPalette
+                title="Background"
+                palette={HIGHLIGHT_COLORS}
+                current={currentHighlight}
+                swatchType="background"
+                onSelect={applyHighlight}
+              />
+            )}
+          </div>
+        </div>
+      )}
 
-      {/* Image / Video / Embed insert buttons */}
-      <Toggle
-        size="sm"
-        pressed={false}
-        onPressedChange={() => {}}
-        onClick={(e) => openMediaFromButton(e, { type: "media", kind: "image" })}
-        aria-label="Insert image"
-        title="Insert image (upload, URL, or paste/drop)"
-        className="h-8 w-8 p-0"
-      >
-        <ImageIcon className="h-4 w-4" />
-      </Toggle>
-      <Toggle
-        size="sm"
-        pressed={false}
-        onPressedChange={() => {}}
-        onClick={(e) => openMediaFromButton(e, { type: "media", kind: "video" })}
-        aria-label="Insert video"
-        title="Insert video (upload or URL)"
-        className="h-8 w-8 p-0"
-      >
-        <VideoIcon className="h-4 w-4" />
-      </Toggle>
-      <Toggle
-        size="sm"
-        pressed={false}
-        onPressedChange={() => {}}
-        onClick={(e) => openMediaFromButton(e, { type: "embed" })}
-        aria-label="Embed"
-        title="Embed — YouTube, X, Vimeo, Loom, TikTok, Spotify…"
-        className="h-8 w-8 p-0"
-      >
-        <Sparkles className="h-4 w-4" />
-      </Toggle>
-    </div>
-    {mediaPop && mediaAnchor && (
-      <div style={{ position: "fixed", top: mediaAnchor.top, left: mediaAnchor.left, zIndex: 60 }}>
-        {mediaPop.type === "media" && pagePath && (
+      {popover?.type === "link" && (
+        <div
+          data-editor-popover="true"
+          style={{ position: "fixed", top: popover.anchor.top, left: popover.anchor.left, zIndex: 60 }}
+        >
+          <LinkPopover
+            anchor={{ top: 0, left: 0 }}
+            initialUrl={popover.existing}
+            onCancel={() => setPopover(null)}
+            onApply={applyLink}
+            onRemove={popover.existing ? removeLink : undefined}
+          />
+        </div>
+      )}
+
+      {popover?.type === "media" && pagePath && (
+        <div
+          data-editor-popover="true"
+          style={{ position: "fixed", top: popover.anchor.top, left: popover.anchor.left, zIndex: 60 }}
+        >
           <MediaPopover
-            kind={mediaPop.kind}
+            kind={popover.kind}
             pagePath={pagePath}
             anchor={{ top: 0, left: 0 }}
-            onCancel={() => setMediaPop(null)}
-            onInsert={(payload) => insertMedia(mediaPop.kind, payload)}
+            onCancel={() => setPopover(null)}
+            onInsert={(payload) => insertMedia(popover.kind, payload)}
           />
-        )}
-        {mediaPop.type === "embed" && (
+        </div>
+      )}
+
+      {popover?.type === "embed" && (
+        <div
+          data-editor-popover="true"
+          style={{ position: "fixed", top: popover.anchor.top, left: popover.anchor.left, zIndex: 60 }}
+        >
           <EmbedPopover
             anchor={{ top: 0, left: 0 }}
-            onCancel={() => setMediaPop(null)}
+            onCancel={() => setPopover(null)}
             onInsert={insertEmbed}
           />
-        )}
-      </div>
-    )}
+        </div>
+      )}
+
+      {popover && <ClickOutsideClose onClose={() => setPopover(null)} />}
     </>
   );
+}
+
+function ClickOutsideClose({ onClose }: { onClose: () => void }) {
+  useEffect(() => {
+    // Give the opening click a tick to settle before listening.
+    const mount = window.setTimeout(() => {
+      const handle = (e: MouseEvent) => {
+        const target = e.target as HTMLElement | null;
+        if (target?.closest('[data-editor-popover="true"]')) return;
+        onClose();
+      };
+      window.addEventListener("mousedown", handle);
+      // Return cleanup via outer closure: store it on element
+      (window as unknown as { __cabinetPopClose?: () => void }).__cabinetPopClose = () =>
+        window.removeEventListener("mousedown", handle);
+    }, 10);
+    return () => {
+      window.clearTimeout(mount);
+      const w = window as unknown as { __cabinetPopClose?: () => void };
+      if (w.__cabinetPopClose) {
+        w.__cabinetPopClose();
+        w.__cabinetPopClose = undefined;
+      }
+    };
+  }, [onClose]);
+  return null;
 }

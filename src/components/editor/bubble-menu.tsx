@@ -18,31 +18,39 @@ import {
   Superscript as SuperIcon,
   Subscript as SubIcon,
 } from "lucide-react";
-import { useState, useRef, useEffect } from "react";
+import { useState, useEffect } from "react";
 import { ColorPalette } from "./color-palette";
 import { TEXT_COLORS, HIGHLIGHT_COLORS } from "./extensions/color-highlight";
+import { LinkPopover } from "./link-popover";
 import { cn } from "@/lib/utils";
 
 interface Props {
   editor: Editor | null;
 }
 
-type OpenPopover = null | "color" | "highlight" | "align";
+type OpenPopover =
+  | null
+  | { type: "color"; range: { from: number; to: number } }
+  | { type: "highlight"; range: { from: number; to: number } }
+  | { type: "align"; range: { from: number; to: number } }
+  | { type: "link"; range: { from: number; to: number }; existing: string; anchor: { top: number; left: number } };
 
 export function EditorBubbleMenu({ editor }: Props) {
-  const [open, setOpen] = useState<OpenPopover>(null);
-  const popRef = useRef<HTMLDivElement | null>(null);
+  const [popover, setPopover] = useState<OpenPopover>(null);
 
   useEffect(() => {
-    if (!open) return;
+    if (!popover) return;
     const handle = (e: MouseEvent) => {
-      if (popRef.current && !popRef.current.contains(e.target as Node)) {
-        setOpen(null);
-      }
+      const target = e.target as HTMLElement | null;
+      if (target?.closest("[data-bubble-popover='true']")) return;
+      setPopover(null);
     };
-    window.addEventListener("mousedown", handle);
-    return () => window.removeEventListener("mousedown", handle);
-  }, [open]);
+    const t = window.setTimeout(() => window.addEventListener("mousedown", handle), 10);
+    return () => {
+      window.clearTimeout(t);
+      window.removeEventListener("mousedown", handle);
+    };
+  }, [popover]);
 
   if (!editor) return null;
 
@@ -55,184 +63,258 @@ export function EditorBubbleMenu({ editor }: Props) {
   const currentColor = editor.getAttributes("textStyle")?.color ?? null;
   const currentHighlight = editor.getAttributes("highlight")?.color ?? null;
 
-  const setLink = () => {
-    const existing = editor.getAttributes("link")?.href ?? "";
-    const url = window.prompt("URL:", existing);
-    if (url === null) return;
-    if (url === "") {
-      editor.chain().focus().unsetLink().run();
-      return;
-    }
-    editor.chain().focus().extendMarkRange("link").setLink({ href: url }).run();
+  const captureRange = () => {
+    const { from, to } = editor.state.selection;
+    return { from, to };
   };
 
-  const setAlign = (align: "left" | "center" | "right" | "justify") => {
+  const restore = (range: { from: number; to: number }) =>
+    editor.chain().focus().setTextSelection(range).run();
+
+  const toggleMark = (run: () => void) => (e: React.MouseEvent<HTMLButtonElement>) => {
+    e.preventDefault();
+    run();
+  };
+
+  const openColor = (e: React.MouseEvent<HTMLButtonElement>) => {
+    e.preventDefault();
+    setPopover({ type: "color", range: captureRange() });
+  };
+  const openHighlight = (e: React.MouseEvent<HTMLButtonElement>) => {
+    e.preventDefault();
+    setPopover({ type: "highlight", range: captureRange() });
+  };
+  const openAlign = (e: React.MouseEvent<HTMLButtonElement>) => {
+    e.preventDefault();
+    setPopover({ type: "align", range: captureRange() });
+  };
+  const openLink = (e: React.MouseEvent<HTMLButtonElement>) => {
+    e.preventDefault();
+    const existing = editor.getAttributes("link")?.href ?? "";
+    const btnRect = e.currentTarget.getBoundingClientRect();
+    setPopover({
+      type: "link",
+      range: captureRange(),
+      existing,
+      anchor: { top: btnRect.bottom + 6, left: btnRect.left },
+    });
+  };
+
+  const applyColor = (v: string | null) => {
+    if (popover?.type !== "color") return;
+    restore(popover.range);
+    if (v == null) editor.chain().focus().unsetColor().run();
+    else editor.chain().focus().setColor(v).run();
+    setPopover(null);
+  };
+
+  const applyHighlight = (v: string | null) => {
+    if (popover?.type !== "highlight") return;
+    restore(popover.range);
+    if (v == null) editor.chain().focus().unsetHighlight().run();
+    else editor.chain().focus().setHighlight({ color: v }).run();
+    setPopover(null);
+  };
+
+  const applyAlign = (align: "left" | "center" | "right" | "justify") => {
+    if (popover?.type !== "align") return;
+    restore(popover.range);
     editor.chain().focus().setTextAlign(align).run();
-    setOpen(null);
+    setPopover(null);
+  };
+
+  const applyLink = (url: string) => {
+    if (popover?.type !== "link") return;
+    restore(popover.range);
+    editor.chain().focus().extendMarkRange("link").setLink({ href: url }).run();
+    setPopover(null);
+  };
+
+  const removeLink = () => {
+    if (popover?.type !== "link") return;
+    restore(popover.range);
+    editor.chain().focus().unsetLink().run();
+    setPopover(null);
   };
 
   return (
-    <BubbleMenu
-      editor={editor}
-      options={{ placement: "top", offset: 8 }}
-      className="flex items-center gap-0.5 px-1 py-1 bg-popover border border-border rounded-md shadow-lg"
-    >
-      <button
-        type="button"
-        className={btn(editor.isActive("bold"))}
-        onClick={() => editor.chain().focus().toggleBold().run()}
-        aria-label="Bold"
+    <>
+      <BubbleMenu
+        editor={editor}
+        options={{ placement: "top", offset: 8 }}
+        className="flex items-center gap-0.5 px-1 py-1 bg-popover border border-border rounded-md shadow-lg"
       >
-        <Bold className="w-3.5 h-3.5" />
-      </button>
-      <button
-        type="button"
-        className={btn(editor.isActive("italic"))}
-        onClick={() => editor.chain().focus().toggleItalic().run()}
-        aria-label="Italic"
-      >
-        <Italic className="w-3.5 h-3.5" />
-      </button>
-      <button
-        type="button"
-        className={btn(editor.isActive("underline"))}
-        onClick={() => editor.chain().focus().toggleUnderline().run()}
-        aria-label="Underline"
-      >
-        <UnderlineIcon className="w-3.5 h-3.5" />
-      </button>
-      <button
-        type="button"
-        className={btn(editor.isActive("strike"))}
-        onClick={() => editor.chain().focus().toggleStrike().run()}
-        aria-label="Strikethrough"
-      >
-        <Strikethrough className="w-3.5 h-3.5" />
-      </button>
-      <button
-        type="button"
-        className={btn(editor.isActive("code"))}
-        onClick={() => editor.chain().focus().toggleCode().run()}
-        aria-label="Inline code"
-      >
-        <Code className="w-3.5 h-3.5" />
-      </button>
-      <div className="w-px h-5 bg-border mx-1" />
-      <button
-        type="button"
-        className={btn(editor.isActive("superscript"))}
-        onClick={() => editor.chain().focus().toggleSuperscript().run()}
-        aria-label="Superscript"
-      >
-        <SuperIcon className="w-3.5 h-3.5" />
-      </button>
-      <button
-        type="button"
-        className={btn(editor.isActive("subscript"))}
-        onClick={() => editor.chain().focus().toggleSubscript().run()}
-        aria-label="Subscript"
-      >
-        <SubIcon className="w-3.5 h-3.5" />
-      </button>
-      <div className="w-px h-5 bg-border mx-1" />
-      <div className="relative">
         <button
           type="button"
-          className={btn(currentColor != null)}
-          onMouseDown={(e) => {
-            e.preventDefault();
-            setOpen((o) => (o === "color" ? null : "color"));
-          }}
-          aria-label="Text color"
-          style={currentColor ? { color: currentColor } : undefined}
+          className={btn(editor.isActive("bold"))}
+          onMouseDown={(e) => e.preventDefault()}
+          onClick={toggleMark(() => editor.chain().focus().toggleBold().run())}
+          aria-label="Bold"
         >
-          <Baseline className="w-3.5 h-3.5" />
+          <Bold className="w-3.5 h-3.5" />
         </button>
-        {open === "color" && (
-          <div
-            ref={popRef}
-            className="absolute top-full left-0 mt-1 z-50 bg-popover border border-border rounded-md shadow-lg"
-          >
-            <ColorPalette
-              title="Text color"
-              palette={TEXT_COLORS}
-              current={currentColor}
-              swatchType="text"
-              onSelect={(v) => {
-                if (v == null) editor.chain().focus().unsetColor().run();
-                else editor.chain().focus().setColor(v).run();
-                setOpen(null);
-              }}
-            />
-          </div>
-        )}
-      </div>
-      <div className="relative">
         <button
           type="button"
-          className={btn(currentHighlight != null || editor.isActive("highlight"))}
-          onMouseDown={(e) => {
-            e.preventDefault();
-            setOpen((o) => (o === "highlight" ? null : "highlight"));
-          }}
-          aria-label="Highlight"
-          style={currentHighlight ? { backgroundColor: currentHighlight } : undefined}
+          className={btn(editor.isActive("italic"))}
+          onMouseDown={(e) => e.preventDefault()}
+          onClick={toggleMark(() => editor.chain().focus().toggleItalic().run())}
+          aria-label="Italic"
         >
-          <Highlighter className="w-3.5 h-3.5" />
+          <Italic className="w-3.5 h-3.5" />
         </button>
-        {open === "highlight" && (
-          <div
-            ref={popRef}
-            className="absolute top-full left-0 mt-1 z-50 bg-popover border border-border rounded-md shadow-lg"
-          >
-            <ColorPalette
-              title="Background"
-              palette={HIGHLIGHT_COLORS}
-              current={currentHighlight}
-              swatchType="background"
-              onSelect={(v) => {
-                if (v == null) editor.chain().focus().unsetHighlight().run();
-                else editor.chain().focus().setHighlight({ color: v }).run();
-                setOpen(null);
-              }}
-            />
-          </div>
-        )}
-      </div>
-      <div className="w-px h-5 bg-border mx-1" />
-      <button
-        type="button"
-        className={btn(editor.isActive("link"))}
-        onClick={setLink}
-        aria-label="Link"
-      >
-        <LinkIcon className="w-3.5 h-3.5" />
-      </button>
-      <div className="w-px h-5 bg-border mx-1" />
-      <div className="relative">
         <button
           type="button"
-          className={btn(false)}
-          onMouseDown={(e) => {
-            e.preventDefault();
-            setOpen((o) => (o === "align" ? null : "align"));
-          }}
-          aria-label="Align"
+          className={btn(editor.isActive("underline"))}
+          onMouseDown={(e) => e.preventDefault()}
+          onClick={toggleMark(() => editor.chain().focus().toggleUnderline().run())}
+          aria-label="Underline"
         >
-          <AlignLeft className="w-3.5 h-3.5" />
+          <UnderlineIcon className="w-3.5 h-3.5" />
         </button>
-        {open === "align" && (
-          <div
-            ref={popRef}
-            className="absolute top-full left-0 mt-1 z-50 bg-popover border border-border rounded-md shadow-lg p-1 flex gap-0.5"
+        <button
+          type="button"
+          className={btn(editor.isActive("strike"))}
+          onMouseDown={(e) => e.preventDefault()}
+          onClick={toggleMark(() => editor.chain().focus().toggleStrike().run())}
+          aria-label="Strikethrough"
+        >
+          <Strikethrough className="w-3.5 h-3.5" />
+        </button>
+        <button
+          type="button"
+          className={btn(editor.isActive("code"))}
+          onMouseDown={(e) => e.preventDefault()}
+          onClick={toggleMark(() => editor.chain().focus().toggleCode().run())}
+          aria-label="Inline code"
+        >
+          <Code className="w-3.5 h-3.5" />
+        </button>
+        <div className="w-px h-5 bg-border mx-1" />
+        <button
+          type="button"
+          className={btn(editor.isActive("superscript"))}
+          onMouseDown={(e) => e.preventDefault()}
+          onClick={toggleMark(() => editor.chain().focus().toggleSuperscript().run())}
+          aria-label="Superscript"
+        >
+          <SuperIcon className="w-3.5 h-3.5" />
+        </button>
+        <button
+          type="button"
+          className={btn(editor.isActive("subscript"))}
+          onMouseDown={(e) => e.preventDefault()}
+          onClick={toggleMark(() => editor.chain().focus().toggleSubscript().run())}
+          aria-label="Subscript"
+        >
+          <SubIcon className="w-3.5 h-3.5" />
+        </button>
+        <div className="w-px h-5 bg-border mx-1" />
+        <div className="relative">
+          <button
+            type="button"
+            className={btn(currentColor != null)}
+            onMouseDown={(e) => e.preventDefault()}
+            onClick={openColor}
+            aria-label="Text color"
+            style={currentColor ? { color: currentColor } : undefined}
           >
-            <button type="button" className={btn(editor.isActive({ textAlign: "left" }))} onClick={() => setAlign("left")} aria-label="Align left"><AlignLeft className="w-3.5 h-3.5" /></button>
-            <button type="button" className={btn(editor.isActive({ textAlign: "center" }))} onClick={() => setAlign("center")} aria-label="Align center"><AlignCenter className="w-3.5 h-3.5" /></button>
-            <button type="button" className={btn(editor.isActive({ textAlign: "right" }))} onClick={() => setAlign("right")} aria-label="Align right"><AlignRight className="w-3.5 h-3.5" /></button>
-            <button type="button" className={btn(editor.isActive({ textAlign: "justify" }))} onClick={() => setAlign("justify")} aria-label="Justify"><AlignJustify className="w-3.5 h-3.5" /></button>
-          </div>
-        )}
-      </div>
-    </BubbleMenu>
+            <Baseline className="w-3.5 h-3.5" />
+          </button>
+          {popover?.type === "color" && (
+            <div
+              data-bubble-popover="true"
+              className="absolute top-full left-0 mt-1 z-50 bg-popover border border-border rounded-md shadow-lg"
+            >
+              <ColorPalette
+                title="Text color"
+                palette={TEXT_COLORS}
+                current={currentColor}
+                swatchType="text"
+                onSelect={applyColor}
+              />
+            </div>
+          )}
+        </div>
+        <div className="relative">
+          <button
+            type="button"
+            className={btn(currentHighlight != null || editor.isActive("highlight"))}
+            onMouseDown={(e) => e.preventDefault()}
+            onClick={openHighlight}
+            aria-label="Highlight"
+            style={currentHighlight ? { backgroundColor: currentHighlight } : undefined}
+          >
+            <Highlighter className="w-3.5 h-3.5" />
+          </button>
+          {popover?.type === "highlight" && (
+            <div
+              data-bubble-popover="true"
+              className="absolute top-full left-0 mt-1 z-50 bg-popover border border-border rounded-md shadow-lg"
+            >
+              <ColorPalette
+                title="Background"
+                palette={HIGHLIGHT_COLORS}
+                current={currentHighlight}
+                swatchType="background"
+                onSelect={applyHighlight}
+              />
+            </div>
+          )}
+        </div>
+        <div className="w-px h-5 bg-border mx-1" />
+        <button
+          type="button"
+          className={btn(editor.isActive("link"))}
+          onMouseDown={(e) => e.preventDefault()}
+          onClick={openLink}
+          aria-label="Link"
+        >
+          <LinkIcon className="w-3.5 h-3.5" />
+        </button>
+        <div className="w-px h-5 bg-border mx-1" />
+        <div className="relative">
+          <button
+            type="button"
+            className={btn(false)}
+            onMouseDown={(e) => e.preventDefault()}
+            onClick={openAlign}
+            aria-label="Align"
+          >
+            <AlignLeft className="w-3.5 h-3.5" />
+          </button>
+          {popover?.type === "align" && (
+            <div
+              data-bubble-popover="true"
+              className="absolute top-full left-0 mt-1 z-50 bg-popover border border-border rounded-md shadow-lg p-1 flex gap-0.5"
+            >
+              <button type="button" className={btn(editor.isActive({ textAlign: "left" }))} onMouseDown={(e) => e.preventDefault()} onClick={() => applyAlign("left")} aria-label="Align left"><AlignLeft className="w-3.5 h-3.5" /></button>
+              <button type="button" className={btn(editor.isActive({ textAlign: "center" }))} onMouseDown={(e) => e.preventDefault()} onClick={() => applyAlign("center")} aria-label="Align center"><AlignCenter className="w-3.5 h-3.5" /></button>
+              <button type="button" className={btn(editor.isActive({ textAlign: "right" }))} onMouseDown={(e) => e.preventDefault()} onClick={() => applyAlign("right")} aria-label="Align right"><AlignRight className="w-3.5 h-3.5" /></button>
+              <button type="button" className={btn(editor.isActive({ textAlign: "justify" }))} onMouseDown={(e) => e.preventDefault()} onClick={() => applyAlign("justify")} aria-label="Justify"><AlignJustify className="w-3.5 h-3.5" /></button>
+            </div>
+          )}
+        </div>
+      </BubbleMenu>
+
+      {popover?.type === "link" && (
+        <div
+          data-bubble-popover="true"
+          style={{
+            position: "fixed",
+            top: popover.anchor.top,
+            left: popover.anchor.left,
+            zIndex: 60,
+          }}
+        >
+          <LinkPopover
+            anchor={{ top: 0, left: 0 }}
+            initialUrl={popover.existing}
+            onCancel={() => setPopover(null)}
+            onApply={applyLink}
+            onRemove={popover.existing ? removeLink : undefined}
+          />
+        </div>
+      )}
+    </>
   );
 }
