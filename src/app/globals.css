@@ -1,6 +1,7 @@
 @import "tailwindcss";
 @import "tw-animate-css";
 @import "shadcn/tailwind.css";
+@import "katex/dist/katex.min.css";
 @plugin "@tailwindcss/typography";
 
 @custom-variant dark (&:is(.dark *));
@@ -474,6 +475,74 @@ html[data-custom-theme] .font-logo,
 .tiptap .callout-error {
   background: color-mix(in oklch, oklch(0.6 0.2 25) 8%, transparent);
   border-color: oklch(0.6 0.2 25);
+}
+
+/* Resizable image wrapper */
+.tiptap .resizable-image {
+  position: relative;
+}
+.tiptap .resizable-image[data-align="left"] { margin-left: 0; margin-right: auto; }
+.tiptap .resizable-image[data-align="right"] { margin-left: auto; margin-right: 0; }
+.tiptap .resizable-image[data-align="center"] { margin-left: auto; margin-right: auto; }
+
+/* Embed blocks */
+.tiptap [data-embed="true"] {
+  margin: 1rem 0;
+}
+.tiptap [data-embed="true"] iframe {
+  width: 100%;
+  border: 1px solid var(--border);
+  border-radius: 0.5rem;
+}
+.tiptap [data-embed="true"] video {
+  width: 100%;
+  border-radius: 0.5rem;
+  background: black;
+}
+
+/* Drag handle */
+#cabinet-drag-handle {
+  font-family: var(--font-sans);
+}
+#cabinet-drag-handle:active {
+  cursor: grabbing;
+}
+
+/* KaTeX sizing tweaks inside editor */
+.tiptap .katex {
+  font-size: 1em;
+}
+.tiptap [data-type="inline-math"],
+.tiptap [data-type="inlineMath"] {
+  display: inline-block;
+  padding: 0 0.1rem;
+  border-radius: 0.2rem;
+  background: color-mix(in oklch, var(--primary) 6%, transparent);
+  cursor: pointer;
+}
+.tiptap [data-type="inline-math"]:hover,
+.tiptap [data-type="inlineMath"]:hover {
+  background: color-mix(in oklch, var(--primary) 12%, transparent);
+}
+
+/* Text-align utility (TextAlign extension renders inline style attr,
+   but also add a fallback for older content) */
+.tiptap [style*="text-align: center"] { text-align: center; }
+.tiptap [style*="text-align: right"] { text-align: right; }
+.tiptap [style*="text-align: justify"] { text-align: justify; }
+
+/* Emoji-mart picker theming (matches popover) */
+em-emoji-picker {
+  --background-rgb: 255, 255, 255;
+  --border-radius: 0.5rem;
+  height: 340px;
+  max-width: 340px;
+}
+.dark em-emoji-picker {
+  --background-rgb: 32, 32, 32;
+  --rgb-background: 32, 32, 32;
+  --rgb-color: 232, 232, 232;
+  --rgb-input: 45, 45, 45;
 }
 
 /* Code syntax highlighting */

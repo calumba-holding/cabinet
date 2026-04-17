@@ -6,11 +6,13 @@ import { Sparkles, Code2 } from "lucide-react";
 import { editorExtensions } from "./extensions";
 import { EditorToolbar } from "./editor-toolbar";
 import { SlashCommands } from "./slash-commands";
+import { EditorBubbleMenu } from "./bubble-menu";
 import { useEditorStore } from "@/stores/editor-store";
 import { useAIPanelStore } from "@/stores/ai-panel-store";
 import { useTreeStore } from "@/stores/tree-store";
 import { markdownToHtml } from "@/lib/markdown/to-html";
 import { htmlToMarkdown } from "@/lib/markdown/to-markdown";
+import { detectEmbed } from "@/lib/embeds/detect";
 import type { TreeNode } from "@/types";
 
 async function uploadFile(pagePath: string, file: File): Promise<string | null> {
@@ -191,21 +193,56 @@ export function KBEditor() {
         },
       handlePaste: (_view, event) => {
         const files = event.clipboardData?.files;
-        if (!files || files.length === 0) return false;
-
+        const text = event.clipboardData?.getData("text/plain")?.trim() ?? "";
         const pagePath = useEditorStore.getState().currentPath;
-        if (!pagePath) return false;
 
-        // Handle file paste
-        for (const file of Array.from(files)) {
-          uploadFile(pagePath, file).then((url) => {
-            if (!url || !editor) return;
-            if (file.type.startsWith("image/")) {
-              editor.chain().focus().setImage({ src: url, alt: file.name }).run();
-            }
-          });
+        // 1. File paste → upload then insert appropriate node
+        if (files && files.length > 0 && pagePath) {
+          for (const file of Array.from(files)) {
+            uploadFile(pagePath, file).then((url) => {
+              if (!url || !editor) return;
+              if (file.type.startsWith("image/")) {
+                editor.chain().focus().setImage({ src: url, alt: file.name }).run();
+              } else if (file.type.startsWith("video/")) {
+                editor
+                  .chain()
+                  .focus()
+                  .insertContent({
+                    type: "embed",
+                    attrs: { provider: "video", src: url, originalUrl: url },
+                  })
+                  .run();
+              } else {
+                editor
+                  .chain()
+                  .focus()
+                  .insertContent(`<a href="${url}">${file.name}</a>`)
+                  .run();
+              }
+            });
+          }
+          return true;
         }
-        return true;
+
+        // 2. URL paste — if it's a known embed provider AND the user is pasting
+        //    onto an empty line, auto-embed. Otherwise let the link mark handle it.
+        if (text && /^https?:\/\/\S+$/.test(text) && editor) {
+          const detected = detectEmbed(text);
+          if (
+            detected &&
+            detected.provider !== "iframe" &&
+            detected.provider !== "video"
+          ) {
+            const { $from } = editor.state.selection;
+            const onEmptyLine = $from.parent.textContent.length === 0;
+            if (onEmptyLine) {
+              editor.commands.setEmbed({ url: text });
+              return true;
+            }
+          }
+        }
+
+        return false;
       },
       handleDrop: (_view, event) => {
         const files = event.dataTransfer?.files;
@@ -220,6 +257,21 @@ export function KBEditor() {
             if (!url || !editor) return;
             if (file.type.startsWith("image/")) {
               editor.chain().focus().setImage({ src: url, alt: file.name }).run();
+            } else if (file.type.startsWith("video/")) {
+              editor
+                .chain()
+                .focus()
+                .insertContent({
+                  type: "embed",
+                  attrs: { provider: "video", src: url, originalUrl: url },
+                })
+                .run();
+            } else {
+              editor
+                .chain()
+                .focus()
+                .insertContent(`<a href="${url}">${file.name}</a>`)
+                .run();
             }
           });
         }
@@ -319,6 +371,7 @@ export function KBEditor() {
       ) : (
         <div className="flex-1 overflow-y-auto relative" dir={isRtl ? "rtl" : undefined}>
           <EditorContent editor={editor} />
+          <EditorBubbleMenu editor={editor} />
           <SlashCommands editor={editor} />
 
           {/* AI Edit Prompt */}

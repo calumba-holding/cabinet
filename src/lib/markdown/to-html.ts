@@ -47,21 +47,24 @@ function fixTaskListHtml(html: string): string {
 /**
  * Rewrite relative URLs (./file.pdf, ./image.png) to /api/assets/{pagePath}/file
  * and convert PDF links to inline embedded viewers.
+ * Applies to href, src, and data-src attributes (the last is used by embed blocks).
  */
 function resolveRelativeUrls(html: string, pagePath: string): string {
-  // Get the directory path (strip trailing filename if any)
   const dirPath = pagePath;
 
-  // Rewrite relative hrefs: href="./file.pdf" → href="/api/assets/dir/file.pdf"
   html = html.replace(
     /href="\.\/([^"]+)"/g,
     (_match, file: string) => `href="/api/assets/${dirPath}/${file}"`
   );
 
-  // Rewrite relative src: src="./image.png" → src="/api/assets/dir/image.png"
   html = html.replace(
     /src="\.\/([^"]+)"/g,
     (_match, file: string) => `src="/api/assets/${dirPath}/${file}"`
+  );
+
+  html = html.replace(
+    /data-src="\.\/([^"]+)"/g,
+    (_match, file: string) => `data-src="/api/assets/${dirPath}/${file}"`
   );
 
   // Mark PDF links with a data attribute so the editor can handle them

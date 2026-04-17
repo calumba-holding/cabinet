@@ -1,6 +1,5 @@
 import StarterKit from "@tiptap/starter-kit";
 import Placeholder from "@tiptap/extension-placeholder";
-import Image from "@tiptap/extension-image";
 import { Table } from "@tiptap/extension-table";
 import { TableRow } from "@tiptap/extension-table-row";
 import { TableCell } from "@tiptap/extension-table-cell";
@@ -12,6 +11,11 @@ import { common, createLowlight } from "lowlight";
 import Link from "@tiptap/extension-link";
 import { WikiLink } from "./wiki-link-extension";
 import { CalloutExtension } from "./callout-extension";
+import { ResizableImage } from "./extensions/resizable-image";
+import { EmbedExtension } from "./extensions/embed-extension";
+import { colorAndStyleExtensions } from "./extensions/color-highlight";
+import { DragHandle } from "./extensions/drag-handle";
+import { CabinetMath } from "./extensions/math-extension";
 
 const lowlight = createLowlight(common);
 
@@ -29,7 +33,7 @@ export const editorExtensions = [
   Placeholder.configure({
     placeholder: "Start writing, or press '/' for commands...",
   }),
-  Image.configure({
+  ResizableImage.configure({
     HTMLAttributes: {
       class: "rounded-lg max-w-full",
     },
@@ -67,6 +71,10 @@ export const editorExtensions = [
       ];
     },
   }),
+  ...colorAndStyleExtensions,
+  EmbedExtension,
+  DragHandle,
+  CabinetMath,
   WikiLink,
   CalloutExtension,
 ];
