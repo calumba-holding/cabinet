@@ -171,11 +171,20 @@ d399c4c  feat(tasks): artifact rows as KB page cards                            
 
 ---
 
-## Follow-ups (not blocking ship)
+## Follow-ups shipped after v2
 
-- **Runtime picker on `/tasks/new`** — let users override the default (`claude-opus-4-7`) with a model + effort dropdown.
-- **`/compact` button wiring** — header button is still a no-op; needs adapter-specific compaction.
+- ✅ **Runtime picker on `/tasks/new`** — `TaskRuntimePicker` plugged in; `createTaskRequest` forwards `providerId` / `adapterType` / `model` / `effort` to the conversations POST.
+- ✅ **`/compact` action** — `compactConversation(id)` in runner collapses prior turns into a ≤200-word digest, kills the session handle. `POST /api/agents/conversations/[id]/compact` + header button.
+- ✅ **Global SSE stream** — `GET /api/agents/conversations/events` feeds live refresh to sidebar recent-tasks + `/tasks` index.
+- ✅ **Cabinet trailer strip** — `SUMMARY` / `CONTEXT` / `ARTIFACT:` block no longer visible in agent chat bubbles (metadata is already in frontmatter + meta).
+- ✅ **Streaming partial content** — `continueConversationRun` writes incremental text to the pending turn (debounced 700ms). SSE delivers `turn.updated` and the viewer refetches so the response grows live.
+- ✅ **80%/95% compact nudge banner** — prominent in-chat banner above turns when tokens approach the context limit, with a one-click Compact button.
+
+## Follow-ups still open
+
 - **Daemon-backed continues** — `continueConversationRun` invokes the adapter in-process. For very long follow-up runs that survive tab close, route through `createDaemonSession` with a new `sessionId` parameter (requires `server/cabinet-daemon.ts` change).
-- **Structured `<ask_user>` tool** — replace the `?`-terminated heuristic with an explicit convention in the agent system prompt.
-- **Auto-summary via Haiku** — swap `deriveSummary` heuristic for a real LLM call when a turn has no `SUMMARY:` trailer.
+- **Structured `<ask_user>` tool** — replace the `?`-terminated heuristic with an explicit convention in the agent system prompt so the awaiting-input flag doesn't false-positive.
+- **Auto-summary via Haiku** — swap `deriveSummary` heuristic for a real LLM call when an agent turn has no `SUMMARY:` trailer.
 - **Migration script** — codify the `.agents/.tasks.v1-retired` rename as an opt-in migrator once we have real user data to move.
+- **TasksBoard convergence** — the kanban section (`TasksBoard`) still uses its own fetch cycle. Switch to the global SSE and route cards through `setSection({ type: "task" })` to keep a single click-through model.
+- **Diff + Logs tabs** — both still placeholders. Diff would render a unified diff of `meta.artifactPaths`; Logs would render raw adapter stdout/stderr per turn.
