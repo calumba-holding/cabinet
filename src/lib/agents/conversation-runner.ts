@@ -59,6 +59,11 @@ interface StartConversationInput {
 
 function buildCabinetEpilogueInstructions(): string {
   return [
+    "If you need the user to answer a question before you can continue,",
+    "wrap that question in `<ask_user>...</ask_user>` tags on its own paragraph.",
+    "Cabinet uses this marker to pause the task and highlight the composer.",
+    "Do not include the tags around rhetorical questions or code samples.",
+    "",
     "At the end of your response, include a ```cabinet block with these fields:",
     "SUMMARY: one short summary line",
     "CONTEXT: optional lightweight memory/context summary",

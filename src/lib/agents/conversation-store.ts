@@ -600,7 +600,8 @@ function hasClaudePromptTail(transcript: string, prompt?: string): boolean {
 
 /**
  * Extract the human-readable portion of an agent's turn: strip ANSI, prompt
- * echo, and the trailing ```cabinet``` block. Unlike
+ * echo, the trailing ```cabinet``` block, and unwrap any
+ * `<ask_user>…</ask_user>` markers. Unlike
  * formatConversationTranscriptForDisplay (which is CLI-terminal-focused),
  * this returns the body the user actually typed/read — suitable for
  * rendering a chat turn.
@@ -610,11 +611,12 @@ export function extractAgentTurnContent(
   prompt?: string
 ): string {
   const cleaned = cleanConversationOutputForParsing(transcript, prompt);
-  // Remove fenced cabinet blocks
   const withoutCabinet = cleaned.replace(/```cabinet[\s\S]*?```/gi, "").trim();
-  if (withoutCabinet) return withoutCabinet;
-  // Fallback: if everything was inside the cabinet block, try the formatted
-  // transcript as a last resort so the UI has something to show.
+  const unwrapped = withoutCabinet.replace(
+    /<ask_user>([\s\S]*?)<\/ask_user>/gi,
+    (_, inner: string) => inner.trim()
+  );
+  if (unwrapped.trim()) return unwrapped.trim();
   return formatConversationTranscriptForDisplay(transcript, prompt);
 }
 
@@ -1286,7 +1288,12 @@ export async function appendUserTurn(
  * so we don't want to show the block again in the rendered bubble.
  */
 function stripCabinetTrailer(content: string): string {
-  return content.replace(/```cabinet[\s\S]*?```/gi, "").trim();
+  return content
+    .replace(/```cabinet[\s\S]*?```/gi, "")
+    .replace(/<ask_user>([\s\S]*?)<\/ask_user>/gi, (_, inner: string) =>
+      inner.trim()
+    )
+    .trim();
 }
 
 /**

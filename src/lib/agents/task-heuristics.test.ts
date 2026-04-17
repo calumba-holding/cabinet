@@ -1,6 +1,30 @@
 import test from "node:test";
 import assert from "node:assert/strict";
-import { deriveSummary, looksLikeAwaitingInput } from "./task-heuristics";
+import {
+  deriveSummary,
+  looksLikeAwaitingInput,
+  stripAskUserMarkers,
+} from "./task-heuristics";
+
+test("looksLikeAwaitingInput: explicit <ask_user> marker wins", () => {
+  const content = "I edited the files. <ask_user>Ship it or iterate once more?</ask_user>";
+  assert.equal(looksLikeAwaitingInput(content), true);
+});
+
+test("looksLikeAwaitingInput: <ask_user> wins even when last line is a period", () => {
+  const content =
+    "Summary: done.\n\n<ask_user>Do you want me to commit?</ask_user>\n\nWorking on next step.";
+  assert.equal(looksLikeAwaitingInput(content), true);
+});
+
+test("stripAskUserMarkers unwraps the question text", () => {
+  const content =
+    "Changes applied.\n\n<ask_user>Proceed to SSO?</ask_user>\n\nThat's it.";
+  const stripped = stripAskUserMarkers(content);
+  assert.ok(stripped.includes("Proceed to SSO?"));
+  assert.ok(!stripped.includes("<ask_user>"));
+  assert.ok(!stripped.includes("</ask_user>"));
+});
 
 test("looksLikeAwaitingInput: yes when last line ends with '?'", () => {
   assert.equal(looksLikeAwaitingInput("All set.\n\nShould I proceed?"), true);

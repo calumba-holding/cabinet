@@ -1,16 +1,25 @@
 const FENCE_RE = /```[\s\S]*?```/g;
+const ASK_USER_RE = /<ask_user>([\s\S]*?)<\/ask_user>/i;
 
 /**
- * Best-effort detection: does this agent reply look like it's waiting on a user answer?
+ * Does this agent reply want a user answer?
  *
- * Heuristic: the last non-empty, non-code-fenced line ends with a question mark,
- * and the output isn't dominated by code or long output.
+ * Two signals, in order of authority:
+ *
+ * 1. Explicit: the agent wraps a question in `<ask_user>…</ask_user>`.
+ *    This is the documented convention the cabinet epilogue instructs the
+ *    agent to use; it's the canonical awaiting-input marker.
+ *
+ * 2. Heuristic fallback: the last non-empty, non-fenced line ends with `?`
+ *    and the content isn't mostly code. Keeps existing agents that don't
+ *    know about the marker flowing.
  */
 export function looksLikeAwaitingInput(content: string): boolean {
   if (!content) return false;
+  if (ASK_USER_RE.test(content)) return true;
+
   const stripped = content.replace(FENCE_RE, "").trim();
   if (!stripped) return false;
-  // If >70% of the content is inside fenced code, it's probably just showing code.
   const fenceLen = (content.match(FENCE_RE) || []).reduce((a, b) => a + b.length, 0);
   if (fenceLen / Math.max(content.length, 1) > 0.7) return false;
 
@@ -20,6 +29,19 @@ export function looksLikeAwaitingInput(content: string): boolean {
     .filter(Boolean);
   const last = lines[lines.length - 1] || "";
   return last.endsWith("?");
+}
+
+/**
+ * Strip the `<ask_user>…</ask_user>` wrapper from the agent's display content
+ * while keeping the question text intact inside. The wrapper is machine-
+ * facing; the user sees "What do you want?" rather than
+ * "<ask_user>What do you want?</ask_user>".
+ */
+export function stripAskUserMarkers(content: string): string {
+  return content.replace(
+    /<ask_user>([\s\S]*?)<\/ask_user>/gi,
+    (_, inner: string) => inner.trim()
+  );
 }
 
 /**
