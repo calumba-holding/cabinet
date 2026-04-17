@@ -812,7 +812,6 @@ export function TasksBoard({
   workspaceMode?: "ops" | "cabinet";
 } = {}) {
   const setSection = useAppStore((state) => state.setSection);
-  const setTaskPanelConversation = useAppStore((state) => state.setTaskPanelConversation);
   const cabinetVisibilityModes = useAppStore((state) => state.cabinetVisibilityModes);
   const setCabinetVisibilityMode = useAppStore((state) => state.setCabinetVisibilityMode);
   const resolvedWorkspaceMode = workspaceMode || (cabinetPath ? "cabinet" : "ops");
@@ -931,13 +930,25 @@ export function TasksBoard({
 
   useEffect(() => {
     void refreshBoard({ initial: true });
-    const interval = window.setInterval(() => {
-      void refreshBoard();
-    }, 5000);
+
+    // Event-driven refresh via the global conversation SSE stream. Still
+    // keep a focus-based refetch as a safety net for dropped connections,
+    // but the 5-second poll is gone — SSE delivers updates immediately.
+    const es = new EventSource("/api/agents/conversations/events");
+    es.onmessage = (msg) => {
+      try {
+        const event = JSON.parse(msg.data) as { type?: string };
+        if (event.type === "ping") return;
+        void refreshBoard();
+      } catch {
+        // ignore
+      }
+    };
+
     const onFocus = () => void refreshBoard();
     window.addEventListener("focus", onFocus);
     return () => {
-      window.clearInterval(interval);
+      es.close();
       window.removeEventListener("focus", onFocus);
     };
   }, [refreshBoard]);
@@ -1214,7 +1225,16 @@ export function TasksBoard({
   }
 
   function openConversation(conversation: ConversationMeta) {
-    setTaskPanelConversation(conversation);
+    // Open the full in-shell task viewer (sidebar stays visible). The
+    // side panel's `setTaskPanelConversation` is still available as a
+    // quick-peek for other surfaces (editor AI panel), but board clicks
+    // deserve the full viewer.
+    setSection({
+      type: "task",
+      taskId: conversation.id,
+      mode: conversation.cabinetPath ? "cabinet" : "ops",
+      cabinetPath: conversation.cabinetPath,
+    });
   }
 
   function handleScheduleEventClick(event: ScheduleEvent) {
