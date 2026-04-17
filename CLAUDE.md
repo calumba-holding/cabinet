@@ -33,7 +33,8 @@ src/
   app/api/git/               → Git log, diff, commit endpoints
   stores/                    → Zustand (tree, editor, ai-panel, task, app)
   components/sidebar/        → Tree navigation, drag-and-drop, context menu
-  components/editor/         → Tiptap WYSIWYG + toolbar, website/PDF/CSV viewers
+  components/editor/         → Tiptap WYSIWYG + toolbar, website/PDF/CSV/office viewers
+  components/editor/office/  → Read-only viewers for .docx, .xlsx, .pptx
   components/ai-panel/       → Right-side AI chat panel
   components/tasks/          → Task board + task detail panel
   components/agents/         → Agents workspace + live/result conversation views
@@ -67,6 +68,8 @@ data/                        → Content directory (KB pages, tasks, jobs)
 10. **Version restore** — users can restore any page to a previous git commit via the Version History panel
 11. **Embedded apps** — dirs with `index.html` + no `index.md` render as iframes. Add `.app` marker for full-screen mode (sidebar + AI panel auto-collapse)
 12. **Linked repos** — `.repo.yaml` in a data dir links it to a Git repo (local path + remote URL). Agents use this to read/search source code in context. See `data/CLAUDE.md` for full spec.
+13. **Office documents** — `.docx`, `.xlsx`/`.xlsm`, `.pptx` render inline via dynamically-imported client viewers (docx-preview, SheetJS, pptx-preview). Read-only; "Download" + "Reveal" actions in the viewer header. Legacy binary formats (`.doc`, `.xls`, `.ppt`) keep the Fallback viewer.
+14. **Google Workspace pages** — a markdown page with a `google:` frontmatter key (`url`, optional `kind` / `embedUrl`) is rendered by `GoogleDocViewer` instead of the Tiptap editor. The iframe needs "Anyone with the link" or "Publish to Web" on Google's side. OAuth-based sync is not yet implemented.
 
 ## AI Editing Behavior (CRITICAL)
 

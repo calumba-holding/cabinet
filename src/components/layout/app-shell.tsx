@@ -12,6 +12,21 @@ import { ImageViewer } from "@/components/editor/image-viewer";
 import { MediaViewer } from "@/components/editor/media-viewer";
 import { MermaidViewer } from "@/components/editor/mermaid-viewer";
 import { FileFallbackViewer } from "@/components/editor/file-fallback-viewer";
+import dynamic from "next/dynamic";
+import { GoogleDocViewer } from "@/components/editor/google-doc-viewer";
+
+const DocxViewer = dynamic(
+  () => import("@/components/editor/office/docx-viewer").then((m) => m.DocxViewer),
+  { ssr: false }
+);
+const XlsxViewer = dynamic(
+  () => import("@/components/editor/office/xlsx-viewer").then((m) => m.XlsxViewer),
+  { ssr: false }
+);
+const PptxViewer = dynamic(
+  () => import("@/components/editor/office/pptx-viewer").then((m) => m.PptxViewer),
+  { ssr: false }
+);
 import { HomeScreen } from "@/components/home/home-screen";
 import { AgentsWorkspace } from "@/components/agents/agents-workspace";
 import { JobsManager } from "@/components/jobs/jobs-manager";
@@ -134,6 +149,9 @@ export function AppShell() {
   const inferredType = !selectedNode && selectedPath
     ? selectedPath.endsWith(".csv") ? "csv"
     : selectedPath.endsWith(".pdf") ? "pdf"
+    : selectedPath.endsWith(".docx") ? "docx"
+    : selectedPath.endsWith(".xlsx") || selectedPath.endsWith(".xlsm") ? "xlsx"
+    : selectedPath.endsWith(".pptx") ? "pptx"
     : null
     : null;
   const nodeType = selectedNode?.type || inferredType;
@@ -146,7 +164,11 @@ export function AppShell() {
   const isVideo = nodeType === "video";
   const isAudio = nodeType === "audio";
   const isMermaid = nodeType === "mermaid";
+  const isDocx = nodeType === "docx";
+  const isXlsx = nodeType === "xlsx";
+  const isPptx = nodeType === "pptx";
   const isUnknown = nodeType === "unknown";
+  const googleFrontmatter = selectedNode?.frontmatter?.google;
   const hasPersistentUpdateState =
     update?.updateStatus.state === "restart-required" ||
     update?.updateStatus.state === "failed" ||
@@ -286,6 +308,36 @@ export function AppShell() {
       const mmdPath = selectedNode?.path || selectedPath!;
       const mmdTitle = selectedNode?.frontmatter?.title || selectedNode?.name || mmdPath.split("/").pop() || "Diagram";
       return <MermaidViewer path={mmdPath} title={mmdTitle} />;
+    }
+
+    if (isDocx && (selectedNode || selectedPath)) {
+      const p = selectedNode?.path || selectedPath!;
+      const t = selectedNode?.frontmatter?.title || selectedNode?.name || p.split("/").pop() || "Document";
+      return <DocxViewer path={p} title={t} />;
+    }
+
+    if (isXlsx && (selectedNode || selectedPath)) {
+      const p = selectedNode?.path || selectedPath!;
+      const t = selectedNode?.frontmatter?.title || selectedNode?.name || p.split("/").pop() || "Spreadsheet";
+      return <XlsxViewer path={p} title={t} />;
+    }
+
+    if (isPptx && (selectedNode || selectedPath)) {
+      const p = selectedNode?.path || selectedPath!;
+      const t = selectedNode?.frontmatter?.title || selectedNode?.name || p.split("/").pop() || "Presentation";
+      return <PptxViewer path={p} title={t} />;
+    }
+
+    // Google-linked markdown page: frontmatter.google.url flips the page to the
+    // Google viewer in place of the normal editor.
+    if (googleFrontmatter?.url && selectedNode) {
+      return (
+        <GoogleDocViewer
+          path={selectedNode.path}
+          title={selectedNode.frontmatter?.title || selectedNode.name}
+          google={googleFrontmatter}
+        />
+      );
     }
 
     if (isUnknown && (selectedNode || selectedPath)) {

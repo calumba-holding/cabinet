@@ -56,9 +56,30 @@ Cabinet renders the following file types as first-class views in the sidebar:
 | Embedded website | Directory with `index.html`, no `index.md` | Iframe (sidebar visible) |
 | Full-screen app | Directory with `index.html` + `.app` marker | Full-screen iframe |
 | Linked repo | Directory with `.repo.yaml` | Normal page, repo context for agents |
-| Office / archive | `.docx .pptx .xlsx .zip .fig .sketch` + more | Shown in sidebar, opens in Finder |
+| Word document | `.docx` | Inline read-only view via docx-preview |
+| Spreadsheet | `.xlsx`, `.xlsm` | Inline read-only grid (SheetJS), multi-sheet tabs |
+| Presentation | `.pptx` | Inline read-only slide deck (pptx-preview) |
+| Google doc page | `.md` with `google:` frontmatter | Iframe to Google Sheets/Slides/Docs/Forms |
+| Archive / legacy office | `.doc .ppt .xls .zip .fig .sketch .rtf` + more | Shown in sidebar, opens in Finder |
 
 Any file not in the above sets is silently skipped (not shown in the sidebar).
+
+### Google Workspace pages
+
+To turn a markdown page into a live Google Sheets / Slides / Docs / Forms view, add a `google:` key to its frontmatter:
+
+```yaml
+---
+title: Q2 Forecast
+google:
+  url: https://docs.google.com/spreadsheets/d/FILE_ID/edit?usp=sharing
+  # optional — auto-detected from the URL when omitted:
+  # kind: sheets | slides | docs | forms | drive
+  # embedUrl: https://docs.google.com/spreadsheets/d/FILE_ID/pubhtml
+---
+```
+
+The page renders the embed in place of the Tiptap editor plus an "Open in Google" action. The document must be shared with **Anyone with the link** or **Published to the web** for the iframe to load — otherwise Google returns an auth page inside the frame.
 
 ## Embedded Apps (`.app` marker)
 

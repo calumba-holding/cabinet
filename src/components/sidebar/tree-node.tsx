@@ -1,6 +1,6 @@
 "use client";
 
-import { useState, useCallback } from "react";
+import { useState, useCallback, useRef } from "react";
 import {
   Archive,
   ChevronRight,
@@ -25,7 +25,11 @@ import {
   Music,
   Workflow,
   File,
+  FileSpreadsheet,
+  Presentation,
   TriangleAlert,
+  ArrowRightLeft,
+  Loader2,
 } from "lucide-react";
 import { cn } from "@/lib/utils";
 import type { TreeNode as TreeNodeType } from "@/types";
@@ -57,17 +61,23 @@ interface TreeNodeProps {
   node: TreeNodeType;
   depth: number;
   contextCabinetPath?: string | null;
+  siblings?: TreeNodeType[];
+  onMoveToRequest?: (node: TreeNodeType) => void;
 }
 
 export function TreeNode({
   node,
   depth,
   contextCabinetPath = null,
+  siblings,
+  onMoveToRequest,
 }: TreeNodeProps) {
   const {
     selectedPath,
     expandedPaths,
     dragOverPath,
+    dragOverZone,
+    movingPaths,
     toggleExpand,
     selectPage,
     deletePage,
@@ -76,6 +86,9 @@ export function TreeNode({
     createPage,
     renamePage,
   } = useTreeStore();
+  const isMoving = movingPaths.has(node.path);
+  const rowRef = useRef<HTMLButtonElement | null>(null);
+  const dragGhostRef = useRef<HTMLDivElement | null>(null);
   const loadPage = useEditorStore((s) => s.loadPage);
   const setSection = useAppStore((s) => s.setSection);
   const [subPageOpen, setSubPageOpen] = useState(false);
@@ -155,23 +168,75 @@ export function TreeNode({
     }
   };
 
+  const isContainer =
+    node.type === "directory" || node.type === "cabinet";
+
+  const computeZone = useCallback(
+    (e: React.DragEvent): "before" | "into" | "after" => {
+      const el = rowRef.current;
+      if (!el) return "into";
+      const rect = el.getBoundingClientRect();
+      const y = e.clientY - rect.top;
+      const h = rect.height;
+      if (isContainer) {
+        if (y < h * 0.25) return "before";
+        if (y > h * 0.75) return "after";
+        return "into";
+      }
+      return y < h * 0.5 ? "before" : "after";
+    },
+    [isContainer]
+  );
+
   // Drag and drop handlers
   const handleDragStart = useCallback(
     (e: React.DragEvent) => {
       e.dataTransfer.setData("text/plain", node.path);
       e.dataTransfer.effectAllowed = "move";
+
+      const source = rowRef.current;
+      if (source) {
+        const ghost = source.cloneNode(true) as HTMLDivElement;
+        ghost.style.position = "fixed";
+        ghost.style.top = "-1000px";
+        ghost.style.left = "-1000px";
+        ghost.style.width = `${source.offsetWidth}px`;
+        ghost.style.borderRadius = "8px";
+        ghost.style.background = "var(--popover)";
+        ghost.style.color = "var(--popover-foreground)";
+        ghost.style.boxShadow =
+          "0 8px 24px rgba(0,0,0,0.18), 0 1px 0 rgba(255,255,255,0.04) inset";
+        ghost.style.border = "1px solid var(--border)";
+        ghost.style.padding = "4px 8px";
+        ghost.style.opacity = "0.95";
+        ghost.style.pointerEvents = "none";
+        ghost.style.transform = "translateZ(0)";
+        document.body.appendChild(ghost);
+        dragGhostRef.current = ghost;
+        e.dataTransfer.setDragImage(ghost, 12, 12);
+      }
     },
     [node.path]
   );
+
+  const handleDragEnd = useCallback(() => {
+    if (dragGhostRef.current) {
+      dragGhostRef.current.remove();
+      dragGhostRef.current = null;
+    }
+  }, []);
 
   const handleDragOver = useCallback(
     (e: React.DragEvent) => {
       e.preventDefault();
       e.stopPropagation();
       e.dataTransfer.dropEffect = "move";
-      setDragOver(node.path);
+      const zone = computeZone(e);
+      if (dragOverPath !== node.path || dragOverZone !== zone) {
+        setDragOver(node.path, zone);
+      }
     },
-    [node.path, setDragOver]
+    [node.path, setDragOver, computeZone, dragOverPath, dragOverZone]
   );
 
   const handleDragLeave = useCallback(
@@ -189,6 +254,7 @@ export function TreeNode({
     (e: React.DragEvent) => {
       e.preventDefault();
       e.stopPropagation();
+      const zone = computeZone(e);
       setDragOver(null);
 
       const fromPath = e.dataTransfer.getData("text/plain");
@@ -197,33 +263,85 @@ export function TreeNode({
       // Don't drop onto own children
       if (fromPath.startsWith(node.path + "/")) return;
 
-      // Drop onto this node's path (it becomes the parent)
-      const isDir = node.type === "directory";
-      const targetParent = isDir ? node.path : node.path.split("/").slice(0, -1).join("/");
-      if (fromPath === targetParent) return;
+      const fromName = fromPath.split("/").pop() || "";
+      const nodeParent = node.path.split("/").slice(0, -1).join("/");
 
-      movePage(fromPath, targetParent);
+      if (zone === "into") {
+        if (!isContainer) return;
+        if (fromPath === node.path) return;
+        movePage(fromPath, node.path);
+        return;
+      }
+
+      // before/after → reorder within node's parent
+      const targetParent = nodeParent;
+      if (!siblings) {
+        movePage(fromPath, targetParent);
+        return;
+      }
+      const visible = siblings.filter((s) => s.path !== fromPath);
+      const targetIndexInVisible = visible.findIndex((s) => s.path === node.path);
+      if (targetIndexInVisible === -1) {
+        movePage(fromPath, targetParent);
+        return;
+      }
+      const insertIndex =
+        zone === "before" ? targetIndexInVisible : targetIndexInVisible + 1;
+      const prev = insertIndex > 0 ? visible[insertIndex - 1] : null;
+      const next =
+        insertIndex < visible.length ? visible[insertIndex] : null;
+      const prevName = prev ? prev.path.split("/").pop() || null : null;
+      const nextName = next ? next.path.split("/").pop() || null : null;
+      movePage(fromPath, targetParent, { prevName, nextName });
     },
-    [node.path, node.type, movePage, setDragOver]
+    [
+      node.path,
+      isContainer,
+      movePage,
+      setDragOver,
+      computeZone,
+      siblings,
+    ]
   );
+
+  const showInsertBefore = isDragOver && dragOverZone === "before";
+  const showInsertAfter = isDragOver && dragOverZone === "after";
+  const showInto = isDragOver && dragOverZone === "into";
 
   return (
     <>
+      <div className="relative">
+      {showInsertBefore && (
+        <div
+          className="pointer-events-none absolute -top-px right-1.5 z-10 h-0.5 rounded-full bg-primary"
+          style={{ left: `${depth * 16 + 8}px` }}
+        />
+      )}
+      {showInsertAfter && (
+        <div
+          className="pointer-events-none absolute -bottom-px right-1.5 z-10 h-0.5 rounded-full bg-primary"
+          style={{ left: `${depth * 16 + 8}px` }}
+        />
+      )}
       <ContextMenu>
         <ContextMenuTrigger>
           <button
+            ref={rowRef}
             onClick={handleClick}
-            draggable
+            draggable={!isMoving}
             onDragStart={handleDragStart}
+            onDragEnd={handleDragEnd}
             onDragOver={handleDragOver}
             onDragLeave={handleDragLeave}
             onDrop={handleDrop}
+            disabled={isMoving}
             className={cn(
               "flex items-center gap-2 w-full text-left py-1 px-2 text-[12px] text-foreground/75 rounded-md transition-colors",
               "hover:bg-foreground/[0.03] hover:text-foreground !cursor-grab active:!cursor-grabbing",
               isSelected && "bg-accent text-accent-foreground font-medium",
-              isDragOver &&
-                "bg-primary/10 ring-1 ring-primary/30 ring-inset"
+              showInto &&
+                "bg-primary/10 ring-1 ring-primary/30 ring-inset",
+              isMoving && "opacity-60 !cursor-progress pointer-events-none"
             )}
             style={{ paddingLeft: `${depth * 16 + 8}px` }}
           >
@@ -264,6 +382,12 @@ export function TreeNode({
               <Music className="h-3.5 w-3.5 shrink-0 text-amber-400" />
             ) : node.type === "mermaid" ? (
               <Workflow className="h-3.5 w-3.5 shrink-0 text-teal-400" />
+            ) : node.type === "docx" ? (
+              <FileText className="h-3.5 w-3.5 shrink-0 text-blue-400" />
+            ) : node.type === "xlsx" ? (
+              <FileSpreadsheet className="h-3.5 w-3.5 shrink-0 text-green-500" />
+            ) : node.type === "pptx" ? (
+              <Presentation className="h-3.5 w-3.5 shrink-0 text-orange-400" />
             ) : node.type === "unknown" ? (
               <File className="h-3.5 w-3.5 shrink-0 text-muted-foreground/50" />
             ) : node.type === "cabinet" ? (
@@ -282,6 +406,9 @@ export function TreeNode({
               <FileText className="h-3.5 w-3.5 shrink-0 text-muted-foreground" />
             )}
             <span className={cn("truncate", node.type === "unknown" && "opacity-50")}>{title}</span>
+            {isMoving && (
+              <Loader2 className="ml-auto h-3 w-3 shrink-0 animate-spin text-muted-foreground" />
+            )}
           </button>
         </ContextMenuTrigger>
         <ContextMenuContent>
@@ -301,6 +428,12 @@ export function TreeNode({
             <Pencil className="h-4 w-4 mr-2" />
             Rename
           </ContextMenuItem>
+          {onMoveToRequest && (
+            <ContextMenuItem onClick={() => onMoveToRequest(node)}>
+              <ArrowRightLeft className="h-4 w-4 mr-2" />
+              Move to…
+            </ContextMenuItem>
+          )}
           <ContextMenuItem onClick={() => navigator.clipboard.writeText(node.path)}>
             <Copy className="h-4 w-4 mr-2" />
             Copy Relative Path
@@ -333,6 +466,7 @@ export function TreeNode({
           </ContextMenuItem>
         </ContextMenuContent>
       </ContextMenu>
+      </div>
 
       {hasChildren && isExpanded && (
         <div>
@@ -342,6 +476,8 @@ export function TreeNode({
               node={child}
               depth={depth + 1}
               contextCabinetPath={contextCabinetPath}
+              siblings={node.children!}
+              onMoveToRequest={onMoveToRequest}
             />
           ))}
         </div>

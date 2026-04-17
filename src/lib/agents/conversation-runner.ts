@@ -626,8 +626,32 @@ export async function continueConversationRun(
   if (!pending) return meta;
   const pendingTurnNumber = pending.turn;
 
-  // 7. Execute adapter
+  // 7. Execute adapter with streaming partial-content updates to the turn.
   const logChunks: string[] = [];
+  let lastStreamedFlushAt = 0;
+  let streamFlushInFlight: Promise<unknown> | null = null;
+
+  const flushStreamedContent = async () => {
+    const now = Date.now();
+    if (now - lastStreamedFlushAt < 700) return;
+    if (streamFlushInFlight) return;
+    lastStreamedFlushAt = now;
+    const accumulated = logChunks.join("").trim();
+    if (!accumulated) return;
+    const partial = extractAgentTurnContent(accumulated) || accumulated;
+    streamFlushInFlight = updateAgentTurn(
+      conversationId,
+      pendingTurnNumber,
+      { content: partial, pending: true },
+      cp
+    )
+      .catch(() => null)
+      .finally(() => {
+        streamFlushInFlight = null;
+      });
+    await streamFlushInFlight;
+  };
+
   const ctx: AdapterExecutionContext = {
     runId: randomUUID(),
     adapterType: adapter.type,
@@ -637,7 +661,9 @@ export async function continueConversationRun(
     timeoutMs: input.timeoutMs ?? 10 * 60 * 1000,
     sessionId: canResume ? session!.resumeId! : null,
     onLog: async (stream, chunk) => {
-      if (stream === "stdout") logChunks.push(chunk);
+      if (stream !== "stdout") return;
+      logChunks.push(chunk);
+      void flushStreamedContent();
     },
   };
 

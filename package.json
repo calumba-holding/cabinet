@@ -62,6 +62,7 @@
     "chokidar": "^5.0.0",
     "class-variance-authority": "^0.7.1",
     "clsx": "^2.1.1",
+    "docx-preview": "^0.3.7",
     "electron-squirrel-startup": "^1.0.1",
     "emoji-mart": "^5.6.0",
     "flexsearch": "^0.8.212",
@@ -77,6 +78,7 @@
     "next-themes": "^0.4.6",
     "node-cron": "^4.2.1",
     "node-pty": "^1.1.0",
+    "pptx-preview": "^1.0.7",
     "react": "19.2.4",
     "react-dom": "19.2.4",
     "rehype-stringify": "^10.0.1",
@@ -94,6 +96,7 @@
     "unified": "^11.0.5",
     "update-electron-app": "^3.1.1",
     "ws": "^8.19.0",
+    "xlsx": "^0.18.5",
     "zustand": "^5.0.12"
   },
   "devDependencies": {
