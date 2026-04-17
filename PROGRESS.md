@@ -2,6 +2,8 @@
 
 [2026-04-17] Image Creator agent heartbeat: built a pre-script visual mockup of Slide 2 (labeled chat inventory) for the "Group Chat Shame Spiral" carousel brief, answering the Script Writer's open research question (inventory reads at 4 rows, not 5). Added visual-direction doc, linked it from the brief, and registered the carousel as "Mockup (pre-script)" in the carousels index.
 
+[2026-04-17] Sidebar list-item hover background tuned: dropped to `hover:bg-foreground/[0.03]` — visible enough to register as a hover state but quiet enough not to compete with the colored agent chips and the selected-row treatment. Replaces the original near-invisible `hover:bg-accent/50`.
+
 [2026-04-17] AGENTS / TASKS / DATA section headers in the sidebar now reveal a `+` button on hover (200 ms reveal delay, instant fade-out via `group-hover:delay-200` on opacity transition). Each routes to its section first, then dispatches an event to open the right dialog: `cabinet:open-add-agent` (existing), new `cabinet:open-create-task` (added listener in `tasks-board`), and `setKbSubPageOpen` for DATA. Tasks header restructured into a `group` row to host the action.
 
 [2026-04-17] Stripped the heartbeat label and hover tooltip from sidebar agent rows. Each row is now just `[colored chip] Name • status-dot` — quieter, matches the user's preference for a leaner sidebar. Removed the now-unused `HeartPulse`, `cronToShortLabel`, and `Tooltip*` imports from `tree-view.tsx`.

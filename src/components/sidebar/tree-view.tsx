@@ -134,7 +134,7 @@ function getAgentIcon(slug: string): LucideIcon {
 const itemClass = (active: boolean) =>
   cn(
     "flex items-center gap-2 w-full text-left py-1 px-2 text-[12px] text-foreground/75 rounded-md transition-colors",
-    "hover:bg-accent/50 hover:text-foreground",
+    "hover:bg-foreground/[0.03] hover:text-foreground",
     active && "bg-accent text-accent-foreground font-medium"
   );
 
@@ -480,7 +480,7 @@ export function TreeView() {
                             })
                           }
                           className={cn(
-                            "flex w-full items-center gap-2 rounded-md px-2 py-1 text-left transition-colors hover:bg-accent/50",
+                            "flex w-full items-center gap-2 rounded-md px-2 py-1 text-left transition-colors hover:bg-foreground/[0.03]",
                             selectedAgentScopedId ===
                               (agent.scopedId ||
                                 `${agent.cabinetPath || activeCabinet?.path}::agent::${agent.slug}`) &&
