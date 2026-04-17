@@ -1277,6 +1277,16 @@ export async function appendUserTurn(
 }
 
 /**
+ * Strip the trailing ```cabinet``` block from an agent turn's display
+ * content — the metadata is already surfaced via frontmatter (artifacts,
+ * tokens, sessionId) and meta.summary / contextSummary / artifactPaths,
+ * so we don't want to show the block again in the rendered bubble.
+ */
+function stripCabinetTrailer(content: string): string {
+  return content.replace(/```cabinet[\s\S]*?```/gi, "").trim();
+}
+
+/**
  * Append an agent turn. Merges parsed cabinet-block artifacts into meta.
  * Returns the created turn.
  */
@@ -1297,12 +1307,16 @@ export async function appendAgentTurn(
     ? { summary: undefined, contextSummary: undefined, artifactPaths: [] }
     : parseCabinetBlock(input.content);
 
+  const displayContent = input.pending
+    ? input.content
+    : stripCabinetTrailer(input.content) || input.content;
+
   const turn: ConversationTurn = {
     id: shortId(),
     turn: turnNumber,
     role: "agent",
     ts,
-    content: input.content,
+    content: displayContent,
     sessionId: input.sessionId,
     tokens: input.tokens,
     awaitingInput: input.awaitingInput,
@@ -1382,10 +1396,13 @@ export async function updateAgentTurn(
     role: "agent",
   });
 
-  const content = patch.content ?? existing.content;
+  const rawContent = patch.content ?? existing.content;
   const parsed = patch.pending
     ? { summary: undefined, contextSummary: undefined, artifactPaths: [] }
-    : parseCabinetBlock(content);
+    : parseCabinetBlock(rawContent);
+  const content = patch.pending
+    ? rawContent
+    : stripCabinetTrailer(rawContent) || rawContent;
 
   const nextTurn: ConversationTurn = {
     ...existing,
