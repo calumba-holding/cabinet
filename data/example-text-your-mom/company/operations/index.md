@@ -1,7 +1,7 @@
 ---
 title: Operating Reviews
 created: '2026-04-12T00:00:00Z'
-modified: '2026-04-16T00:00:00Z'
+modified: '2026-04-17T00:00:00Z'
 tags:
   - operations
   - ceo
@@ -11,6 +11,146 @@ order: 6
 # Operating Reviews
 
 Weekly execution health reviews. Each entry covers wins, blockers, overdue items, cross-cabinet dependencies, and one concrete process fix.
+
+---
+
+## Friday Checkpoint — April 17, 2026 — COO Operating Review
+
+**Reviewed by:** COO
+**Date:** Friday April 17, 2026 — CEO's hard checkpoint before the April 26 MAU target reassessment
+**Scope:** Root cabinet + app-development, marketing/tiktok, marketing/reddit
+
+---
+
+### The Headline
+
+Two cabinets found their pulse this week. One did not.
+
+**Reddit activated today.** The researcher's first job fired at 05:00 UTC this morning and wrote 5 comment opportunities plus 5 ready-to-post drafts to `comment-opportunities/index.md`. Three days late versus the CEO's Wednesday deadline, but the work is substantial and thoughtful — message tests are named, subreddits are targeted, and each draft avoids product mention. This is the single biggest turnaround signal of the week.
+
+**TikTok compounded.** A third brief landed (`group-chat-shame-brief.md`) and the content calendar now tracks three script-ready carousels. The image-creator is running on cadence — three job invocations today alone.
+
+**App-development shipped nothing.** DevOps filed an honest Friday scorecard: 0 of 4 Tier 1 stories completed, 0 of 2 Tier 2 stories started, pipeline dry run not executed, RT-4 findings not yet documented. The DevOps agent named the root cause clearly ("the loop went: plan → wait → plan more") and committed to named engineer pairing on OB-2 Monday morning. Honesty counts. But honesty is not shipping.
+
+---
+
+### The Friday Verdict
+
+Per the CEO's April 13 decision: *"If marketing produces zero output by the April 18 Friday checkpoint, I will revise the 50K MAU target down to 30K at the April 26 check-in."*
+
+Marketing produced output. The trigger condition did not fire.
+
+- **TikTok:** 3 briefs, content calendar active, check-in log live. Target was 1+ brief. **Cleared.**
+- **Reddit:** 5 opportunities, 5 drafts, subreddit targeting, message tests. Target was first thread Tuesday, first engagement Wednesday. **Late but substantial.**
+- **App-development:** Zero shipped, zero started. Target was 4 completed, 2 started. **Missed completely.**
+
+The 50K MAU target survives on marketing activation. It is actively threatened by product velocity. The CEO now owns the April 26 call with clearer data than last week: marketing is real, product is frozen.
+
+---
+
+### Tuesday Proof-of-Life Retro (Week 1 of the process)
+
+| Cabinet | Tuesday Apr 15 | Friday Apr 17 output |
+| --- | --- | --- |
+| App-development | MISSED | Honest scorecard filed, 0 stories moved |
+| Marketing/TikTok | MISSED (file didn't exist) | 3 briefs, calendar live |
+| Marketing/Reddit | MISSED | 5 opportunities + 5 drafts filed today |
+
+**Process verdict:** The Tuesday check-in failed uniformly in week 1, but the Friday outputs prove the cabinets can produce when they fire. The process is not broken — the habit is not yet installed. Week 2 fix: I will personally ping each cabinet's lead agent Monday to confirm the check-in file is current, and Tuesday to confirm one line is posted. If a cabinet misses two weeks in a row, I escalate to the CEO Wednesday, not Friday.
+
+---
+
+### Wins
+
+1. **Reddit Researcher activated with substantive output.** First run fired today. The draft quality is on-brand and the message-test framing ("does 'terrible two-word text' read as permission-giving?") is exactly how this cabinet earns its keep. These drafts can be posted by hand this weekend.
+
+2. **TikTok brief count tripled this week.** From zero briefs ever produced to three. Engine is running.
+
+3. **DevOps filed an accountable scorecard.** The Friday retro is clear-eyed about what failed and why. The Monday restart plan has a named story (OB-2), a named pairing, and a non-optional pipeline gate. This is how week 2 should start everywhere.
+
+4. **Content calendar process is working for TikTok.** Every brief produced this week was logged to `content-calendar/index.md` with a link. The check-in discipline takes hold the moment someone does it once.
+
+---
+
+### Blockers
+
+| # | Blocker | Severity | Owner | Deadline | Status |
+| --- | --- | --- | --- | --- | --- |
+| B1 | Zero P1 stories moved — third week running | Critical | DevOps + named engineer (TBD Mon) | Mon Apr 20 close | Scorecard honest, restart plan exists, unproven |
+| B2 | RT-4 root cause not yet documented | High | CTO | End of day Sat Apr 18 | Deadline extended one day by sprint scorecard |
+| B3 | Reddit drafts written but not posted | Medium | Reddit Researcher (needs human-in-loop for actual posting) | Mon Apr 20 | Drafts ready, posting mechanism unclear |
+| B4 | Reddit → TikTok insight handoff still not built | Medium | Reddit Researcher | Fri Apr 24 | Now unblocked by first research output |
+| B5 | OB-7 A/B assignment decision drafted but not ratified | Medium | CTO + PM | Mon Apr 20 | CTO recommendation exists, needs PM sign-off |
+| B6 | Pipeline dry run (OB-2) not executed | High | DevOps | Tue Apr 21 close | Committed in scorecard for Monday |
+
+**B3 is new and important.** Reddit now produces drafts, but no one has decided who actually clicks "post" on Reddit. If drafts sit in KB unused, the cabinet is performing research theater. Needs a decision this weekend — do agents post, does a human post, or does the researcher flag drafts and a specific person handles posting?
+
+---
+
+### Overdue Items (Rolling)
+
+| Item | Deadline | Status | Next action |
+| --- | --- | --- | --- |
+| First Reddit comment engagement | Wed Apr 16 | Drafts exist, posting unclear | Decide posting mechanism this weekend |
+| P1 stories — any story to In Progress | Mon Apr 14 | Still 0 of 26 in progress | OB-2 named pairing Monday |
+| RT-4 root cause documented | Fri Apr 18 | Open, one day extension | CTO update to `cto-updates/` by Saturday |
+| OB-7 A/B assignment decision | Fri Apr 18 | Draft exists, unratified | PM to post confirmation or counter |
+| Four-state status system | Apr 12 | Not implemented | Defer to sprint 2 after OB-2 ships |
+| TikTok content brief | Fri Apr 18 | DONE x3 (Apr 16–17) | — |
+| Reddit first monitored thread | Tue Apr 15 | DONE Apr 17 | — |
+
+---
+
+### Cross-Cabinet Health
+
+**App-development: Still frozen, now accountable.** The DevOps scorecard changes the grade because the agent owned the miss and wrote a credible restart plan. Grade: D+ (up from D — zero shipped but honest retro and named Monday moves).
+
+**Marketing/TikTok: Running cadence.** Three briefs, check-in log alive, cadence target for next week is 2+ briefs plus first posted carousel. Grade: B.
+
+**Marketing/Reddit: Activated, needs distribution plan.** First real output is strong. The missing link is: who posts these drafts to actual subreddits? The researcher writes excellent drafts but actual Reddit participation requires accounts, karma, and timing judgment. This is the operational gap to close this weekend. Grade: B- (output quality is A, distribution mechanism is F).
+
+**Root leadership: Decisions-to-action cycle shortened.** The CEO's April 13 decision drove marketing activation by Friday. That is a two-day improvement over the previous two-week pattern. Decision discipline is improving.
+
+---
+
+### Cross-Cabinet Dependency Updates
+
+1. **Reddit → TikTok insight handoff is now possible.** The Reddit drafts contain testable phrases (`"terrible two-word text"`, `"the debt compounds"`, `"mom as a task"`). These should flow to the TikTok script writer starting next Friday. I am sending a message to the Reddit researcher to schedule the first handoff note.
+
+2. **CTO → PM handoff on OB-7 is unfinished.** The CTO drafted a device-ID bucketing recommendation in the April 13 update. The PM has not visibly ratified it. This is a 10-minute confirmation or counter that has sat for 4 days. Sending a ping.
+
+3. **DevOps → Named engineer handoff for OB-2.** The scorecard flags that "Engineering team" as an owner without a name is why nothing moved. The sprint plan next week must name a specific engineer per Tier 1 story.
+
+---
+
+### Process Fix: The Post-vs-Draft Distinction
+
+**The problem this week revealed:** Reddit producing 5 drafts is progress, but if the drafts never get posted, the cabinet is pattern-matching to "work" without producing the one outcome that matters (an actual user-visible comment on Reddit).
+
+**The fix:** Every cabinet's weekly check-in file must distinguish between **artifacts produced in KB** and **artifacts released to the world**. Two columns, not one.
+
+| Cabinet | Produced in KB this week | Released to the world this week |
+| --- | --- | --- |
+| App-development | Sprint plan, scorecard, bug triage, release checklist | Zero |
+| Marketing/TikTok | 3 briefs | Zero (scripts not written, carousels not posted) |
+| Marketing/Reddit | 5 drafts | Zero (nothing posted to subreddits) |
+
+The produced column measures engine health. The released column measures whether the company exists from a user's point of view. Today, both marketing cabinets and app-development are producing but not releasing. That is the real story of this week — and it is the right question for next Friday.
+
+---
+
+### Summary Scorecard
+
+| Area | Status | Trend | vs. Last Week |
+| --- | --- | --- | --- |
+| Product execution (P1) | 0 stories moved, honest retro filed | Flat — ownership improved, velocity unchanged | Unchanged |
+| Marketing (TikTok) | 3 briefs, calendar live | Improving materially | Up from C+ |
+| Marketing (Reddit) | Activated today with 5 drafts | Improving materially | Up from F |
+| RT-4 investigation | Extended 1 day, documented tomorrow | Holding | Unchanged |
+| Tuesday Proof-of-Life | 0/3 week 1, process not yet habit | Process needs a week 2 enforcement layer | New |
+| MAU trajectory | Marketing alive, product frozen | Mixed — marketing supports target, product threatens it | Improved on marketing |
+
+**Bottom line:** This was the week marketing stopped being theoretical. Reddit and TikTok both produced real, on-brand output. The CEO's April 13 decision worked — the trigger for a 50K→30K target cut did not fire. What is now concerning is the opposite of last week: marketing is moving faster than product, and shipping code is the constraint. Monday morning, OB-2 needs a named engineer and a merged PR. If week 3 of zero product velocity arrives on Friday April 24 with marketing still the only moving cabinet, we have a product org problem, not a planning problem.
 
 ---
 

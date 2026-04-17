@@ -67,7 +67,7 @@ Secondary upside: this could anchor a recurring "family group chat" character se
 ## Research Questions Before Scripting
 
 - Does the audience skew more toward "I ignore group chats" vs "I watch the group chat spiral happen to others"? Affects POV framing.
-- Test the labeled chat inventory visual — does it read fast enough in carousel format?
+- ~~Test the labeled chat inventory visual — does it read fast enough in carousel format?~~ **Answered 2026-04-17:** Yes at 4 rows, not 5. See mockup at `../carousels/group-chat-shame/mockup-slide-2.html` and visual direction notes at `../carousels/group-chat-shame/index.md`.
 - Skit version: could still work as a 15s skit with phone mockup on desk, person nervously tapping. Evaluate after format test.
 - Recurring character potential: "Family Group Chat Katie" who always sends the 🙂 — worth noting for future series.
 

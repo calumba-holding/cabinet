@@ -1,21 +1,23 @@
 ---
 title: "Brief — The fake mental math of reply guilt"
 created: '2026-04-16T00:00:00Z'
-modified: '2026-04-16T00:00:00Z'
+modified: '2026-04-17T00:00:00Z'
 tags:
   - brief
   - carousel
-  - script-ready
-status: Script Ready
+  - shooting
+status: In Production (week of April 14)
 priority: High
 ---
 
 # Brief: "The fake mental math of reply guilt"
 
-**Format:** 6-slide carousel  
-**Hook:** "You are not busy. You are emotionally buffering."  
-**Status:** Script Ready  
+**Format:** 6-slide carousel
+**Hook (final):** "Not busy. Buffering." — the longer phrase *"You are not busy. You are emotionally buffering."* now lives inside Slide 3 as the payoff.
+**Status:** In Production — promoted to the [Week of April 14 shooting brief](../week-of-april-14) as Script 3.
 **Visual tone:** Stats-card aesthetic, deadpan infographic, self-aware humor
+
+> The canonical production script is now Script 3 in the week-of-april-14 brief. The breakdown below is retained for concept rationale and slide-by-slide direction.
 
 ---
 

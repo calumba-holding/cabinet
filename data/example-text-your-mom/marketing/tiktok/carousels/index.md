@@ -26,11 +26,20 @@ Per creative briefs — these carousels use a dark/minimal iPhone-native aesthet
 
 ## Slide Patterns
 
-- **Lock screen slides** — notification red as only accent, phone frame mockup
-- **Chat bubble slides** — iMessage-style, read receipts visible
-- **Stats card slides** — iOS Screen Time aesthetic, bar charts
-- **Progress bar slides** — full-width fill, hero moment
-- **CTA slides** — bold headline, green action button
+Reusable pattern library — reference by name in future briefs to speed design.
+
+| Pattern | When to use | Key elements |
+|---------|-------------|--------------|
+| **Lock screen** | Opening slides, notification-driven hooks | iOS lock screen frame, time/date, red notification badge, single notification preview |
+| **Chat bubble** | Dialogue-driven slides, mom POV | iMessage bubbles (gray incoming, blue outgoing), read receipts, typing indicator |
+| **Labeled inventory** | Listing chat contents with commentary | Emoji + bubble + yellow mono label, 4 rows max, highlight ring on comedic beat |
+| **Stats card** | Data/insight slides, "the math" moments | Screen Time-style card, monospace numbers, subtle bar charts, % deltas |
+| **Progress bar** | Hero moments, escalation reveals | Full-bleed fill, big number, minimal chrome |
+| **Decision tree** | Systems-humor slides | Branching flowchart or two-button meme, deadpan mono labels |
+| **Timeline** | Compounding/escalation (Day 1 → Day 4) | Horizontal bar with milestones, emotional labels on each node |
+| **CTA** | Closer — product as the fix | Notification-style card, bold headline, handle/link visible |
+
+**Rule:** Every carousel ends with a CTA pattern. Never skip the product tie.
 
 ---
 
@@ -40,3 +49,4 @@ Per creative briefs — these carousels use a dark/minimal iPhone-native aesthet
 |---|-------|--------|------|--------------|--------|
 | 01 | [The Most Dangerous Text](./question-mark-danger/) | 5 | "The most dangerous text on earth is just a question mark" | Lock screen + chat bubbles + giant `?` | Designed |
 | 02 | [The Fake Mental Math of Reply Guilt](./reply-guilt-math/) | 6 | "You are not busy, you are emotionally buffering" | Screen Time stats + progress bar + timer | Designed |
+| 03 | [Group Chat Shame Spiral](./group-chat-shame/) | 5 | "Me opening the family group chat after 4 days of silence" | Labeled chat inventory + decision tree + timeline | Mockup (pre-script) |

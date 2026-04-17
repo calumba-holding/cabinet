@@ -1,7 +1,7 @@
 ---
 title: Brief — Week of April 14
 created: '2026-04-16T00:00:00Z'
-modified: '2026-04-16T00:00:00Z'
+modified: '2026-04-17T00:00:00Z'
 tags:
   - tiktok
   - brief
@@ -10,7 +10,7 @@ order: 1
 ---
 # Brief — Week of April 14
 
-First activation week. Two scripts ready to shoot. Both pull from the "reply guilt" emotional core without pushing the product. Humor first, product second.
+First activation week. **Three** scripts ready to shoot. All three pull from the "reply guilt" emotional core without pushing the product. Humor first, product second.
 
 ---
 
@@ -103,10 +103,76 @@ Because the question mark is coming either way.
 
 ---
 
+## Script 3 — "Not Busy. Buffering."
+
+**Format:** 6-slide carousel, deadpan stat-card aesthetic
+**Priority:** High — ships this week alongside 1 and 2
+**Emotional angle:** The self-aware recognition of the avoidance math
+**Product mention:** Slide 5 only (soft)
+
+**Hook (Slide 1 headline, also the caption):**
+> Not busy. Buffering.
+
+**Slides:**
+
+---
+
+**Slide 1:**
+*Screen time stat card, real-looking, not mocked.*
+
+> You checked your phone 52 times today.
+> You have not replied to your mom in 3 days.
+
+**Slide 2:**
+*Split — a Screen Time usage bar chart.*
+
+> You had time for 2 YouTube rabbit holes, a 22-minute TikTok disappearance, and one full scroll of Instagram.
+> You did not have 12 seconds.
+
+**Slide 3:**
+*Full-bleed. Progress bar labeled* `EMOTIONALLY BUFFERING… 94%`
+
+> You are not busy.
+> You are buffering.
+
+**Slide 4:**
+*Text list — the cognitive spiral.*
+
+> What do I even say.
+> What if she calls.
+> Now we're in a whole conversation.
+> I should wait until I can really talk.
+>
+> Replying feels like a commitment. It's 12 seconds.
+
+**Slide 5:**
+*Phone notification — low-friction, warm.*
+
+> Text Your Mom nudges you before the debt compounds.
+
+**Slide 6:**
+*Timer counting down. 0:12 → 0:00.*
+
+> 12 seconds.
+> That's the whole thing.
+
+---
+
+**Notes:**
+- Hook is now **"Not busy. Buffering."** (was "You are not busy. You are emotionally buffering.") — shorter, caption-native, works as the post's visible text before the swipe. The longer line lives inside Slide 3 as the payoff.
+- Slide 3 is the hero. Give it space. Don't decorate it.
+- Slide 4 must not feel like advice. It should feel like the audience's own thought loop being read back to them.
+- Resist making Slide 5 cute. The product earns its slot by relieving the spiral, not by charming.
+- Caption options:
+  - *not busy. buffering.*
+  - *at 94%*
+  - *12 seconds. genuinely.*
+
+---
+
 ## What's Next
 
-Two more backlog ideas are close to Script Ready:
-- "The fake mental math of reply guilt" (carousel) — needs one more pass on the hook
-- "How to stop treating replies like taxes" (explainer) — good bridge from humor to product, save for week 3+
+One more backlog idea is close to Script Ready:
+- "How to stop treating replies like taxes" (explainer) — good bridge from humor to product, save for week 3+ when we've seen data from scripts 1–3
 
-Focus this week: shoot scripts 1 and 2. Rough is fine. The goal is volume and learning, not polish.
+Focus this week: shoot all three. Rough is fine. The goal is volume and learning, not polish. Script 1 is talking-head; scripts 2 and 3 are carousels — can be produced in parallel.
