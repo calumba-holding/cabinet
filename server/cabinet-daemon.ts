@@ -934,11 +934,13 @@ function scheduleJob(job: JobConfig): void {
   }
 
   const task = cron.schedule(job.schedule, () => {
-    console.log(`Triggering scheduled job ${key}`);
+    const scheduledAt = new Date(Math.round(Date.now() / 60000) * 60000).toISOString();
+    console.log(`Triggering scheduled job ${key} @ ${scheduledAt}`);
     void putJson(`${getAppOrigin()}/api/agents/${job.agentSlug}/jobs/${job.id}`, {
       action: "run",
       source: "scheduler",
       cabinetPath: job.cabinetPath,
+      scheduledAt,
     }).catch((error) => {
       console.error(`Failed to trigger scheduled job ${key}:`, error);
     });
@@ -957,11 +959,13 @@ function scheduleHeartbeat(slug: string, cronExpr: string, cabinetPath: string):
   }
 
   const task = cron.schedule(cronExpr, () => {
-    console.log(`Triggering heartbeat ${key}`);
+    const scheduledAt = new Date(Math.round(Date.now() / 60000) * 60000).toISOString();
+    console.log(`Triggering heartbeat ${key} @ ${scheduledAt}`);
     void putJson(`${getAppOrigin()}/api/agents/personas/${slug}`, {
       action: "run",
       source: "scheduler",
       cabinetPath,
+      scheduledAt,
     }).catch((error) => {
       console.error(`Failed to trigger heartbeat ${key}:`, error);
     });

@@ -348,7 +348,11 @@ async function processHeartbeatOutput(
  * Returns the sessionId (cron ignores it; frontend connects WebTerminal to it).
  * Returns null if the agent is inactive or over budget.
  */
-export async function runHeartbeat(slug: string, cabinetPath?: string): Promise<string | null> {
+export async function runHeartbeat(
+  slug: string,
+  cabinetPath?: string,
+  scheduledAt?: string,
+): Promise<string | null> {
   const ctx = await buildHeartbeatContext(slug, cabinetPath);
   if (!ctx) return null;
   const { prompt, persona, inbox, startTime, cwd } = ctx;
@@ -380,6 +384,7 @@ export async function runHeartbeat(slug: string, cabinetPath?: string): Promise<
         providerId: persona.provider,
       }),
       cabinetPath,
+      scheduledAt,
       cwd,
       timeoutSeconds: 600,
       onComplete: async (completion) => {
@@ -416,8 +421,12 @@ export async function runHeartbeat(slug: string, cabinetPath?: string): Promise<
  * Start a manual heartbeat — thin wrapper over runHeartbeat.
  * Returns sessionId for the frontend to connect a WebTerminal to.
  */
-export async function startManualHeartbeat(slug: string, cabinetPath?: string): Promise<string | null> {
-  return runHeartbeat(slug, cabinetPath);
+export async function startManualHeartbeat(
+  slug: string,
+  cabinetPath?: string,
+  scheduledAt?: string,
+): Promise<string | null> {
+  return runHeartbeat(slug, cabinetPath, scheduledAt);
 }
 
 /**

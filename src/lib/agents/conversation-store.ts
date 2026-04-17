@@ -62,6 +62,7 @@ interface CreateConversationInput {
   mentionedPaths?: string[];
   jobId?: string;
   jobName?: string;
+  scheduledAt?: string;
   startedAt?: string;
 }
 
@@ -360,6 +361,7 @@ export async function createConversation(
     startedAt,
     jobId: input.jobId,
     jobName: input.jobName,
+    scheduledAt: input.scheduledAt,
     providerId: input.providerId,
     adapterType: input.adapterType,
     adapterConfig: input.adapterConfig,

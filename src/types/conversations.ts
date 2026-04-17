@@ -24,6 +24,7 @@ export interface ConversationMeta {
   exitCode?: number | null;
   jobId?: string;
   jobName?: string;
+  scheduledAt?: string;
   providerId?: string;
   adapterType?: string;
   adapterConfig?: Record<string, unknown>;

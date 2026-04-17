@@ -35,6 +35,7 @@ interface StartConversationInput {
   mentionedPaths?: string[];
   jobId?: string;
   jobName?: string;
+  scheduledAt?: string;
   cabinetPath?: string;
   cwd?: string;
   timeoutSeconds?: number;
@@ -261,6 +262,7 @@ export async function startConversationRun(
     mentionedPaths: input.mentionedPaths,
     jobId: input.jobId,
     jobName: input.jobName,
+    scheduledAt: input.scheduledAt,
   });
 
   try {
@@ -395,7 +397,10 @@ async function processPostActions(
   }
 }
 
-export async function startJobConversation(job: JobConfig): Promise<JobRun> {
+export async function startJobConversation(
+  job: JobConfig,
+  options: { scheduledAt?: string } = {}
+): Promise<JobRun> {
   const persona = job.agentSlug ? await readPersona(job.agentSlug, job.cabinetPath) : null;
   const defaultProviderId = getDefaultProviderId();
   const jobPrompt = substituteTemplateVars(job.prompt, job);
@@ -442,6 +447,7 @@ export async function startJobConversation(job: JobConfig): Promise<JobRun> {
     }),
     jobId: job.id,
     jobName: job.name,
+    scheduledAt: options.scheduledAt,
     cabinetPath: job.cabinetPath,
     cwd,
     timeoutSeconds: job.timeout || 600,
