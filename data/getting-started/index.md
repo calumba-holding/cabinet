@@ -1,7 +1,7 @@
 ---
 title: Getting Started
 created: '2026-04-12T00:00:00.000Z'
-modified: '2026-04-15T00:00:00.000Z'
+modified: '2026-04-17T10:23:03.640Z'
 tags:
   - guide
   - onboarding
@@ -12,39 +12,147 @@ order: 0
 
 Cabinet is an AI-first knowledge base. Everything lives as files on disk — no database, no cloud lock-in. You write pages in markdown, organize them in a tree, and let AI agents help you edit and maintain the whole thing.
 
-## Supported File Types
+## Editor — Notion-grade writing
 
-Cabinet treats specific file formats as first-class views. Everything else can still live in the KB as an asset linked from a markdown page.
+The WYSIWYG editor runs on Tiptap. Everything you type roundtrips to plain markdown on disk.
 
-<table class="border-collapse w-full" style="min-width: 100px;"><colgroup><col style="min-width: 25px;"><col style="min-width: 25px;"><col style="min-width: 25px;"><col style="min-width: 25px;"></colgroup><tbody><tr><th colspan="1" rowspan="1"><p>Type</p></th><th colspan="1" rowspan="1"><p>Files</p></th><th colspan="1" rowspan="1"><p>How Cabinet shows it</p></th><th colspan="1" rowspan="1"><p>Sidebar icon</p></th></tr><tr><td colspan="1" rowspan="1"><p>Markdown page</p></td><td colspan="1" rowspan="1"><p><code>*.md</code>, <code>index.md</code></p></td><td colspan="1" rowspan="1"><p>WYSIWYG editor with markdown source toggle</p></td><td colspan="1" rowspan="1"><p>FileText (gray)</p></td></tr><tr><td colspan="1" rowspan="1"><p>CSV data</p></td><td colspan="1" rowspan="1"><p><code>*.csv</code></p></td><td colspan="1" rowspan="1"><p>Interactive table editor with source view</p></td><td colspan="1" rowspan="1"><p>Table (green)</p></td></tr><tr><td colspan="1" rowspan="1"><p>PDF document</p></td><td colspan="1" rowspan="1"><p><code>*.pdf</code></p></td><td colspan="1" rowspan="1"><p>Inline PDF viewer (browser-native)</p></td><td colspan="1" rowspan="1"><p>FileType (red)</p></td></tr><tr><td colspan="1" rowspan="1"><p>Mermaid diagram</p></td><td colspan="1" rowspan="1"><p><code>*.mermaid</code>, <code>*.mmd</code></p></td><td colspan="1" rowspan="1"><p>Rendered diagram</p></td><td colspan="1" rowspan="1"><p>GitBranch (violet)</p></td></tr><tr><td colspan="1" rowspan="1"><p>Image</p></td><td colspan="1" rowspan="1"><p><code>.png .jpg .jpeg .gif .webp .svg .avif .ico</code></p></td><td colspan="1" rowspan="1"><p>Inline image viewer</p></td><td colspan="1" rowspan="1"><p>Image (pink)</p></td></tr><tr><td colspan="1" rowspan="1"><p>Video</p></td><td colspan="1" rowspan="1"><p><code>.mp4 .webm .mov .m4v</code></p></td><td colspan="1" rowspan="1"><p>Inline video player</p></td><td colspan="1" rowspan="1"><p>Video (cyan)</p></td></tr><tr><td colspan="1" rowspan="1"><p>Audio</p></td><td colspan="1" rowspan="1"><p><code>.mp3 .wav .ogg .m4a .aac</code></p></td><td colspan="1" rowspan="1"><p>Inline audio player</p></td><td colspan="1" rowspan="1"><p>Music (amber)</p></td></tr><tr><td colspan="1" rowspan="1"><p>Source code</p></td><td colspan="1" rowspan="1"><p><code>.js .ts .py .go .swift .yaml .json</code> (and more)</p></td><td colspan="1" rowspan="1"><p>Syntax-highlighted viewer</p></td><td colspan="1" rowspan="1"><p>Code (violet)</p></td></tr><tr><td colspan="1" rowspan="1"><p>Embedded website</p></td><td colspan="1" rowspan="1"><p>Directory with <code>index.html</code>, no <code>index.md</code></p></td><td colspan="1" rowspan="1"><p>Iframe in main panel, sidebar visible</p></td><td colspan="1" rowspan="1"><p>Globe (blue)</p></td></tr><tr><td colspan="1" rowspan="1"><p>Full-screen app</p></td><td colspan="1" rowspan="1"><p>Directory with <code>index.html</code> + <code>.app</code> marker</p></td><td colspan="1" rowspan="1"><p>Full-screen iframe, sidebar collapses</p></td><td colspan="1" rowspan="1"><p>AppWindow (green)</p></td></tr><tr><td colspan="1" rowspan="1"><p>Linked Git repo</p></td><td colspan="1" rowspan="1"><p>Directory with <code>.repo.yaml</code></p></td><td colspan="1" rowspan="1"><p>Normal page/folder, repo context for agents</p></td><td colspan="1" rowspan="1"><p>GitBranch (orange)</p></td></tr><tr><td colspan="1" rowspan="1"><p>Linked directory</p></td><td colspan="1" rowspan="1"><p>Symlink without <code>.repo.yaml</code></p></td><td colspan="1" rowspan="1"><p>Normal folder, contents appear as children</p></td><td colspan="1" rowspan="1"><p>Link2 (blue)</p></td></tr><tr><td colspan="1" rowspan="1"><p>Office / archive</p></td><td colspan="1" rowspan="1"><p><code>.docx .pptx .xlsx .zip .fig .sketch</code> (and more)</p></td><td colspan="1" rowspan="1"><p>Shown in sidebar, opens in Finder</p></td><td colspan="1" rowspan="1"><p>File (gray)</p></td></tr></tbody></table>
+### Headings, lists, and styling
 
-## Sidebar Icons at a Glance
+Select any text and the **bubble menu** appears. Use it for **bold**, *italic*, <u>underline</u>, ~strike~, `code`, super<sup>script</sup>, sub<sub>script</sub>, alignment, and links.
 
-<table class="border-collapse w-full" style="min-width: 75px;"><colgroup><col style="min-width: 25px;"><col style="min-width: 25px;"><col style="min-width: 25px;"></colgroup><tbody><tr><th colspan="1" rowspan="1"><p>Icon</p></th><th colspan="1" rowspan="1"><p>Color</p></th><th colspan="1" rowspan="1"><p>Meaning</p></th></tr><tr><td colspan="1" rowspan="1"><p>AppWindow</p></td><td colspan="1" rowspan="1"><p>Green</p></td><td colspan="1" rowspan="1"><p>Full-screen embedded app (<code>.app</code> marker)</p></td></tr><tr><td colspan="1" rowspan="1"><p>Globe</p></td><td colspan="1" rowspan="1"><p>Blue</p></td><td colspan="1" rowspan="1"><p>Embedded website (directory with <code>index.html</code>)</p></td></tr><tr><td colspan="1" rowspan="1"><p>GitBranch</p></td><td colspan="1" rowspan="1"><p>Orange</p></td><td colspan="1" rowspan="1"><p>Linked Git repo (<code>.repo.yaml</code>)</p></td></tr><tr><td colspan="1" rowspan="1"><p>Link2</p></td><td colspan="1" rowspan="1"><p>Blue</p></td><td colspan="1" rowspan="1"><p>Linked directory (non-repo symlink)</p></td></tr><tr><td colspan="1" rowspan="1"><p>FileType</p></td><td colspan="1" rowspan="1"><p>Red</p></td><td colspan="1" rowspan="1"><p>PDF file</p></td></tr><tr><td colspan="1" rowspan="1"><p>Table</p></td><td colspan="1" rowspan="1"><p>Green</p></td><td colspan="1" rowspan="1"><p>CSV file</p></td></tr><tr><td colspan="1" rowspan="1"><p>Code</p></td><td colspan="1" rowspan="1"><p>Violet</p></td><td colspan="1" rowspan="1"><p>Source code file</p></td></tr><tr><td colspan="1" rowspan="1"><p>Image</p></td><td colspan="1" rowspan="1"><p>Pink</p></td><td colspan="1" rowspan="1"><p>Image file</p></td></tr><tr><td colspan="1" rowspan="1"><p>Video</p></td><td colspan="1" rowspan="1"><p>Cyan</p></td><td colspan="1" rowspan="1"><p>Video file</p></td></tr><tr><td colspan="1" rowspan="1"><p>Music</p></td><td colspan="1" rowspan="1"><p>Amber</p></td><td colspan="1" rowspan="1"><p>Audio file</p></td></tr><tr><td colspan="1" rowspan="1"><p>Folder</p></td><td colspan="1" rowspan="1"><p>Gray</p></td><td colspan="1" rowspan="1"><p>Regular directory (has <code>index.md</code>)</p></td></tr><tr><td colspan="1" rowspan="1"><p>FileText</p></td><td colspan="1" rowspan="1"><p>Gray</p></td><td colspan="1" rowspan="1"><p>Markdown page</p></td></tr></tbody></table>
+### Text color and highlights
+
+Pick text color or background highlight from the toolbar or bubble menu. They roundtrip through markdown as inline HTML.
+
+-   <span style="color: rgb(220, 38, 38);">Red urgency notes</span> for incidents
+    
+-   <span style="color: rgb(22, 163, 74);">Green confirmations</span> for shipped items
+    
+-   <mark data-color="#fef08a" style="background-color: rgb(254, 240, 138); color: inherit;">Yellow highlights</mark> for key terms
+    
+-   <mark data-color="#bfdbfe" style="background-color: rgb(191, 219, 254); color: inherit;">Blue backgrounds</mark> for cross-references
+    
+
+### Images — paste, drop, or URL
+
+Three ways to add an image, all save the file next to this page on disk:
+
+1.  **Paste** a copy-pasted screenshot — it uploads and inserts automatically
+    
+2.  **Drag & drop** a file from Finder onto the editor
+    
+3.  Click the **image icon** on the toolbar, or type `/Image`, and use the **Upload** tab or **From URL** tab
+    
+
+Hover any image and drag its side handles to resize — the width persists across reloads.
+
+<img class="rounded-lg max-w-full" src="https://runcabinet.com/cabinet-icon.png" alt="Cabinet icon" data-align="center" style="width: 96px;" />
+
+↑ Example: the Cabinet logo inserted via `/Image → From URL`. Hover it in edit mode to see the resize handles.
+
+### Videos and universal embeds
+
+Click the **video icon** on the toolbar or type `/Video` to upload a file or paste a direct video URL. Click the **embed icon** (sparkles) or type `/Embed` for YouTube, X, Vimeo, Loom, TikTok, Spotify, Facebook, Instagram, or any URL — Cabinet auto-detects the provider.
+
+<video src="https://runcabinet.com/demo.webm" controls></video>
+
+↑ Example: `demo.webm` embedded via `/Video → From URL` with `https://runcabinet.com/demo.webm`.
+
+Supported providers when you type `/Embed`:
+
+<table class="border-collapse w-full" style="min-width: 50px;"><colgroup><col style="min-width: 25px;"><col style="min-width: 25px;"></colgroup><tbody><tr><th colspan="1" rowspan="1"><p>Provider</p></th><th colspan="1" rowspan="1"><p>Paste a link like…</p></th></tr><tr><td colspan="1" rowspan="1"><p>YouTube</p></td><td colspan="1" rowspan="1"><p><code>https://youtube.com/watch?v=…</code></p></td></tr><tr><td colspan="1" rowspan="1"><p>Vimeo</p></td><td colspan="1" rowspan="1"><p><code>https://vimeo.com/…</code></p></td></tr><tr><td colspan="1" rowspan="1"><p>Loom</p></td><td colspan="1" rowspan="1"><p><code>https://loom.com/share/…</code></p></td></tr><tr><td colspan="1" rowspan="1"><p>X / Twitter</p></td><td colspan="1" rowspan="1"><p><code>https://x.com/user/status/…</code></p></td></tr><tr><td colspan="1" rowspan="1"><p>TikTok</p></td><td colspan="1" rowspan="1"><p><code>https://tiktok.com/@user/video/…</code></p></td></tr><tr><td colspan="1" rowspan="1"><p>Facebook / Instagram</p></td><td colspan="1" rowspan="1"><p>any public post URL</p></td></tr><tr><td colspan="1" rowspan="1"><p>Spotify</p></td><td colspan="1" rowspan="1"><p><code>https://open.spotify.com/track/…</code></p></td></tr><tr><td colspan="1" rowspan="1"><p>Anything else</p></td><td colspan="1" rowspan="1"><p>Falls back to a generic iframe</p></td></tr></tbody></table>
+
+Pasting a recognized URL on an empty line auto-embeds without the popover.
+
+### Slash commands
+
+Press `/` on an empty line to open the command menu, grouped into **Basic**, **Media**, and **Advanced**.
+
+<table class="border-collapse w-full" style="min-width: 50px;"><colgroup><col style="min-width: 25px;"><col style="min-width: 25px;"></colgroup><tbody><tr><th colspan="1" rowspan="1"><p>Group</p></th><th colspan="1" rowspan="1"><p>Commands</p></th></tr><tr><td colspan="1" rowspan="1"><p>Basic</p></td><td colspan="1" rowspan="1"><p>Text, H1/H2/H3, Bullet, Numbered, Checklist, Code block, Quote, Divider, Table</p></td></tr><tr><td colspan="1" rowspan="1"><p>Media</p></td><td colspan="1" rowspan="1"><p>Image, Video, Embed, File</p></td></tr><tr><td colspan="1" rowspan="1"><p>Advanced</p></td><td colspan="1" rowspan="1"><p>Callout, Warning, Math, Emoji</p></td></tr></tbody></table>
+
+### Callouts
+
+Use `/Callout` for info blocks and `/Warning` for alerts:
+
+**Tip.** You can drop a file onto an already-open page and it saves straight into the page's directory — no need to move it manually.
+
+**Heads up.** Don't edit files inside `.git`, `.history`, or `.jobs` — Cabinet owns those.
+
+### Math, emoji, checklists
+
+-   
+    
+
+-   Type `/Math` or wrap in `$…$` / `$$…$$` — KaTeX renders inline, e.g., $E = mc^2$
+    
+-   Type `/Emoji` for a picker, or 🚀 paste unicode directly
+    
+-   Type `/Checklist` for a task list:
+    
+-   Edit colors and highlights
+    
+-   Paste a YouTube link
+    
+-   Try the drag handle on the left gutter
+    
+
+### Drag handle
+
+Hover any block and a ⋮⋮ handle appears in the left margin. Drag it to reorder paragraphs, lists, embeds, or images.
+
+### Wiki-links and mentions
+
+Type `<a data-wiki-link="true" data-page-name="Apps and Repos" href="#page:apps-and-repos" class="wiki-link">Apps and Repos</a>` to link another page (autocompletes the slug). In the right-side AI panel use `@PageName` to attach pages as context for the agent.
+
+### Source mode
+
+Every editor view has a **Source** toggle in the top-right. Click it to see (and edit) the raw markdown that will be written to disk.
 
 ## Core Features
 
--   **WYSIWYG Editor** — Rich text editing with toolbar, tables, code blocks, and markdown source toggle
+-   **WYSIWYG Editor** — rich text with Notion-grade features (see the section above). Auto-saves 500 ms after each keystroke.
     
--   **AI Editor Panel** — Right-side panel for live AI editing sessions. Today this remains terminal-backed for interactive runs and page-focused workflows
+    *Example:* Select a phrase → pick yellow highlight → keep typing. On disk it's saved as `<mark style="background-color: #fef08a">phrase</mark>`.
     
--   **Agent Dashboard** — Run AI agents on tasks, monitor sessions, and view native live transcripts for detached runs
+-   **AI Editor Panel** — right-side chat for editing the current page. `@mention` other pages to pass their content as context.
     
--   **Scheduled Jobs** — Cron-based automation with YAML configs under `.jobs/`
+    *Example:* Open a draft, press `Cmd+Shift+A`, type "Tighten the intro using @Brand Voice as reference." The agent edits this page inline.
     
--   **Heartbeats** — Recurring agent check-ins defined in `persona.md`
+-   **Agent Dashboard** — detached AI runs with live transcripts. Each conversation becomes a row under Agents.
     
--   **Kanban Tasks** — Board and list views (Backlog → In Progress → Review → Done)
+    *Example:* Ask an agent to research competitors overnight. Run shows `running → completed` with its full output accessible next morning.
     
--   **Web Terminal** — Interactive browser terminal for direct CLI sessions and future Cabinet-managed terminal features such as tmux-like workflows
+-   **Scheduled Jobs** — YAML configs in `/data/.jobs/` fired by cron.
     
--   **Search** — `Cmd+K` full-text search across all pages
+    *Example:* `monday-digest.yaml` runs every Monday 09:00, asks Claude to summarize last week's commits, writes the result to `/data/weekly/`.
     
--   **Version History** — Git-backed auto-save with diff viewer and one-click restore
+-   **Heartbeats** — recurring agent check-ins defined in `persona.md`. Lightweight "ping the state" runs.
     
--   **Drag & Drop** — Reorder pages in the sidebar, upload images by pasting or dragging
+    *Example:* A `support` heartbeat every 4 h scans `/data/inbox/` for new tickets and tags urgency.
     
--   **Cabinets** — Runtime sub-directories with their own agents, jobs, and visibility scope
+-   **Kanban Tasks** — visit `/tasks`. Cards live in `board.yaml`.
+    
+    *Example:* Drag a card from **Backlog** to **In Progress** → Cabinet kicks off the linked agent run automatically.
+    
+-   **Web Terminal** — `` Cmd+` `` toggles an interactive terminal. Good for focused CLI work.
+    
+    *Example:* Open the terminal, run `git log --oneline`, paste interesting hashes into a page as references.
+    
+-   **Search** — `Cmd+K`, full-text across every markdown page, ranked by relevance.
+    
+    *Example:* Search "ARR target" — jumps straight to the OKR page that mentions it.
+    
+-   **Version History** — click the clock icon on any page to see git commits, diff them, or one-click restore.
+    
+    *Example:* Accidentally deleted a section? Restore the commit from 10 minutes ago.
+    
+-   **Drag & Drop** — reorder pages in the sidebar, drop files onto the editor to upload.
+    
+    *Example:* Drag a PDF into a folder — it lands as a first-class PDF page in the sidebar.
+    
+-   **Cabinets** — subdirectories tagged as runtime cabinets get their own agents, jobs, and visibility.
+    
+    *Example:* `/data/client-acme/` becomes an isolated cabinet with its own agent roster and private views.
     
 
 ## Keyboard Shortcuts
@@ -56,3 +164,14 @@ Cabinet treats specific file formats as first-class views. Everything else can s
 -   [[Apps and Repos]] — Embedded apps, full-screen mode, and linked repos
     
 -   [[Symlinks and Load Knowledge]] — Direct symlinks, `.cabinet-meta`, `.repo.yaml`, and `CABINET_DATA_DIR`
+    
+
+## Supported File Types
+
+Cabinet treats specific file formats as first-class views. Everything else can still live in the KB as an asset linked from a markdown page.
+
+<table class="border-collapse w-full" style="min-width: 100px;"><colgroup><col style="min-width: 25px;"><col style="min-width: 25px;"><col style="min-width: 25px;"><col style="min-width: 25px;"></colgroup><tbody><tr><th colspan="1" rowspan="1"><p>Type</p></th><th colspan="1" rowspan="1"><p>Files</p></th><th colspan="1" rowspan="1"><p>How Cabinet shows it</p></th><th colspan="1" rowspan="1"><p>Sidebar icon</p></th></tr><tr><td colspan="1" rowspan="1"><p>Markdown page</p></td><td colspan="1" rowspan="1"><p><code>*.md</code>, <code>index.md</code></p></td><td colspan="1" rowspan="1"><p>WYSIWYG editor with markdown source toggle</p></td><td colspan="1" rowspan="1"><p>FileText (gray)</p></td></tr><tr><td colspan="1" rowspan="1"><p>CSV data</p></td><td colspan="1" rowspan="1"><p><code>*.csv</code></p></td><td colspan="1" rowspan="1"><p>Interactive table editor with source view</p></td><td colspan="1" rowspan="1"><p>Table (green)</p></td></tr><tr><td colspan="1" rowspan="1"><p>PDF document</p></td><td colspan="1" rowspan="1"><p><code>*.pdf</code></p></td><td colspan="1" rowspan="1"><p>Inline PDF viewer (browser-native)</p></td><td colspan="1" rowspan="1"><p>FileType (red)</p></td></tr><tr><td colspan="1" rowspan="1"><p>Mermaid diagram</p></td><td colspan="1" rowspan="1"><p><code>*.mermaid</code>, <code>*.mmd</code></p></td><td colspan="1" rowspan="1"><p>Rendered diagram</p></td><td colspan="1" rowspan="1"><p>GitBranch (violet)</p></td></tr><tr><td colspan="1" rowspan="1"><p>Image</p></td><td colspan="1" rowspan="1"><p><code>.png .jpg .jpeg .gif .webp .svg .avif .ico</code></p></td><td colspan="1" rowspan="1"><p>Inline image viewer</p></td><td colspan="1" rowspan="1"><p>Image (pink)</p></td></tr><tr><td colspan="1" rowspan="1"><p>Video</p></td><td colspan="1" rowspan="1"><p><code>.mp4 .webm .mov .m4v</code></p></td><td colspan="1" rowspan="1"><p>Inline video player</p></td><td colspan="1" rowspan="1"><p>Video (cyan)</p></td></tr><tr><td colspan="1" rowspan="1"><p>Audio</p></td><td colspan="1" rowspan="1"><p><code>.mp3 .wav .ogg .m4a .aac</code></p></td><td colspan="1" rowspan="1"><p>Inline audio player</p></td><td colspan="1" rowspan="1"><p>Music (amber)</p></td></tr><tr><td colspan="1" rowspan="1"><p>Source code</p></td><td colspan="1" rowspan="1"><p><code>.js .ts .py .go .swift .yaml .json</code> (and more)</p></td><td colspan="1" rowspan="1"><p>Syntax-highlighted viewer</p></td><td colspan="1" rowspan="1"><p>Code (violet)</p></td></tr><tr><td colspan="1" rowspan="1"><p>Embedded website</p></td><td colspan="1" rowspan="1"><p>Directory with <code>index.html</code>, no <code>index.md</code></p></td><td colspan="1" rowspan="1"><p>Iframe in main panel, sidebar visible</p></td><td colspan="1" rowspan="1"><p>Globe (blue)</p></td></tr><tr><td colspan="1" rowspan="1"><p>Full-screen app</p></td><td colspan="1" rowspan="1"><p>Directory with <code>index.html</code> + <code>.app</code> marker</p></td><td colspan="1" rowspan="1"><p>Full-screen iframe, sidebar collapses</p></td><td colspan="1" rowspan="1"><p>AppWindow (green)</p></td></tr><tr><td colspan="1" rowspan="1"><p>Linked Git repo</p></td><td colspan="1" rowspan="1"><p>Directory with <code>.repo.yaml</code></p></td><td colspan="1" rowspan="1"><p>Normal page/folder, repo context for agents</p></td><td colspan="1" rowspan="1"><p>GitBranch (orange)</p></td></tr><tr><td colspan="1" rowspan="1"><p>Linked directory</p></td><td colspan="1" rowspan="1"><p>Symlink without <code>.repo.yaml</code></p></td><td colspan="1" rowspan="1"><p>Normal folder, contents appear as children</p></td><td colspan="1" rowspan="1"><p>Link2 (blue)</p></td></tr><tr><td colspan="1" rowspan="1"><p>Office / archive</p></td><td colspan="1" rowspan="1"><p><code>.docx .pptx .xlsx .zip .fig .sketch</code> (and more)</p></td><td colspan="1" rowspan="1"><p>Shown in sidebar, opens in Finder</p></td><td colspan="1" rowspan="1"><p>File (gray)</p></td></tr></tbody></table>
+
+## Sidebar Icons at a Glance
+
+<table class="border-collapse w-full" style="min-width: 75px;"><colgroup><col style="min-width: 25px;"><col style="min-width: 25px;"><col style="min-width: 25px;"></colgroup><tbody><tr><th colspan="1" rowspan="1"><p>Icon</p></th><th colspan="1" rowspan="1"><p>Color</p></th><th colspan="1" rowspan="1"><p>Meaning</p></th></tr><tr><td colspan="1" rowspan="1"><p>AppWindow</p></td><td colspan="1" rowspan="1"><p>Green</p></td><td colspan="1" rowspan="1"><p>Full-screen embedded app (<code>.app</code> marker)</p></td></tr><tr><td colspan="1" rowspan="1"><p>Globe</p></td><td colspan="1" rowspan="1"><p>Blue</p></td><td colspan="1" rowspan="1"><p>Embedded website (directory with <code>index.html</code>)</p></td></tr><tr><td colspan="1" rowspan="1"><p>GitBranch</p></td><td colspan="1" rowspan="1"><p>Orange</p></td><td colspan="1" rowspan="1"><p>Linked Git repo (<code>.repo.yaml</code>)</p></td></tr><tr><td colspan="1" rowspan="1"><p>Link2</p></td><td colspan="1" rowspan="1"><p>Blue</p></td><td colspan="1" rowspan="1"><p>Linked directory (non-repo symlink)</p></td></tr><tr><td colspan="1" rowspan="1"><p>FileType</p></td><td colspan="1" rowspan="1"><p>Red</p></td><td colspan="1" rowspan="1"><p>PDF file</p></td></tr><tr><td colspan="1" rowspan="1"><p>Table</p></td><td colspan="1" rowspan="1"><p>Green</p></td><td colspan="1" rowspan="1"><p>CSV file</p></td></tr><tr><td colspan="1" rowspan="1"><p>Code</p></td><td colspan="1" rowspan="1"><p>Violet</p></td><td colspan="1" rowspan="1"><p>Source code file</p></td></tr><tr><td colspan="1" rowspan="1"><p>Image</p></td><td colspan="1" rowspan="1"><p>Pink</p></td><td colspan="1" rowspan="1"><p>Image file</p></td></tr><tr><td colspan="1" rowspan="1"><p>Video</p></td><td colspan="1" rowspan="1"><p>Cyan</p></td><td colspan="1" rowspan="1"><p>Video file</p></td></tr><tr><td colspan="1" rowspan="1"><p>Music</p></td><td colspan="1" rowspan="1"><p>Amber</p></td><td colspan="1" rowspan="1"><p>Audio file</p></td></tr><tr><td colspan="1" rowspan="1"><p>Folder</p></td><td colspan="1" rowspan="1"><p>Gray</p></td><td colspan="1" rowspan="1"><p>Regular directory (has <code>index.md</code>)</p></td></tr><tr><td colspan="1" rowspan="1"><p>FileText</p></td><td colspan="1" rowspan="1"><p>Gray</p></td><td colspan="1" rowspan="1"><p>Markdown page</p></td></tr></tbody></table>

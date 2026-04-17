@@ -31,11 +31,16 @@ import {
   Superscript as SuperIcon,
   Subscript as SubIcon,
   Link as LinkIcon,
+  ImageIcon,
+  Video as VideoIcon,
+  Sparkles,
 } from "lucide-react";
 import { useEditorStore } from "@/stores/editor-store";
 import { useState, useRef, useEffect } from "react";
 import { ColorPalette } from "./color-palette";
 import { TEXT_COLORS, HIGHLIGHT_COLORS } from "./extensions/color-highlight";
+import { MediaPopover, type MediaKind } from "./media-popover";
+import { EmbedPopover } from "./embed-popover";
 import { cn } from "@/lib/utils";
 
 interface EditorToolbarProps {
@@ -43,12 +48,19 @@ interface EditorToolbarProps {
 }
 
 type Popover = null | "color" | "highlight";
+type MediaPop =
+  | null
+  | { type: "media"; kind: MediaKind }
+  | { type: "embed" };
 
 export function EditorToolbar({ editor }: EditorToolbarProps) {
   const frontmatter = useEditorStore((s) => s.frontmatter);
   const updateFrontmatter = useEditorStore((s) => s.updateFrontmatter);
+  const pagePath = useEditorStore((s) => s.currentPath);
   const isRtl = frontmatter?.dir === "rtl";
   const [popover, setPopover] = useState<Popover>(null);
+  const [mediaPop, setMediaPop] = useState<MediaPop>(null);
+  const [mediaAnchor, setMediaAnchor] = useState<{ top: number; left: number } | null>(null);
   const popRef = useRef<HTMLDivElement | null>(null);
 
   useEffect(() => {
@@ -71,6 +83,38 @@ export function EditorToolbar({ editor }: EditorToolbarProps) {
     if (url === null) return;
     if (url === "") editor.chain().focus().unsetLink().run();
     else editor.chain().focus().extendMarkRange("link").setLink({ href: url }).run();
+  };
+
+  const openMediaFromButton = (
+    e: React.MouseEvent<HTMLElement>,
+    next: NonNullable<MediaPop>
+  ) => {
+    const btn = e.currentTarget.getBoundingClientRect();
+    setMediaAnchor({ top: btn.bottom + 6, left: btn.left });
+    setMediaPop(next);
+  };
+
+  const insertMedia = (kind: MediaKind, payload: { url: string; alt?: string; mimeType?: string }) => {
+    const { url, alt, mimeType } = payload;
+    const type = mimeType ?? "";
+    const isImage = kind === "image" || type.startsWith("image/") || /\.(png|jpe?g|gif|webp|svg|avif)(\?|$)/i.test(url);
+    const isVideo = kind === "video" || type.startsWith("video/") || /\.(mp4|webm|ogg|mov|m4v)(\?|$)/i.test(url);
+    if (isImage) {
+      editor.chain().focus().setImage({ src: url, alt: alt ?? "" }).run();
+    } else if (isVideo) {
+      editor.chain().focus().insertContent({
+        type: "embed",
+        attrs: { provider: "video", src: url, originalUrl: url },
+      }).run();
+    } else {
+      editor.chain().focus().insertContent(`<a href="${url}">${alt ?? url}</a>`).run();
+    }
+    setMediaPop(null);
+  };
+
+  const insertEmbed = (url: string) => {
+    editor.commands.setEmbed({ url });
+    setMediaPop(null);
   };
 
   type Item =
@@ -117,6 +161,7 @@ export function EditorToolbar({ editor }: EditorToolbarProps) {
   ];
 
   return (
+    <>
     <div className="flex items-center gap-0.5 border-b border-border px-2 py-1 bg-background/50 overflow-x-auto scrollbar-none relative">
       {items.map((item, i) => {
         if ("separator" in item) {
@@ -196,6 +241,64 @@ export function EditorToolbar({ editor }: EditorToolbarProps) {
           </div>
         )}
       </div>
+
+      <Separator orientation="vertical" className="mx-1 h-6" />
+
+      {/* Image / Video / Embed insert buttons */}
+      <Toggle
+        size="sm"
+        pressed={false}
+        onPressedChange={() => {}}
+        onClick={(e) => openMediaFromButton(e, { type: "media", kind: "image" })}
+        aria-label="Insert image"
+        title="Insert image (upload, URL, or paste/drop)"
+        className="h-8 w-8 p-0"
+      >
+        <ImageIcon className="h-4 w-4" />
+      </Toggle>
+      <Toggle
+        size="sm"
+        pressed={false}
+        onPressedChange={() => {}}
+        onClick={(e) => openMediaFromButton(e, { type: "media", kind: "video" })}
+        aria-label="Insert video"
+        title="Insert video (upload or URL)"
+        className="h-8 w-8 p-0"
+      >
+        <VideoIcon className="h-4 w-4" />
+      </Toggle>
+      <Toggle
+        size="sm"
+        pressed={false}
+        onPressedChange={() => {}}
+        onClick={(e) => openMediaFromButton(e, { type: "embed" })}
+        aria-label="Embed"
+        title="Embed — YouTube, X, Vimeo, Loom, TikTok, Spotify…"
+        className="h-8 w-8 p-0"
+      >
+        <Sparkles className="h-4 w-4" />
+      </Toggle>
     </div>
+    {mediaPop && mediaAnchor && (
+      <div style={{ position: "fixed", top: mediaAnchor.top, left: mediaAnchor.left, zIndex: 60 }}>
+        {mediaPop.type === "media" && pagePath && (
+          <MediaPopover
+            kind={mediaPop.kind}
+            pagePath={pagePath}
+            anchor={{ top: 0, left: 0 }}
+            onCancel={() => setMediaPop(null)}
+            onInsert={(payload) => insertMedia(mediaPop.kind, payload)}
+          />
+        )}
+        {mediaPop.type === "embed" && (
+          <EmbedPopover
+            anchor={{ top: 0, left: 0 }}
+            onCancel={() => setMediaPop(null)}
+            onInsert={insertEmbed}
+          />
+        )}
+      </div>
+    )}
+    </>
   );
 }
