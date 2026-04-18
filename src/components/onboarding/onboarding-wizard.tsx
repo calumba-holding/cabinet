@@ -126,9 +126,6 @@ const GITHUB_REPO_URL = "https://github.com/hilash/cabinet";
 const GITHUB_STATS_URL = "/api/github/repo";
 const GITHUB_STARS_FALLBACK = 393;
 const CABINET_CLOUD_URL = "https://runcabinet.com/waitlist";
-const TEAM_SIZES = ["Just me", "2-5", "5-20", "20+"];
-const HOUSEHOLD_SIZES = ["Just me", "Couple", "3-4", "5+"];
-
 // Typewritten on the Welcome home step after the blueprint finishes drawing.
 const WELCOME_PARAGRAPH =
   "Your Home is yours. Inside it, you'll set up rooms for different parts of your life: work, second brain, research, family. And every room has cabinets: your notes, your files, and an AI team quietly getting things done in the background.";
@@ -987,20 +984,20 @@ function TeamBuildStep({
             <Loader2 className="size-5 animate-spin" style={{ color: WEB.textTertiary }} />
           </div>
         ) : (
-          <div className="flex gap-3 overflow-x-auto px-6 pb-2 scrollbar-hide" style={{ scrollbarWidth: "none", msOverflowStyle: "none" } as React.CSSProperties}>
+          <div className="flex items-start justify-center gap-3 overflow-x-auto px-6 pb-2 scrollbar-hide" style={{ scrollbarWidth: "none", msOverflowStyle: "none" } as React.CSSProperties}>
             {groupByDepartment(suggestedAgents, libraryTemplates, roomType).map(([label, agents]) => (
               <div
                 key={label}
-                className="rounded-xl p-3 shrink-0"
-                style={{ background: WEB.bgWarm, width: 180 }}
+                className="flex flex-col rounded-xl p-3 shrink-0"
+                style={{ background: WEB.bgWarm, width: 180, maxHeight: 260 }}
               >
                 <p
-                  className="mb-2 text-[10px] font-semibold uppercase tracking-wider"
+                  className="mb-2 text-[10px] font-semibold uppercase tracking-wider shrink-0"
                   style={{ color: WEB.textTertiary }}
                 >
                   {label}
                 </p>
-                <div className="flex flex-col gap-1.5">
+                <div className="flex flex-col gap-1.5 overflow-y-auto scrollbar-thin pr-1">
                   {agents.map((agent) => {
                     const isMandatory = mandatoryAgents.has(agent.slug);
                     const atLimit = selectedCount >= maxAgents && !agent.checked;
@@ -1227,9 +1224,20 @@ function groupByDepartment(
     groups.get(label)!.push(agent);
   }
 
-  // Sort groups by the predefined order
+  // Sort groups by the predefined order. Some rooms already map departments
+  // to "Other" (e.g. LAB maps household+finance → "Other"), so we must dedup
+  // the final list before returning to avoid duplicate React keys.
   const order = DEPARTMENT_ORDERS[roomType];
-  const labelOrder = Array.from(new Set(order.map(([, l]) => l))).concat("Other");
+  const seen = new Set<string>();
+  const labelOrder: string[] = [];
+  for (const [, label] of order) {
+    if (!seen.has(label)) {
+      seen.add(label);
+      labelOrder.push(label);
+    }
+  }
+  if (!seen.has("Other")) labelOrder.push("Other");
+
   return labelOrder
     .filter((label) => groups.has(label))
     .map((label) => [label, groups.get(label)!]);
@@ -2079,31 +2087,6 @@ export function OnboardingWizard({ onComplete }: { onComplete: () => void }) {
                   />
                 </div>
 
-                {activeRoom.askTeamSize && (
-                  <div className="space-y-2">
-                    <label className="text-sm font-medium" style={{ color: WEB.text }}>
-                      {activeRoom.teamSizeLabel || "How big is your team?"}
-                    </label>
-                    <div className="flex gap-2">
-                      {(answers.roomType === "family-room" ? HOUSEHOLD_SIZES : TEAM_SIZES).map((size) => (
-                        <button
-                          key={size}
-                          onClick={() =>
-                            setAnswers({ ...answers, teamSize: size })
-                          }
-                          className="flex-1 py-2.5 px-3 rounded-xl text-sm font-medium transition-all"
-                          style={{
-                            border: `1px solid ${answers.teamSize === size ? WEB.accent : WEB.border}`,
-                            background: answers.teamSize === size ? WEB.accentBg : WEB.bgCard,
-                            color: answers.teamSize === size ? WEB.accent : WEB.textSecondary,
-                          }}
-                        >
-                          {size}
-                        </button>
-                      ))}
-                    </div>
-                  </div>
-                )}
               </div>
 
               <div className="flex items-center justify-between pt-1">
@@ -2875,7 +2858,7 @@ export function OnboardingWizard({ onComplete }: { onComplete: () => void }) {
                 }}
               >
                 {/* Left half — Company + agents */}
-                <div className="p-5 space-y-4 flex-1 overflow-y-auto">
+                <div className="p-5 space-y-4 flex-1 overflow-y-auto scrollbar-thin">
                   <div className="space-y-1">
                     <h2 className="font-logo text-xl tracking-tight italic" style={{ color: WEB.text }}>
                       {answers.workspaceName || "Your Cabinet"}
@@ -2932,7 +2915,7 @@ export function OnboardingWizard({ onComplete }: { onComplete: () => void }) {
                     <span className="text-[11px] font-semibold" style={{ color: WEB.textTertiary }}>#</span>
                     <span className="text-[11px] font-semibold" style={{ color: WEB.text }}>general</span>
                   </div>
-                  <div className="flex-1 overflow-y-auto p-3 pb-2 space-y-0.5">
+                  <div className="flex-1 overflow-y-auto scrollbar-thin p-3 pb-2 space-y-0.5">
                     <AgentChatPreview
                       agents={suggestedAgents.filter((a) => a.checked)}
                       workspaceName={answers.workspaceName}
