@@ -4,6 +4,7 @@ import { useEffect, useMemo, useRef, useState } from "react";
 import { cn } from "@/lib/utils";
 import {
   buildScheduledKey,
+  getManualScheduleEvents,
   getScheduleEvents,
   getViewRange,
   getAgentColor,
@@ -62,6 +63,12 @@ interface ScheduleCalendarProps {
   anchor: Date;
   agents: CabinetAgentSummary[];
   jobs: CabinetJobSummary[];
+  /**
+   * Optional pool of conversations to render as extra ScheduleEvent pills
+   * (e.g. past manual runs). The calendar filters them to the visible window
+   * and paints them alongside jobs/heartbeats, one pill per conversation.
+   */
+  manualConversations?: ConversationMeta[];
   fullscreen?: boolean;
   /** 0 = whole day fits container; >0 = each hour row gains px and grid scrolls. */
   density?: number;
@@ -82,6 +89,8 @@ function isEventMissed(
 ): boolean {
   if (!event.enabled) return false; // disabled is a different state, tracked separately
   if (event.time.getTime() >= now.getTime()) return false;
+  // Manual events represent conversations that actually ran — never "missed".
+  if (event.sourceType === "manual") return false;
   if (!scheduledConversations || scheduledConversations.size === 0) return false;
   const key = buildScheduledKey(
     event.agentSlug,
@@ -732,6 +741,7 @@ export function ScheduleCalendar({
   anchor,
   agents,
   jobs,
+  manualConversations,
   fullscreen,
   density,
   visibleStartHour = DEFAULT_VISIBLE_START_HOUR,
@@ -743,10 +753,14 @@ export function ScheduleCalendar({
 }: ScheduleCalendarProps) {
   const { start, end } = useMemo(() => getViewRange(mode, anchor), [mode, anchor]);
 
-  const events = useMemo(
-    () => getScheduleEvents(agents, jobs, start, end),
-    [agents, jobs, start, end]
-  );
+  const events = useMemo(() => {
+    const scheduled = getScheduleEvents(agents, jobs, start, end);
+    const manual = manualConversations
+      ? getManualScheduleEvents(manualConversations, agents, start, end)
+      : [];
+    if (manual.length === 0) return scheduled;
+    return [...scheduled, ...manual].sort((a, b) => a.time.getTime() - b.time.getTime());
+  }, [agents, jobs, manualConversations, start, end]);
 
   // Build day list for week/day views
   const days = useMemo(() => {

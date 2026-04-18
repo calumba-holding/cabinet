@@ -636,6 +636,10 @@ export function CabinetView({ cabinetPath }: { cabinetPath: string }) {
   }
 
   function lookupConversationForEvent(event: ScheduleEvent): ConversationMeta | null {
+    // Manual events are one-offs — the conversation id lives on the event
+    // itself, not in the scheduledConversations index. Callers that want to
+    // resolve it should look it up from their own conversation list.
+    if (event.sourceType === "manual") return null;
     const agentSlug = event.agentRef?.slug;
     if (!agentSlug) return null;
     const key = buildScheduledKey(

@@ -1081,6 +1081,41 @@ export function TasksBoard({
     );
   }, [overview?.jobs, selectedFilterAgent]);
 
+  // Past manual conversations — fed into the calendar so they paint as pills
+  // alongside job/heartbeat events. Respects the agent dropdown for parity
+  // with `scheduleAgents` / `scheduleJobs`.
+  const manualConversationsInWindow = useMemo(() => {
+    return conversations.filter((c) => {
+      if (c.trigger !== "manual") return false;
+      if (c.status === "cancelled") return false;
+      if (
+        selectedFilterAgentId !== "all" &&
+        scopedAgentKey(c.cabinetPath, c.agentSlug) !== selectedFilterAgentId
+      ) {
+        return false;
+      }
+      return true;
+    });
+  }, [conversations, selectedFilterAgentId]);
+
+  // Apply the trigger chip filter to the data we feed the calendar/list.
+  // "all" → everything; "manual" → only manual; "job" → agents+jobs without
+  // manual pills; "heartbeat" → only agents with heartbeat rules.
+  const scheduleFilteredAgents = useMemo(() => {
+    if (triggerFilter === "manual") return [];
+    return scheduleAgents;
+  }, [scheduleAgents, triggerFilter]);
+
+  const scheduleFilteredJobs = useMemo(() => {
+    if (triggerFilter === "manual" || triggerFilter === "heartbeat") return [];
+    return scheduleJobs;
+  }, [scheduleJobs, triggerFilter]);
+
+  const scheduleFilteredManual = useMemo(() => {
+    if (triggerFilter === "job" || triggerFilter === "heartbeat") return [];
+    return manualConversationsInWindow;
+  }, [manualConversationsInWindow, triggerFilter]);
+
   const filterAgentItems = useMemo(
     () => [
       { label: "All visible agents", value: "all" },
@@ -1310,6 +1345,15 @@ export function TasksBoard({
   }
 
   function handleScheduleEventClick(event: ScheduleEvent) {
+    // Manual events always resolve directly to their conversation — they
+    // can't be edited (one-offs) and only exist in the past.
+    if (event.sourceType === "manual" && event.conversationId) {
+      const convo = conversations.find((c) => c.id === event.conversationId);
+      if (convo) {
+        openConversation(convo);
+        return;
+      }
+    }
     if (event.sourceType === "job" && event.jobRef && event.agentRef) {
       setScheduleJobDialog({
         agentSlug: event.agentRef.slug, agentName: event.agentRef.name,
@@ -1433,10 +1477,11 @@ export function TasksBoard({
           <div className="flex items-start justify-between gap-4">
             <div className="min-w-0">
               <h1 className="font-body-serif text-[1.9rem] leading-none tracking-tight text-foreground sm:text-[2.2rem]">
-                Jobs & heartbeats
+                Schedule
               </h1>
               <p className="pt-2 text-sm leading-6 text-muted-foreground">
-                {jobCount} scheduled job{jobCount === 1 ? "" : "s"} and {heartbeatCount} heartbeat{heartbeatCount === 1 ? "" : "s"}{resolvedWorkspaceMode === "cabinet" ? ` in ${cabinetName}` : " across all cabinets"}.
+                {jobCount} scheduled job{jobCount === 1 ? "" : "s"}, {heartbeatCount} heartbeat{heartbeatCount === 1 ? "" : "s"}, and {manualConversationsInWindow.length} manual run{manualConversationsInWindow.length === 1 ? "" : "s"}
+                {resolvedWorkspaceMode === "cabinet" ? ` in ${cabinetName}` : " across all cabinets"}.
               </p>
             </div>
             <div className="flex shrink-0 items-center gap-3">
@@ -1445,6 +1490,38 @@ export function TasksBoard({
                 Back to Board
               </Button>
             </div>
+          </div>
+
+          {/* Trigger chips — same component as the board view; shared
+              `triggerFilter` state means the filter persists across views. */}
+          <div className="mt-3 flex flex-wrap items-center gap-1.5">
+            {TRIGGER_FILTERS.map((filter) => (
+              <TriggerChip
+                key={filter}
+                filter={filter}
+                active={triggerFilter === filter}
+                onClick={() => setTriggerFilter(filter)}
+              >
+                {filter === "all" ? (
+                  "All"
+                ) : filter === "manual" ? (
+                  <>
+                    <TriggerIcon trigger="manual" className={cn("size-3", triggerFilter !== "manual" && "text-sky-400")} />
+                    Tasks
+                  </>
+                ) : filter === "job" ? (
+                  <>
+                    <TriggerIcon trigger="job" className={cn("size-3", triggerFilter !== "job" && "text-emerald-400")} />
+                    Jobs
+                  </>
+                ) : (
+                  <>
+                    <TriggerIcon trigger="heartbeat" className={cn("size-3", triggerFilter !== "heartbeat" && "text-pink-400")} />
+                    Heartbeat
+                  </>
+                )}
+              </TriggerChip>
+            ))}
           </div>
 
           <div className="mt-4 flex flex-wrap items-center gap-2">
@@ -1644,8 +1721,9 @@ export function TasksBoard({
             <ScheduleCalendar
               mode={calendarMode}
               anchor={calendarAnchor}
-              agents={scheduleAgents}
-              jobs={scheduleJobs}
+              agents={scheduleFilteredAgents}
+              jobs={scheduleFilteredJobs}
+              manualConversations={scheduleFilteredManual}
               fullscreen={calendarFullscreen}
               density={calendarDensity}
               visibleStartHour={visibleHours.start}
@@ -1656,8 +1734,10 @@ export function TasksBoard({
             />
           ) : (
             <ScheduleList
-              agents={scheduleAgents}
-              jobs={scheduleJobs}
+              agents={scheduleFilteredAgents}
+              jobs={scheduleFilteredJobs}
+              manualConversations={scheduleFilteredManual}
+              onManualClick={(conversation) => openConversation(conversation)}
               onJobClick={(job, agent) => {
                 setScheduleJobDialog({
                   agentSlug: agent.slug, agentName: agent.name,
@@ -1784,7 +1864,7 @@ export function TasksBoard({
               onClick={() => setBoardView("schedule")}
             >
               <Calendar className="h-3.5 w-3.5" />
-              Jobs & Heartbeats
+              Schedule
             </Button>
           </div>
         </div>

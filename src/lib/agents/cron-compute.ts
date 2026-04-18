@@ -1,4 +1,5 @@
 import type { CabinetAgentSummary, CabinetJobSummary } from "@/types/cabinets";
+import type { ConversationMeta, ConversationStatus } from "@/types/conversations";
 import { AGENT_PALETTE } from "@/lib/themes";
 
 /* ─── Cron → next run computation ─── */
@@ -76,19 +77,32 @@ export function buildScheduledKey(
 
 /* ─── Schedule event type ─── */
 
+export type ScheduleSourceType = "job" | "heartbeat" | "manual";
+
 export interface ScheduleEvent {
   id: string;
-  sourceType: "job" | "heartbeat";
+  sourceType: ScheduleSourceType;
   sourceId: string;
   label: string;
   agentEmoji: string;
   agentName: string;
   agentSlug: string;
   enabled: boolean;
+  /**
+   * Cron expression that produced this event. Empty string for manual events
+   * (they're one-off, not recurring).
+   */
   cronExpr: string;
   time: Date;
   jobRef?: CabinetJobSummary;
   agentRef?: CabinetAgentSummary;
+  /**
+   * Present only for `sourceType === "manual"`. Points back at the
+   * ConversationMeta so click handlers can route straight to the task viewer.
+   */
+  conversationId?: string;
+  /** Terminal status of the backing conversation (for "manual" events). */
+  conversationStatus?: ConversationStatus;
 }
 
 /* ─── Generate events for a date range ─── */
@@ -169,6 +183,59 @@ export function getScheduleEvents(
       cursor = next;
       count++;
     }
+  }
+
+  events.sort((a, b) => a.time.getTime() - b.time.getTime());
+  return events;
+}
+
+/* ─── Manual conversations → ScheduleEvent ─── */
+
+/**
+ * Synthesize ScheduleEvent rows for past manual conversations that fall
+ * inside the visible window. Manual runs aren't cron-driven so they have
+ * no future tail — they only paint in past slots.
+ */
+export function getManualScheduleEvents(
+  conversations: ConversationMeta[],
+  agents: CabinetAgentSummary[],
+  rangeStart: Date,
+  rangeEnd: Date
+): ScheduleEvent[] {
+  if (conversations.length === 0) return [];
+
+  const agentMap = new Map<string, CabinetAgentSummary>();
+  for (const a of agents) {
+    agentMap.set(a.scopedId, a);
+    agentMap.set(a.slug, a);
+  }
+
+  const events: ScheduleEvent[] = [];
+  for (const convo of conversations) {
+    if (convo.trigger !== "manual") continue;
+    const when = convo.startedAt ? new Date(convo.startedAt) : null;
+    if (!when || Number.isNaN(when.getTime())) continue;
+    if (when.getTime() < rangeStart.getTime()) continue;
+    if (when.getTime() >= rangeEnd.getTime()) continue;
+
+    const owner = agentMap.get(convo.agentSlug);
+    const label = convo.title || convo.summary || "Manual run";
+
+    events.push({
+      id: `manual:${convo.id}`,
+      sourceType: "manual",
+      sourceId: convo.id,
+      label,
+      agentEmoji: owner?.emoji || "💬",
+      agentName: owner?.name || convo.agentSlug || "Manual",
+      agentSlug: owner?.slug || convo.agentSlug || "general",
+      enabled: convo.status !== "cancelled",
+      cronExpr: "",
+      time: when,
+      agentRef: owner,
+      conversationId: convo.id,
+      conversationStatus: convo.status,
+    });
   }
 
   events.sort((a, b) => a.time.getTime() - b.time.getTime());
