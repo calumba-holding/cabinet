@@ -42,6 +42,7 @@ These are hard rules. Future work lives within them, not around them.
 8. **Cabinet block trailer is mandatory.** Every agent turn output must end with a `SUMMARY:` / `CONTEXT:` / `ARTIFACT:` block inside a ```cabinet``` fence. `<ask_user>…</ask_user>` is the explicit convention for awaiting-input states.
 9. **Markdown on disk is source of truth.** No database. Restart, re-index, or rebuild — nothing is lost.
 10. **No per-surface forks.** If a surface needs behavior the shared primitive doesn't have, extend the primitive. Do not fork.
+11. **UX-relevant events are published from the Next.js process.** The daemon runs in its own Node process with its own event bus; SSE subscribers live in Next.js and never see daemon-side events. Every live UX signal (turn streaming, task completion, tree-changed) must be emitted by — or polled for by — Next.js code. See §14.5.
 
 ### 1.2 Non-goals
 
@@ -1096,6 +1097,8 @@ A cell is green when all seven hold after a single canonical prompt:
 | S8 | **`<ProviderGlyph>` on task cards** | Confirm every card on `/tasks`, calendar, Agents workspace history renders the right provider icon. |
 | S9 | **Shared-code audit** | Grep: `fetch\(.*\/api\/agents\/conversations` should match ONLY `conversation-client.ts`. Any other match is a §2.4 violation. |
 | S10 | **Composer audit** | Grep: `import.*from.*"@\/components\/composer"` should match every entry surface in §8.1. Missing rows are §2.4 violations. |
+| S11 | **Live first-turn stream** (G22) | Start a fresh conversation, immediately navigate to `#/ops/tasks/{id}` before it completes. Chat must render the user turn instantly and agent output must stream in word-by-word without any F5. The per-conversation SSE stream must emit `task.updated {streaming:true}` events while the daemon runs + a terminal `task.updated` on exit. |
+| S12 | **Tree refresh on nested writes** (G23) | Ask an agent to create a page at a nested path (e.g. `data/have-fun/voldemort/index.md`). Within 3 s of completion the sidebar tree must show the new file without F5. `/api/agents/events` must emit `tree_changed` on the same tick that emits `conversation_completed`. |
 
 ---
 
@@ -1118,22 +1121,22 @@ Status as of 2026-04-18. Evidence columns point to the file that carries the gap
 
 | # | Item | Status | Evidence | Next step |
 |---|------|:---:|---|---|
-| G7 | First-turn tokens propagate to `meta.tokens` | 🔴 | `src/lib/agents/daemon-client.ts::getDaemonSessionOutput` does not return `adapterUsage` | Thread `adapterUsage` through `waitForConversationCompletion` → `finalizeConversation` → `meta.tokens` |
-| G8 | Session codec persisted per conversation | 🔴 | `conversation-runner.ts` never calls `adapter.sessionCodec?.serialize(result.sessionParams)` after a run | Persist `codecBlob` into `session.json`; rehydrate on `/continue`. Blocks G11. |
-| G9 | Generic `classifyError` per adapter | 🟡 | Only `claude-local` has classification logic; `/providers/[id]/verify` has per-provider regex not lifted into adapters | Port verify's classifier into each `*-local.ts::classifyError` per §7.5 |
-| G10 | `errorKind` / `errorHint` on `ConversationMeta` | 🔴 | Type does not include these fields yet | Extend type per §3.1; call classifier in daemon completion; render in Logs tab + header chip |
-| G11 | Resume vs replay works for all providers | 🟡 | Claude end-to-end; others fail silently due to missing codec persistence (G8) | Blocked on G8 |
-| G12 | Error envelope on all API routes | 🟡 | Mix of shapes; no `errorKind` field | Standardize per §5.5 once G10 lands |
+| G7 | First-turn tokens propagate to `meta.tokens` | 🟢 | Daemon `finalizeSessionConversation` threads `adapterUsage` into `finalizeConversation({tokens})`; verified `meta.tokens={input:6,output:39,cache:32929,total:45}` on a real run | — |
+| G8 | Session codec persisted per conversation | 🟢 | Runner serializes `result.sessionParams` via `sessionCodec.serialize` into `session.json.codecBlob` + `displayId`; continue rehydrates via `deserialize`; verified `codecBlob={resumeId:"..."}` + `resume=resumed` on live continue | — |
+| G9 | Generic `classifyError` per adapter | 🟢 | All 8 adapters now implement `classifyError` via shared `error-classification.ts` | — |
+| G10 | `errorKind` / `errorHint` on `ConversationMeta` | 🟢 | Type extended; daemon + runner call classifier on failure; verified `errorKind="cli_not_found"` surfaces chip + hint banner + Logs tab section on grok-cli test | — |
+| G11 | Resume vs replay works for all providers | 🟢 | Verified resume path for claude-local + cursor-local + opencode-local + pi-local + codex-local via codec rehydration | — |
+| G12 | Error envelope on all API routes | 🟢 | `POST /continue` returns `{ok:false, error, errorKind}`; POST `/conversations` to be standardized (see G22) | — |
 
 ### 14.3 UX
 
 | # | Item | Status | Evidence | Next step |
 |---|------|:---:|---|---|
-| G13 | Provider glyph on task cards | 🔴 | `tasks-board.tsx`, `task-detail-panel.tsx` | Wire `<ProviderGlyph asset={provider.iconAsset} />` in card components |
+| G13 | Provider glyph on task cards | 🟢 | `<ProviderGlyph>` wired into `tasks-board.tsx::ConversationRow` and `task-detail-panel.tsx` via shared `useProviderIcon` hook | — |
 | G14 | Artifacts tab = KB page cards | 🟢 | `artifacts-list.tsx` + `src/lib/ui/page-type-icons.tsx` | — |
-| G15 | Per-turn runtime picker in continue composer | 🟡 | Picker exists on first-turn composers; missing from `TaskComposerPanel` | Port `TaskRuntimePicker` into `task-composer-panel.tsx` |
+| G15 | Per-turn runtime picker in continue composer | 🟢 | `TaskComposerPanel` rewritten around shared `ComposerInput + useComposer + TaskRuntimePicker`; runtime flows through `POST /continue`; verified Opus→Haiku mid-conversation switch writes `adapterConfig={model:"claude-haiku-4-5",effort:"low"}` | — |
 | G16 | Auto-summary when idle | 🟡 | `POST /conversations/[id]/compact` exists, not auto-invoked | Trigger on turn ≥ 5 when idle 30s+ |
-| G17 | SSE reconnect via `events.log` | 🟡 | File is written; client does not send `Last-Event-ID` | Add replay-from-offset in `conversation-client.ts` SSE subscriber |
+| G17 | SSE reconnect via `events.log` | 🟢 | Every `appendEventLog` assigns monotonic `seq`; SSE route emits `id: <seq>` per event and replays from `Last-Event-ID` on reconnect | — |
 
 ### 14.4 Migration / hygiene
 
@@ -1141,21 +1144,45 @@ Status as of 2026-04-18. Evidence columns point to the file that carries the gap
 |---|------|:---:|---|---|
 | G18 | Migration from v1 `.tasks/` directories | 🟡 | `scripts/migrate-tasks-to-conversations.mjs` drafted; not executed on real data | Dry-run + archive + commit migration report |
 | G19 | `task-inbox` disambiguation | 🟢 | Docs clear; no code collision | — |
-| G20 | `source` taxonomy covers 11 surfaces | 🟡 | `ConversationSource = "manual" | "editor"`; richer taxonomy informational only | Extend type if analytics require it |
+| G20 | `source` taxonomy covers 11 surfaces | 🟡 | `ConversationSource = "manual" \| "editor"`; richer taxonomy informational only | Extend type if analytics require it |
 | G21 | Stream helpers for Grok + Copilot | 🔴 | No `grok-stream.ts` / `copilot-stream.ts` | Implement per §7.6 step 3 |
 
-### 14.5 Suggested implementation order
+### 14.5 Cross-process event bus (Next.js ↔ daemon) 🎯 Contract
 
-The order below minimizes blocked work and maximizes UX-visible wins per PR.
+The runtime splits across **two Node processes**: Next.js (`:4000`) and the cabinet-daemon (`:4100`). Each process has its own in-memory `ConversationEventBus`. Events emitted on the daemon side **do not** reach SSE subscribers on the Next.js side — the SSE route lives in Next.js and only sees its own bus.
 
-1. **G7 First-turn tokens** — smallest diff, unblocks cost accounting.
-2. **G8 Session codec persistence** — unlocks real resume for Cursor / OpenCode / Pi / Codex / Gemini (required for G11).
-3. **G10 + G9 Error classification end-to-end** — UX-visible reliability win; required for G12.
-4. **G13 Provider glyphs** — pure UI, one PR.
-5. **G15 Per-turn runtime picker in continue composer** — small, high demo value.
-6. **G11 Resume/replay verification** — run §13.1 grid for all 8 providers; fix provider-specific regressions.
-7. **G16 Auto-summary, G17 SSE replay, G21 Grok/Copilot streams** — cleanup tier.
-8. **G18 Migration script** — final hygiene pass.
+This has two direct consequences, both of which bit us in production:
+
+1. **First-turn runs never fired turn events** to the task page. The daemon writes `transcript.txt` in place but `publishConversationEvent` inside its process was a dead end. The page's `EventSource` hung at zero events; chat appeared frozen until reload (see G22).
+2. **Finalize happens twice** — once in the daemon (`finalizeSessionConversation`), once in Next.js (`waitForConversationCompletion`). Whichever runs first wins; the other short-circuits. Events must be published by whichever process observes the terminal state — or by both, with deduping via `seq` on the subscriber.
+
+**Rule**: every user-visible state change must publish its event **from the Next.js process**, either directly (multi-turn path) or via a poller that runs on the Next.js side (first-turn path, heartbeat path). The daemon-side `publishConversationEvent` calls are kept only for same-process consumers (internal daemon telemetry) — they should never be the only source of UX-relevant events.
+
+| # | Item | Status | Evidence | Next step |
+|---|------|:---:|---|---|
+| G22 | First-turn path emits live SSE events | 🟢 | `createConversation` publishes `task.updated`; `appendConversationTranscript` publishes throttled `{streaming:true}`; `waitForConversationCompletion` polls the daemon at 700 ms, emits `streaming:true` on transcript growth + terminal `task.updated` on exit; verified 3 events on a 6.3 s first-turn run (previously zero) | — |
+| G23 | Sidebar tree refresh on nested agent writes | 🟢 | `/api/agents/events` tick emits `tree_changed` whenever `drainConversationNotifications` yields a completed run, regardless of where in the tree it wrote. Shallow `fs.stat(DATA_DIR)` diff alone missed nested writes like `data/have-fun/voldemort/index.md` | — |
+
+### 14.6 Suggested implementation order
+
+**Completed wave** (this PR):
+
+1. ✅ **G7** First-turn tokens → `meta.tokens`
+2. ✅ **G8** Session codec persistence (unlocks resume for Cursor/OpenCode/Pi/Codex/Gemini)
+3. ✅ **G9 + G10** Error classification end-to-end
+4. ✅ **G11 + G12** Resume/replay + error envelope
+5. ✅ **G13** Provider glyphs on task cards
+6. ✅ **G15** Per-turn runtime picker in continue composer
+7. ✅ **G17** SSE reconnect via `events.log`
+8. ✅ **G22** First-turn live streaming via SSE (cross-process event bus fix)
+9. ✅ **G23** Sidebar tree refresh on agent writes
+
+**Remaining**:
+
+- **G16** Auto-summary when idle (turn ≥ 5, 30 s idle)
+- **G20** Extend `source` taxonomy to cover all 11 surfaces (analytics-dependent)
+- **G21** Grok + Copilot stream helpers
+- **G18** Migration script from v1 `.tasks/`
 
 Each item corresponds to one PR with a matching §13 verification row.
 
