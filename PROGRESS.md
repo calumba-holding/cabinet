@@ -1,5 +1,7 @@
 # Progress
 
+[2026-04-18] Guarded the RegistryBrowser import dialog against double-fire. The Import button lacked a busy-state `disabled` guard, so a fast second click fired a parallel POST — the first one created the directory, the second hit the "Directory already exists" 409. Added `disabled={importing}` on both buttons, a re-entry guard at the top of `handleImport`, and a spinner on the Import button while the request is in flight.
+
 [2026-04-18] Post-import "cabinet created" screen now shows a `Home › Room` breadcrumb above the tree so the user can see where the new cabinet lives (e.g., `🏠 Maya's Home › 💼 The Office`). Uses Lucide House + the room's configured icon. `homeName` and `roomType` are threaded from `TeamBuildStep` down into `CabinetCreatedScreen`.
 
 [2026-04-18] Tightened line-height on the post-import "cabinet created" tree diagram. `leading-relaxed` (1.625) left visible vertical gaps between box-drawing `│` connectors; switched to `lineHeight: 1.25` so the tree renders as a continuous structure.

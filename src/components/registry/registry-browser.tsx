@@ -526,7 +526,7 @@ function DetailView({
   }, [slug]);
 
   const handleImport = async () => {
-    if (!detail) return;
+    if (!detail || importing) return;
     setImporting(true);
     setImportError(null);
     setImportOpen(false);
@@ -804,9 +804,18 @@ function DetailView({
             </div>
             {importError && <p className="text-xs text-destructive">{importError}</p>}
             <div className="flex justify-end gap-2">
-              <Button variant="outline" onClick={() => setImportOpen(false)}>Cancel</Button>
-              <Button onClick={() => void handleImport()} disabled={!importName.trim()}>
-                <Download className="mr-2 h-4 w-4" />
+              <Button variant="outline" onClick={() => setImportOpen(false)} disabled={importing}>
+                Cancel
+              </Button>
+              <Button
+                onClick={() => void handleImport()}
+                disabled={!importName.trim() || importing}
+              >
+                {importing ? (
+                  <Loader2 className="mr-2 h-4 w-4 animate-spin" />
+                ) : (
+                  <Download className="mr-2 h-4 w-4" />
+                )}
                 Import
               </Button>
             </div>
