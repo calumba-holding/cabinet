@@ -140,7 +140,7 @@ export function ScheduleList({
   }
 
   return (
-    <div className="divide-y divide-border/60 overflow-hidden rounded-lg border border-border/60 bg-background">
+    <div className="divide-y divide-border/60 bg-background">
       {items.map((item) => {
         const secondary =
           item.type === "manual" ? item.schedule : cronToHuman(item.schedule);
