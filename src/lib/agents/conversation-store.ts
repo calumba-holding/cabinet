@@ -399,6 +399,22 @@ export async function createConversation(
     writeFileContent(metaPath(id, cp), JSON.stringify(meta, null, 2)),
   ]);
 
+  // Broadcast the freshly-created conversation so the task list/board can
+  // render it without waiting for a manual refresh. `task.updated` is the
+  // event shape the UI already knows how to handle.
+  const createdSeq = await appendEventLog(
+    id,
+    { type: "task.updated", status: meta.status },
+    cp
+  );
+  publishConversationEvent({
+    type: "task.updated",
+    taskId: id,
+    cabinetPath: cp,
+    seq: createdSeq ?? undefined,
+    payload: { status: meta.status },
+  });
+
   return meta;
 }
 
@@ -773,6 +789,12 @@ export async function writeConversationMeta(meta: ConversationMeta): Promise<voi
   await writeFileContent(metaPath(meta.id, meta.cabinetPath), JSON.stringify(meta, null, 2));
 }
 
+// Throttle state for transcript-driven task.updated events. Streaming stdout
+// can fire 100+ times per second; we coalesce to ~one event per 500 ms per
+// conversation so the UI refetch cadence stays sane.
+const TRANSCRIPT_EVENT_THROTTLE_MS = 500;
+const transcriptEventThrottle = new Map<string, number>();
+
 export async function appendConversationTranscript(
   id: string,
   chunk: string,
@@ -780,6 +802,20 @@ export async function appendConversationTranscript(
 ): Promise<void> {
   await ensureDirectory(conversationDir(id, cabinetPath));
   await fs.appendFile(transcriptPathFs(id, cabinetPath), chunk, "utf-8");
+
+  const now = Date.now();
+  const lastAt = transcriptEventThrottle.get(id) ?? 0;
+  if (now - lastAt < TRANSCRIPT_EVENT_THROTTLE_MS) return;
+  transcriptEventThrottle.set(id, now);
+
+  // Fire-and-forget task.updated so the task page can refetch the partial
+  // transcript and stream it into the rendered turn while the adapter runs.
+  publishConversationEvent({
+    type: "task.updated",
+    taskId: id,
+    cabinetPath,
+    payload: { streaming: true },
+  });
 }
 
 export async function replaceConversationArtifacts(
@@ -864,6 +900,29 @@ export async function finalizeConversation(
     writeConversationMeta(meta),
     replaceConversationArtifacts(id, artifacts, cp),
   ]);
+
+  // Broadcast a task.updated so every subscribed surface (task page, tasks
+  // board, sidebar file tree) can refresh without waiting on an explicit
+  // turn.appended event (first-turn runs never hit that path).
+  const seq = await appendEventLog(
+    id,
+    {
+      type: "task.updated",
+      status: meta.status,
+      artifactPaths: meta.artifactPaths,
+    },
+    cp
+  );
+  publishConversationEvent({
+    type: "task.updated",
+    taskId: id,
+    cabinetPath: cp,
+    seq: seq ?? undefined,
+    payload: {
+      status: meta.status,
+      artifactPaths: meta.artifactPaths,
+    },
+  });
 
   // Push notification for terminal statuses
   if (shouldEnqueueConversationNotification(previousStatus, meta.status)) {

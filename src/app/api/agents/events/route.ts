@@ -93,6 +93,14 @@ export async function GET() {
               };
             });
             send("conversation_completed", enriched);
+
+            // Agent just finished — it may have written KB files anywhere in
+            // the tree. The shallow fs.stat diff at the bottom of this tick
+            // only catches top-level mtime changes, so a file written into
+            // e.g. data/have-fun/voldemort/ doesn't trip it. Force a
+            // tree_changed so the sidebar refetches without F5.
+            send("tree_changed", { reason: "conversation_completed" });
+            lastDataVersion = await getDataDirVersion();
           }
 
           // Goal progress (only for agents with goals)

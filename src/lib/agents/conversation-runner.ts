@@ -24,6 +24,7 @@ import {
   writeConversationMeta,
   writeSession,
 } from "./conversation-store";
+import { publishConversationEvent } from "./conversation-events";
 import {
   createDaemonSession,
   getDaemonSessionOutput,
@@ -319,12 +320,28 @@ export async function waitForConversationCompletion(
   onComplete?: (completion: ConversationCompletion) => Promise<void> | void
 ): Promise<ConversationCompletion> {
   const deadline = Date.now() + 15 * 60 * 1000;
+  let lastOutputLength = 0;
 
   while (Date.now() < deadline) {
-    await new Promise((resolve) => setTimeout(resolve, 3000));
+    await new Promise((resolve) => setTimeout(resolve, 700));
 
     try {
       const data = await getDaemonSessionOutput(conversationId);
+
+      // Live-streaming — broadcast a task.updated whenever the daemon's
+      // transcript grew since the last poll. This is the only mechanism the
+      // SSE subscribers have to learn about first-turn progress, because the
+      // daemon process's in-memory event bus can't reach Next.js subscribers.
+      const outputLen = (data.output ?? "").length;
+      if (outputLen > lastOutputLength) {
+        lastOutputLength = outputLen;
+        publishConversationEvent({
+          type: "task.updated",
+          taskId: conversationId,
+          payload: { streaming: true },
+        });
+      }
+
       if (data.status === "running") {
         continue;
       }
@@ -355,6 +372,20 @@ export async function waitForConversationCompletion(
       if (!finalMeta) {
         throw new Error(`Conversation ${conversationId} disappeared during completion`);
       }
+
+      // Always publish a terminal task.updated on the Next.js side. The
+      // daemon process may have beaten us to finalizeConversation (where the
+      // event is normally fired), but its in-memory event bus can't reach
+      // Next.js SSE subscribers — so we re-announce here unconditionally.
+      publishConversationEvent({
+        type: "task.updated",
+        taskId: conversationId,
+        cabinetPath: finalMeta.cabinetPath,
+        payload: {
+          status: finalMeta.status,
+          artifactPaths: finalMeta.artifactPaths,
+        },
+      });
 
       const completion = {
         meta: finalMeta,
