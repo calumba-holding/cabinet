@@ -1,89 +1,52 @@
 "use client";
 
 import { useCallback, useEffect, useMemo, useState } from "react";
-import {
-  Archive,
-  CheckCircle2,
-  Circle,
-  CircleAlert,
-  Loader2,
-  Pause,
-  Play,
-  Users,
-} from "lucide-react";
+import { Loader2, Users } from "lucide-react";
 import { Button } from "@/components/ui/button";
-import { cn } from "@/lib/utils";
 import { buildConversationInstanceKey } from "@/lib/agents/conversation-identity";
 import { deriveStatus } from "@/lib/agents/conversation-to-task-view";
+import { AgentPill } from "@/components/tasks/board-v2/agent-pill";
+import { StatusIcon, type CardState } from "@/components/tasks/board-v2/status-icon";
+import { ProviderGlyph } from "@/components/agents/provider-glyph";
+import { useProviderIcons } from "@/hooks/use-provider-icons";
 import { formatRelative } from "./cabinet-utils";
 import type { ConversationMeta } from "@/types/conversations";
+import type { CabinetAgentSummary } from "@/types/cabinets";
 import type { TaskStatus } from "@/types/tasks";
 
 interface ActivityFeedProps {
   cabinetPath: string;
   visibilityMode: string;
+  agents: CabinetAgentSummary[];
   onOpen: (conv: ConversationMeta) => void;
   onOpenWorkspace: () => void;
 }
 
-const STATUS_META: Record<
-  TaskStatus,
-  { label: string; tone: string; icon: React.ComponentType<{ className?: string }> }
-> = {
-  idle: { label: "Idle", tone: "bg-muted text-muted-foreground", icon: Circle },
-  running: {
-    label: "Running",
-    tone: "bg-sky-500/15 text-sky-700 dark:text-sky-400",
-    icon: Play,
-  },
-  "awaiting-input": {
-    label: "Awaiting input",
-    tone: "bg-amber-500/15 text-amber-700 dark:text-amber-400",
-    icon: Pause,
-  },
-  done: {
-    label: "Done",
-    tone: "bg-emerald-500/15 text-emerald-700 dark:text-emerald-400",
-    icon: CheckCircle2,
-  },
-  failed: {
-    label: "Failed",
-    tone: "bg-red-500/15 text-red-700 dark:text-red-400",
-    icon: CircleAlert,
-  },
-  archived: { label: "Archived", tone: "bg-muted text-muted-foreground", icon: Archive },
+const TASK_STATUS_TO_CARD_STATE: Record<TaskStatus, CardState> = {
+  running: "running",
+  "awaiting-input": "ask",
+  failed: "failed",
+  done: "just-done",
+  idle: "idle",
+  archived: "idle",
 };
-
-function StatusBadge({ status }: { status: TaskStatus }) {
-  const meta = STATUS_META[status];
-  const Icon = meta.icon;
-  return (
-    <span
-      className={cn(
-        "inline-flex shrink-0 items-center gap-1.5 rounded-full px-2 py-0.5 text-[10.5px] font-medium",
-        meta.tone
-      )}
-    >
-      <Icon className="size-2.5" />
-      {meta.label}
-    </span>
-  );
-}
-
-function runtimeLabel(conv: ConversationMeta): string | null {
-  const config = conv.adapterConfig as { model?: string; effort?: string } | undefined;
-  const parts = [config?.model, conv.providerId].filter(Boolean) as string[];
-  return parts.length ? parts.join(" · ") : null;
-}
 
 export function ActivityFeed({
   cabinetPath,
   visibilityMode,
+  agents,
   onOpen,
   onOpenWorkspace,
 }: ActivityFeedProps) {
   const [conversations, setConversations] = useState<ConversationMeta[]>([]);
   const [loading, setLoading] = useState(true);
+  const providerIcons = useProviderIcons();
+
+  const agentsBySlug = useMemo(() => {
+    const m = new Map<string, CabinetAgentSummary>();
+    for (const a of agents) m.set(a.slug, a);
+    return m;
+  }, [agents]);
 
   const refresh = useCallback(async () => {
     try {
@@ -157,8 +120,11 @@ export function ActivityFeed({
       ) : (
         <ul className="divide-y divide-border/60 overflow-hidden rounded-xl border border-border/70 bg-card">
           {sorted.map((conv) => {
-            const status = deriveStatus(conv);
-            const runtime = runtimeLabel(conv);
+            const cardState = TASK_STATUS_TO_CARD_STATE[deriveStatus(conv)];
+            const agent = agentsBySlug.get(conv.agentSlug);
+            const providerIcon = conv.providerId
+              ? providerIcons.get(conv.providerId)
+              : null;
             const tokens = conv.tokens?.total ?? 0;
             return (
               <li key={buildConversationInstanceKey(conv)}>
@@ -167,34 +133,43 @@ export function ActivityFeed({
                   onClick={() => onOpen(conv)}
                   className="flex w-full items-start gap-3 px-4 py-3.5 text-left transition-colors hover:bg-muted/40"
                 >
-                  <div className="mt-0.5">
-                    <StatusBadge status={status} />
+                  <div className="flex shrink-0 items-center gap-2 pt-0.5">
+                    <AgentPill agent={agent} slug={conv.agentSlug} size="sm" />
+                    <StatusIcon state={cardState} />
                   </div>
                   <div className="min-w-0 flex-1">
-                    <div className="flex items-baseline gap-2">
-                      <p className="truncate text-[13.5px] font-medium text-foreground">
-                        {conv.title}
-                      </p>
-                      <span className="shrink-0 text-[11px] text-muted-foreground">
-                        {formatRelative(conv.lastActivityAt || conv.startedAt)}
-                      </span>
-                    </div>
+                    <p className="truncate text-[13.5px] font-medium text-foreground">
+                      {conv.title}
+                    </p>
                     {conv.summary ? (
                       <p className="mt-0.5 line-clamp-2 text-[12.5px] leading-relaxed text-muted-foreground">
                         {conv.summary}
                       </p>
                     ) : null}
-                    {(runtime || tokens > 0) && (
-                      <div className="mt-1.5 flex items-center gap-3 text-[11px] text-muted-foreground/80">
-                        {runtime ? <span>{runtime}</span> : null}
-                        {runtime && tokens > 0 ? <span>·</span> : null}
-                        {tokens > 0 ? (
-                          <span className="font-mono tabular-nums">
-                            {(tokens / 1000).toFixed(1)}k tok
-                          </span>
-                        ) : null}
-                      </div>
-                    )}
+                  </div>
+                  <div className="ml-2 flex shrink-0 flex-col items-end gap-0.5 pt-0.5 text-[11px] text-muted-foreground">
+                    <div className="flex items-center gap-1.5">
+                      {providerIcon ? (
+                        <span
+                          className="inline-flex size-4 items-center justify-center rounded border border-border/60 bg-muted/30"
+                          title={providerIcon.name}
+                        >
+                          <ProviderGlyph
+                            icon={providerIcon.icon}
+                            asset={providerIcon.iconAsset}
+                            className="size-2.5"
+                          />
+                        </span>
+                      ) : null}
+                      <span className="tabular-nums">
+                        {formatRelative(conv.lastActivityAt || conv.startedAt)}
+                      </span>
+                    </div>
+                    {tokens > 0 ? (
+                      <span className="font-mono tabular-nums text-muted-foreground/80">
+                        {(tokens / 1000).toFixed(1)}k tok
+                      </span>
+                    ) : null}
                   </div>
                 </button>
               </li>

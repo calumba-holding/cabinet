@@ -402,6 +402,7 @@ export function CabinetView({ cabinetPath }: { cabinetPath: string }) {
                 <ActivityFeed
                   cabinetPath={cabinetPath}
                   visibilityMode={cabinetVisibilityMode}
+                  agents={overview?.agents || []}
                   onOpen={openConversation}
                   onOpenWorkspace={openCabinetAgentsWorkspace}
                 />
