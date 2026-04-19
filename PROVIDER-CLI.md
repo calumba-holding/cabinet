@@ -253,28 +253,26 @@ Phased work that landed on this branch (see commit trail below):
 
 ### 12.0 TL;DR — what's left
 
-**Provider track (§12.1):** 8 of 12 items are live. 4 remaining:
+**Provider track (§12.1):** 8½ of 12 items are live. 4 remaining:
 
 | Deferred | Reason |
 |---|---|
 | #2 Skills injection | Needs catalog-location decision (where does Cabinet store skills?) |
-| #4 Per-provider directory refactor | Mechanical churn, behavior-neutral; low ROI |
+| #4 Per-provider directory refactor | Phase 1 shipped (`_shared/cli-args.ts` extracted, 8 adapters deduped). Full directory split deferred as low-ROI mechanical churn. |
 | #5 `agent-live-panel` adapter awareness | Minor; WebTerminal works fine for both paths |
 | #9 Reasoning-effort policy per provider | Product call |
 | #11 Polish placeholder glyphs | Needs licensed artwork |
 
-**Terminal track (§12.2):** 22 of 24 items live. 2 remaining:
+**Terminal track (§12.2):** 24 of 24 items resolved.
 
-| Deferred | Reason |
-|---|---|
-| T19 Distill PTY output into a clean agent turn | By design — terminal mode is "I drive the CLI"; structured summary/artifacts belong to native mode |
-| T21 WebTerminal reconnect-after-navigate-away UX | Not verified — daemon buffers `session.output` and replays; needs manual QA pass |
+T19 (distill PTY output) shipped as a deterministic summary line.
+T21 (reconnect UX) verified by audit — works correctly.
 
 **Genuinely actionable remaining:**
 1. **#2 Skills injection** — needs the catalog-location product decision first, then wiring is ~1 day of work.
 2. **#11 Glyph artwork** — if/when licensed artwork is available.
 
-Everything else is either shipped, by-design skipped, waiting on manual QA, or waiting on an external input (product decision, artwork).
+Everything else is shipped, by-design skipped, partial with the rest deferred as low-ROI, or waiting on product/artwork input.
 
 ### 12.1 Status matrix
 
@@ -283,7 +281,7 @@ Everything else is either shipped, by-design skipped, waiting on manual QA, or w
 | 1 | Session codec persistence per conversation | ✅ Already shipped — `writeSession(conversationId, { codecBlob, resumeId, … })` + `deserialize(session.codecBlob)` on continuation | — |
 | 2 | Skills injection through the daemon | 🟨 Deferred — needs catalog location decision | — |
 | 3 | Dynamic model discovery (OpenCode / Pi) | ✅ Done — `listModels()` hook + `GET /api/agents/providers/:id/models` w/ 60 s cache | `0587bec` |
-| 4 | Per-provider directory refactor (paperclip shape) | 🟨 Deferred — mechanical churn, behavior-neutral | — |
+| 4 | Per-provider directory refactor (paperclip shape) — Phase 1: `_shared/cli-args.ts` extracted (`readStringConfig` + `readEffortConfig`), all 8 adapters consume from there instead of duplicating. Full per-provider directory split (`<provider>-local/{index,execute,parse,test,skills}.ts`) still deferred as low-ROI mechanical churn | 🟡 Partial | `98c757d` |
 | 5 | Stop rendering WebTerminal in `agent-live-panel.tsx` for structured adapters | 🟨 Deferred — minor; PTY now has its own mode | — |
 | 6 | Label legacy PTY adapters as experimental | ✅ Superseded — promoted to first-class **terminal mode** via Native/Terminal toggle | `a767892`, `e922c63` |
 | 7 | Integration coverage for adapter lifecycle | ✅ Done — registry test covers 16 adapters + `legacy-ids.test.ts` asserts client/server sync | `656526d` |
@@ -318,9 +316,9 @@ Separate track covering the "user runs task in Terminal mode" experience. Audit 
 | T16 | Fullscreen terminal layout (thin dark top strip + WebTerminal fills viewport) | ✅ Done | `4313979` |
 | T17 | Running indicator = terminal-icon chip with pulsing ring when live (replaces separate "live" + "PTY" chips) | ✅ Done | `89f5b2a` |
 | T18 | Legacy-adapter continuation — `continueConversationRun` reopens the PTY via `createDaemonSession` instead of bailing on the missing `adapter.execute` | ✅ Done | `a012478` |
-| T19 | Distill PTY output into a clean agent turn on exit (summary, artifact extraction, `<ask_user>` detection) | 🟨 Deferred — by design: terminal mode is "I'm driving the CLI", structured summary/artifacts belong to native mode |
+| T19 | Distill PTY output on exit — `finalizeSessionConversation` now emits a deterministic summary (`Terminal <provider> session <status> · N lines[ — last output: …]`) for legacy_pty_cli sessions so `meta.summary` isn't box-drawing junk. Raw transcript on disk untouched; artifact extraction + `<ask_user>` detection explicitly skipped for PTY mode (out of scope — terminal mode is "I drive the CLI") | ✅ Done | `98c757d` |
 | T20 | Same-process continue (keep CLI alive across turns, inject prompts via stdin) — daemon `POST /session/:id/input`; runner probes liveness first, writes to stdin if alive, spawns fresh PTY only on fallback | ✅ Done | `5aebc4c` |
-| T21 | WebTerminal reconnect-after-navigate-away UX | 🟨 Unverified — daemon buffers `session.output` and replays; manual QA needed |
+| T21 | WebTerminal reconnect-after-navigate-away UX | ✅ Verified by audit — `attachSessionSocket` (cabinet-daemon.ts) replays full `session.output` buffer on WS reconnect; on WS close the session is preserved (`session.ws = null`, session stays in map). PTY exit while away prepends a `[Process exited with code N]` marker on reconnect. |
 | T22 | Token bar / context window hidden in terminal fullscreen layout | ✅ Done — fullscreen top strip already omits `TokenBar` (PTY output doesn't self-report usage uniformly) | `4313979` |
 | T23 | Stop-PTY button in the top strip — calls `stopConversation()` → PATCH `{ action: "stop" }` → daemon SIGTERMs the PTY | ✅ Done | `a012478` |
 | T24 | Terminal-mode "experimental" advisory vs. first-class messaging | ✅ First-class — Native/Terminal is a positive product choice, not a warning |
