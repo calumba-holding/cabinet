@@ -1,6 +1,6 @@
 "use client";
 
-import { useEffect, useRef, useState, useCallback } from "react";
+import { useEffect, useLayoutEffect, useRef, useState, useCallback } from "react";
 import { Sidebar } from "@/components/sidebar/sidebar";
 import { Header } from "@/components/layout/header";
 import { KBEditor } from "@/components/editor/editor";
@@ -57,6 +57,10 @@ import { useAppStore } from "@/stores/app-store";
 const DISMISSED_UPDATE_STORAGE_KEY = "cabinet.dismissed-update-version";
 const WIZARD_DONE_STORAGE_KEY = "cabinet.wizard-done";
 
+// useLayoutEffect logs a no-op warning during SSR; alias to useEffect on the
+// server so we get pre-paint sync on the client without console noise.
+const useIsoLayoutEffect = typeof window !== "undefined" ? useLayoutEffect : useEffect;
+
 export function AppShell() {
   const loadTree = useTreeStore((s) => s.loadTree);
   const nodes = useTreeStore((s) => s.nodes);
@@ -85,17 +89,20 @@ export function AppShell() {
   // Sync navigation state with URL hash + localStorage
   useHashRoute();
 
-  // Onboarding wizard state. If we've completed it before (cached in
-  // localStorage), skip the blocking "null" render entirely — this was the
-  // main reason refreshes showed a blank screen for a beat.
-  const [showWizard, setShowWizard] = useState<boolean | null>(() => {
-    if (typeof window === "undefined") return null;
+  // Onboarding wizard state. We initialize to `null` on both server and first
+  // client render to avoid a hydration mismatch, then synchronously rehydrate
+  // from localStorage in a layout effect (runs before paint, so cached users
+  // still skip the blank-screen flash that used to appear on refresh).
+  const [showWizard, setShowWizard] = useState<boolean | null>(null);
+  useIsoLayoutEffect(() => {
     try {
-      return window.localStorage.getItem(WIZARD_DONE_STORAGE_KEY) === "1" ? false : null;
+      if (window.localStorage.getItem(WIZARD_DONE_STORAGE_KEY) === "1") {
+        setShowWizard(false);
+      }
     } catch {
-      return null;
+      // ignore
     }
-  });
+  }, []);
   const [updateDialogOpen, setUpdateDialogOpen] = useState(false);
   const [dismissedUpdateVersion, setDismissedUpdateVersion] = useState<string | null>(() => {
     if (typeof window === "undefined") return null;
