@@ -849,6 +849,7 @@ export function RuntimeMatrixPicker({
               >
                 {selectableProviders.map((provider) => {
                   const ready = readyProviderIds.has(provider.id);
+                  const isActive = activeProviderIdValue === provider.id;
                   const unreadyReason = describeProviderUnreadyReason(provider);
                   return (
                     <TabsTrigger
@@ -862,15 +863,19 @@ export function RuntimeMatrixPicker({
                           : `${provider.name} — ${unreadyReason || "Not available"}`
                       }
                       className={cn(
-                        "relative -mb-px h-7 flex-none gap-1.5 rounded-t-md rounded-b-none border-0 !bg-muted/60 px-2.5 py-1 text-[9px] font-medium text-muted-foreground shadow-none after:hidden data-active:z-10 data-active:!bg-background data-active:text-foreground data-active:shadow-none",
+                        "relative -mb-px flex h-7 flex-none items-center gap-1.5 rounded-t-md rounded-b-none border-0 !bg-muted/60 py-1 text-[9px] font-medium text-muted-foreground shadow-none after:hidden data-active:z-10 data-active:!bg-background data-active:text-foreground data-active:shadow-none",
+                        // Active tabs widen to show icon + name; inactive
+                        // collapse to icon-only so all 8 providers fit without
+                        // horizontal scroll. Name still available via title.
+                        isActive ? "px-2.5" : "justify-center px-1.5",
                         ready
                           ? "hover:text-foreground"
                           : "cursor-not-allowed opacity-50 grayscale data-[disabled]:pointer-events-none"
                       )}
                     >
                       <ProviderGlyph icon={provider.icon} className="h-3 w-3" />
-                      <span>{provider.name}</span>
-                      {!ready && (
+                      {isActive && <span>{provider.name}</span>}
+                      {isActive && !ready && (
                         <span className="ml-0.5 rounded-full bg-muted px-1.5 py-0.5 text-[8px] font-semibold uppercase tracking-wide text-muted-foreground/80">
                           Not ready
                         </span>
@@ -1216,30 +1221,49 @@ export function TaskRuntimePicker({
     setOpen(false);
   }
 
+  const isTerminalTrigger = value.runtimeMode === "terminal";
   return (
     <DropdownMenu open={open} onOpenChange={setOpen}>
       <DropdownMenuTrigger
         className={cn(
-          "inline-flex h-8 items-center gap-1 rounded-md border border-border/70 bg-background px-2 text-muted-foreground transition-colors hover:bg-accent hover:text-accent-foreground disabled:pointer-events-none disabled:opacity-50",
+          "inline-flex h-8 items-center gap-1 rounded-md border px-2 transition-colors disabled:pointer-events-none disabled:opacity-50",
+          isTerminalTrigger
+            ? "border-emerald-500/40 bg-zinc-950 text-zinc-100 hover:bg-zinc-900"
+            : "border-border/70 bg-background text-muted-foreground hover:bg-accent hover:text-accent-foreground",
           className
         )}
-        aria-label={triggerTitle}
-        title={triggerTitle}
+        aria-label={isTerminalTrigger ? `${triggerTitle} (Terminal)` : triggerTitle}
+        title={isTerminalTrigger ? `${triggerTitle} · Terminal (PTY)` : triggerTitle}
         disabled={loading && providers.length === 0}
       >
         {currentProvider ? (
-          <>
-            <div className="flex size-4 shrink-0 items-center justify-center rounded border border-border/60 bg-muted/30">
-              <ProviderGlyph icon={currentProvider.icon} className="h-2.5 w-2.5" />
-            </div>
-            <span className={cn("text-[11px] font-medium", getEffortTone(normalizedValue.effort ?? AUTO_EFFORT_ID).header)}>
-              {currentModel?.name || currentProvider.name}
-            </span>
-            <span className="text-[9px] text-muted-foreground/40">·</span>
-            <span className={cn("text-[9px] font-medium", getEffortTone(normalizedValue.effort ?? AUTO_EFFORT_ID).header)}>
-              {currentEffort?.name || (normalizedValue.effort ? formatEffortName(normalizedValue.effort) : "Auto")}
-            </span>
-          </>
+          isTerminalTrigger ? (
+            <>
+              <div className="flex size-4 shrink-0 items-center justify-center rounded border border-emerald-500/40 bg-zinc-900 text-emerald-400">
+                <Terminal className="h-2.5 w-2.5" />
+              </div>
+              <span className="text-[11px] font-medium text-zinc-100">
+                {currentProvider.name}
+              </span>
+              <span className="text-[9px] text-zinc-500">·</span>
+              <span className="text-[9px] font-semibold uppercase tracking-wide text-emerald-400">
+                Terminal
+              </span>
+            </>
+          ) : (
+            <>
+              <div className="flex size-4 shrink-0 items-center justify-center rounded border border-border/60 bg-muted/30">
+                <ProviderGlyph icon={currentProvider.icon} className="h-2.5 w-2.5" />
+              </div>
+              <span className={cn("text-[11px] font-medium", getEffortTone(normalizedValue.effort ?? AUTO_EFFORT_ID).header)}>
+                {currentModel?.name || currentProvider.name}
+              </span>
+              <span className="text-[9px] text-muted-foreground/40">·</span>
+              <span className={cn("text-[9px] font-medium", getEffortTone(normalizedValue.effort ?? AUTO_EFFORT_ID).header)}>
+                {currentEffort?.name || (normalizedValue.effort ? formatEffortName(normalizedValue.effort) : "Auto")}
+              </span>
+            </>
+          )
         ) : (
           <BrainCircuit className="h-4 w-4" />
         )}
