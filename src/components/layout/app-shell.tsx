@@ -32,7 +32,7 @@ import { AgentsWorkspace } from "@/components/agents/agents-workspace";
 import { AgentDetailV2 } from "@/components/agents/agent-detail-v2";
 import type { ConversationMeta } from "@/types/conversations";
 import { JobsManager } from "@/components/jobs/jobs-manager";
-import { TasksBoard } from "@/components/tasks/tasks-board";
+import { TasksBoardV2 } from "@/components/tasks/board-v2";
 import { TaskConversationPage } from "@/components/tasks/conversation/task-conversation-page";
 import { SettingsPage } from "@/components/settings/settings-page";
 import { TerminalTabs } from "@/components/terminal/terminal-tabs";
@@ -305,7 +305,7 @@ export function AppShell() {
     }
     if (section.type === "tasks") {
       return (
-        <TasksBoard
+        <TasksBoardV2
           cabinetPath={section.cabinetPath}
         />
       );

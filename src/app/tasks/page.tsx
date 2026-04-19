@@ -9,15 +9,20 @@ export const dynamic = "force-dynamic";
 
 type SearchParams = Promise<{ board?: string; cabinet?: string }>;
 
+/**
+ * /tasks — new attention-first board by default. Pass `?board=v1` for the
+ * legacy flat list while we keep that code path around as a safety net
+ * during rollout.
+ */
 export default async function TasksIndexPage({
   searchParams,
 }: {
   searchParams?: SearchParams;
 }) {
   const params = (await searchParams) ?? {};
-  const useV2 = params.board === "v2";
+  const useLegacy = params.board === "v1";
 
-  if (useV2) {
+  if (!useLegacy) {
     return (
       <div className="h-screen">
         <TasksBoardV2
@@ -40,12 +45,12 @@ export default async function TasksIndexPage({
         >
           <ArrowLeft className="size-4" />
         </Link>
-        <h1 className="flex-1 text-[14px] font-semibold tracking-tight">Tasks</h1>
+        <h1 className="flex-1 text-[14px] font-semibold tracking-tight">Tasks (legacy)</h1>
         <Link
-          href="/tasks?board=v2"
+          href="/tasks"
           className="inline-flex h-8 items-center gap-1.5 rounded-md border border-border/60 px-3 text-[11px] font-medium text-muted-foreground transition-colors hover:bg-muted hover:text-foreground"
         >
-          Try v2 board
+          Back to new board
         </Link>
         <Link
           href="/tasks/new"
