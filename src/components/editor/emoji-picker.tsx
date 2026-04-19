@@ -3,7 +3,7 @@
 import { useEffect, useRef } from "react";
 import data from "@emoji-mart/data";
 import { Picker } from "emoji-mart";
-import { useTheme } from "next-themes";
+import { useTheme } from "@/components/theme-provider";
 
 interface Props {
   anchor: { top: number; left: number };

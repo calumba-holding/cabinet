@@ -36,7 +36,7 @@ import { Input } from "@/components/ui/input";
 import { ScrollArea } from "@/components/ui/scroll-area";
 import { UpdateSummary } from "@/components/system/update-summary";
 import { useCabinetUpdate } from "@/hooks/use-cabinet-update";
-import { useTheme } from "next-themes";
+import { useTheme } from "@/components/theme-provider";
 import {
   THEMES,
   applyTheme,
