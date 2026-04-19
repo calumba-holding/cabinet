@@ -14,7 +14,9 @@ import {
   ArrowRight,
   Briefcase,
   Calendar as CalendarIcon,
+  Check,
   CheckCircle,
+  CircleAlert,
   File as FileIcon,
   FileCode,
   FileSpreadsheet,
@@ -1205,9 +1207,11 @@ function Field({
 function DetailsSection({
   persona,
   onSaveField,
+  onSaveSkills,
 }: {
   persona: AgentPersona;
   onSaveField: (field: string, value: string) => void;
+  onSaveSkills: (slugs: string[]) => void;
 }) {
   return (
     <Section title="Details">
@@ -1256,30 +1260,141 @@ function DetailsSection({
           mono
           readOnly
         />
-        <Field
-          label="Skills"
-          value={
-            persona.skills && persona.skills.length > 0
-              ? persona.skills.join(", ")
-              : "—"
-          }
-          className="col-span-6"
-          mono
-          readOnly
-        />
+        <div className="col-span-6">
+          <SkillsMultiSelect
+            selected={persona.skills ?? []}
+            onChange={onSaveSkills}
+          />
+        </div>
       </div>
-      {persona.skills && persona.skills.length > 0 ? (
-        <p className="mt-2 px-1 text-[10.5px] text-muted-foreground/70">
-          Injected into every run via <code className="rounded bg-muted px-1 py-0.5">--add-dir</code>{" "}
-          (Claude) or the adapter&apos;s skill-dir flag. Edit the agent&apos;s markdown frontmatter
-          <code className="rounded bg-muted px-1 py-0.5">skills:</code> field to change. Catalog:{" "}
-          <a href="#settings/skills" className="text-foreground underline-offset-2 hover:underline">
-            Settings → Skills
-          </a>
-          .
-        </p>
-      ) : null}
     </Section>
+  );
+}
+
+interface SkillCatalogEntry {
+  slug: string;
+  name: string;
+  description?: string;
+  path: string;
+}
+
+function SkillsMultiSelect({
+  selected,
+  onChange,
+}: {
+  selected: string[];
+  onChange: (slugs: string[]) => void;
+}) {
+  const [catalog, setCatalog] = useState<SkillCatalogEntry[]>([]);
+  const [loading, setLoading] = useState(true);
+  const [error, setError] = useState<string | null>(null);
+
+  useEffect(() => {
+    let cancelled = false;
+    (async () => {
+      try {
+        const res = await fetch("/api/agents/skills");
+        if (!res.ok) throw new Error(`HTTP ${res.status}`);
+        const data = (await res.json()) as { skills: SkillCatalogEntry[] };
+        if (!cancelled) setCatalog(data.skills || []);
+      } catch (e) {
+        if (!cancelled) setError(e instanceof Error ? e.message : String(e));
+      } finally {
+        if (!cancelled) setLoading(false);
+      }
+    })();
+    return () => {
+      cancelled = true;
+    };
+  }, []);
+
+  const selectedSet = useMemo(() => new Set(selected), [selected]);
+  const toggle = (slug: string) => {
+    if (selectedSet.has(slug)) {
+      onChange(selected.filter((s) => s !== slug));
+    } else {
+      onChange([...selected, slug]);
+    }
+  };
+  // Slugs the persona lists that don't exist in the catalog — still render
+  // them as chips so the user sees them and can remove them.
+  const orphanSlugs = selected.filter((slug) =>
+    !catalog.some((entry) => entry.slug === slug)
+  );
+
+  return (
+    <div>
+      <label className="mb-1 block text-[10.5px] font-medium uppercase tracking-wide text-muted-foreground">
+        Skills
+      </label>
+      {loading ? (
+        <div className="flex items-center gap-2 rounded-md border border-border/70 bg-muted/30 px-3 py-2 text-[11px] text-muted-foreground">
+          <Loader2 className="size-3 animate-spin" />
+          Loading catalog…
+        </div>
+      ) : error ? (
+        <div className="rounded-md border border-destructive/40 bg-destructive/10 px-3 py-2 text-[11px] text-destructive">
+          Failed to load catalog: {error}
+        </div>
+      ) : catalog.length === 0 && selected.length === 0 ? (
+        <div className="rounded-md border border-dashed border-border/70 bg-muted/20 px-3 py-2.5 text-[11px] text-muted-foreground">
+          No skills detected. Create a directory under{" "}
+          <code className="rounded bg-muted px-1 py-0.5">~/.cabinet/skills/</code> with a{" "}
+          <code className="rounded bg-muted px-1 py-0.5">SKILL.md</code> to see it here.
+        </div>
+      ) : (
+        <div className="flex flex-wrap gap-1.5">
+          {catalog.map((entry) => {
+            const isOn = selectedSet.has(entry.slug);
+            return (
+              <button
+                key={entry.slug}
+                type="button"
+                onClick={() => toggle(entry.slug)}
+                title={entry.description || entry.name}
+                className={cn(
+                  "inline-flex items-center gap-1 rounded-full border px-2 py-0.5 text-[11px] font-medium transition-colors",
+                  isOn
+                    ? "border-violet-500/40 bg-violet-500/15 text-violet-700 dark:text-violet-300 hover:bg-violet-500/20"
+                    : "border-border bg-background text-muted-foreground hover:border-border/70 hover:text-foreground"
+                )}
+              >
+                {isOn ? (
+                  <Check className="size-3" />
+                ) : (
+                  <Sparkles className="size-3 text-muted-foreground/60" />
+                )}
+                {entry.name}
+                <span className="ml-0.5 font-mono text-[9px] opacity-60">
+                  {entry.slug}
+                </span>
+              </button>
+            );
+          })}
+          {orphanSlugs.map((slug) => (
+            <button
+              key={slug}
+              type="button"
+              onClick={() => toggle(slug)}
+              title="Not found in catalog — click to remove"
+              className="inline-flex items-center gap-1 rounded-full border border-amber-500/40 bg-amber-500/10 px-2 py-0.5 text-[11px] font-medium text-amber-700 dark:text-amber-400 hover:bg-amber-500/20"
+            >
+              <CircleAlert className="size-3" />
+              {slug}
+              <span className="ml-0.5 font-mono text-[9px] opacity-60">orphan</span>
+            </button>
+          ))}
+        </div>
+      )}
+      <p className="mt-1.5 text-[10.5px] text-muted-foreground/70">
+        Skills are symlinked into every run (<code className="rounded bg-muted px-1 py-0.5">--add-dir</code>{" "}
+        on Claude; adapter-specific on others). Catalog:{" "}
+        <a href="#settings/skills" className="text-foreground underline-offset-2 hover:underline">
+          Settings → Skills
+        </a>
+        .
+      </p>
+    </div>
   );
 }
 
@@ -1797,6 +1912,18 @@ export function AgentDetailV2({
     [slug, refresh]
   );
 
+  const saveSkills = useCallback(
+    async (slugs: string[]) => {
+      await fetch(`/api/agents/personas/${slug}`, {
+        method: "PUT",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ skills: slugs }),
+      });
+      refresh();
+    },
+    [slug, refresh]
+  );
+
   const artifacts = useMemo(
     () => aggregateArtifacts(conversations),
     [conversations]
@@ -1886,7 +2013,11 @@ export function AgentDetailV2({
                 onRunHeartbeat={runHeartbeat}
                 onManage={() => setScheduleOpen(true)}
               />
-              <DetailsSection persona={persona} onSaveField={saveField} />
+              <DetailsSection
+                persona={persona}
+                onSaveField={saveField}
+                onSaveSkills={saveSkills}
+              />
               <PersonaEditor
                 persona={persona}
                 onSave={(body) => saveField("body", body)}

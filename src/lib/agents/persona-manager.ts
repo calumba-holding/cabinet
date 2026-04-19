@@ -304,6 +304,13 @@ export async function writePersona(slug: string, persona: Partial<AgentPersona> 
     ...(typeof merged.avatarExt === "string" && merged.avatarExt.trim()
       ? { avatarExt: merged.avatarExt.trim() }
       : {}),
+    ...(Array.isArray(merged.skills) && merged.skills.length > 0
+      ? {
+          skills: merged.skills.filter(
+            (slug): slug is string => typeof slug === "string" && slug.trim() !== ""
+          ),
+        }
+      : {}),
   };
 
   const md = matter.stringify(merged.body || "", frontmatter);
