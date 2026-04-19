@@ -900,6 +900,46 @@ export async function continueConversationRun(
     defaultAdapterTypeForProvider(meta.providerId);
   const adapter = agentAdapterRegistry.get(adapterType);
 
+  // Legacy PTY adapters don't implement adapter.execute — they delegate the
+  // whole conversation to the daemon's PTY session machinery. For terminal-mode
+  // continuations, we reopen the PTY session with the new prompt and let the
+  // existing WebTerminal stream the output.
+  if (adapter && adapter.executionEngine === "legacy_pty_cli") {
+    const legacyPersona =
+      meta.agentSlug && meta.agentSlug !== "general"
+        ? await readPersona(meta.agentSlug, cp)
+        : null;
+    const legacyBaseCwd = cp ? path.join(DATA_DIR, cp) : DATA_DIR;
+    const legacyCwd =
+      legacyPersona?.workdir && legacyPersona.workdir !== "/data"
+        ? `${DATA_DIR}/${legacyPersona.workdir.replace(/^\/+/, "")}`
+        : legacyBaseCwd;
+    try {
+      await createDaemonSession({
+        id: conversationId,
+        prompt: input.userMessage,
+        providerId: meta.providerId,
+        adapterType,
+        adapterConfig: meta.adapterConfig,
+        cwd: legacyCwd,
+        timeoutSeconds: undefined,
+      });
+    } catch (error) {
+      const message =
+        error instanceof Error ? error.message : "Failed to restart PTY session";
+      await appendAgentTurn(
+        conversationId,
+        {
+          content: message,
+          exitCode: 1,
+          error: "pty_restart_failed",
+        },
+        cp
+      );
+    }
+    return readConversationMeta(conversationId, cp);
+  }
+
   if (!adapter || !adapter.execute) {
     await appendAgentTurn(
       conversationId,

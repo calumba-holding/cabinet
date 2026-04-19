@@ -18,10 +18,12 @@ import {
   Play,
   RefreshCw,
   Sparkles,
+  Square,
   Terminal,
 } from "lucide-react";
 import { isLegacyAdapterType } from "@/lib/agents/adapters/legacy-ids";
 import { WebTerminal } from "@/components/terminal/web-terminal";
+import { stopConversation } from "@/components/tasks/board-v2/board-actions";
 import { cn } from "@/lib/utils";
 import { Button } from "@/components/ui/button";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
@@ -513,6 +515,28 @@ export function TaskConversationPage({
           >
             <Copy className="size-3.5" />
           </button>
+          {task.meta.status === "running" || task.meta.status === "awaiting-input" ? (
+            <Button
+              variant="ghost"
+              size="sm"
+              className="h-7 gap-1 px-2 text-[11px] text-rose-400 hover:bg-rose-500/10 hover:text-rose-300"
+              disabled={busy || isDemo}
+              onClick={async () => {
+                try {
+                  setBusy(true);
+                  await stopConversation(task.meta.id, task.meta.cabinetPath);
+                } catch (e) {
+                  console.error(e);
+                } finally {
+                  setBusy(false);
+                }
+              }}
+              title="Send SIGTERM to the running PTY process"
+            >
+              <Square className="size-3 fill-current" />
+              Stop
+            </Button>
+          ) : null}
           <Button
             variant="ghost"
             size="sm"
