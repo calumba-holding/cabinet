@@ -253,32 +253,28 @@ Phased work that landed on this branch (see commit trail below):
 
 ### 12.0 TL;DR — what's left
 
-**Provider track (§12.1):** 6 of 12 items are live, 6 are deferred with a concrete reason each:
+**Provider track (§12.1):** 8 of 12 items are live. 4 remaining:
 
 | Deferred | Reason |
 |---|---|
 | #2 Skills injection | Needs catalog-location decision (where does Cabinet store skills?) |
 | #4 Per-provider directory refactor | Mechanical churn, behavior-neutral; low ROI |
 | #5 `agent-live-panel` adapter awareness | Minor; WebTerminal works fine for both paths |
-| #8 Reduce "provider = PTY CLI" assumptions | Cross-cutting audit; no API-only providers shipped yet |
 | #9 Reasoning-effort policy per provider | Product call |
 | #11 Polish placeholder glyphs | Needs licensed artwork |
-| #12 Daemon-level PTY keep-alive (same-process REPL) | Real engineering: interactive launch mode + stdin injection |
 
-**Terminal track (§12.2):** 21 of 24 items live. 3 remaining:
+**Terminal track (§12.2):** 22 of 24 items live. 2 remaining:
 
 | Deferred | Reason |
 |---|---|
 | T19 Distill PTY output into a clean agent turn | By design — terminal mode is "I drive the CLI"; structured summary/artifacts belong to native mode |
-| T20 Same-process continue (keep CLI alive across turns) | Same as §12.1 #12 — needs interactive-REPL launch mode |
 | T21 WebTerminal reconnect-after-navigate-away UX | Not verified — daemon buffers `session.output` and replays; needs manual QA pass |
 
-**Three genuinely actionable items remain:**
-1. **T20 / #12** (same pairing) — add an interactive-REPL launch mode to `createDetachedSession` + stdin injection path so same-process continue works for providers with a REPL (Claude/Codex without `-p`).
-2. **#2 Skills injection** — needs the catalog-location product decision first, then wiring is ~1 day of work.
-3. **#11 Glyph artwork** — if/when licensed artwork is available.
+**Genuinely actionable remaining:**
+1. **#2 Skills injection** — needs the catalog-location product decision first, then wiring is ~1 day of work.
+2. **#11 Glyph artwork** — if/when licensed artwork is available.
 
-Everything else is either shipped, by-design skipped, or a cross-cutting audit.
+Everything else is either shipped, by-design skipped, waiting on manual QA, or waiting on an external input (product decision, artwork).
 
 ### 12.1 Status matrix
 
@@ -291,12 +287,12 @@ Everything else is either shipped, by-design skipped, or a cross-cutting audit.
 | 5 | Stop rendering WebTerminal in `agent-live-panel.tsx` for structured adapters | 🟨 Deferred — minor; PTY now has its own mode | — |
 | 6 | Label legacy PTY adapters as experimental | ✅ Superseded — promoted to first-class **terminal mode** via Native/Terminal toggle | `a767892`, `e922c63` |
 | 7 | Integration coverage for adapter lifecycle | ✅ Done — registry test covers 16 adapters + `legacy-ids.test.ts` asserts client/server sync | `656526d` |
-| 8 | Reduce "provider = PTY CLI" assumptions | 🟨 Deferred — cross-cutting audit, no API providers shipped yet | — |
+| 8 | Reduce "provider = PTY CLI" assumptions — centralize the `type === "cli"` UX filter into `isAgentProviderSelectable()` so one predicate change lights up API providers across onboarding / settings / agents-workspace / providers-demo | ✅ Done | `1e0edbd` |
 | 9 | Reasoning-effort policy per provider | 🟨 Deferred — product call | — |
 | 10 | Model + effort on `/api/agents/headless` | ✅ Done for Claude + Codex — endpoint + `OneShotInvocationOptions` | `979d87a` |
 | 10b | Model-override for the other 6 providers — Gemini (`-m`), Cursor/Grok/Copilot (`--model`), OpenCode (`--model` + `--variant`), Pi (`--model` + `--thinking`) | ✅ Done | `db351ac` |
 | 11 | Polish placeholder glyphs | 🟨 Deferred — needs licensed artwork | — |
-| 12 | Daemon-level PTY keep-alive (same-process continue) | 🟨 Deferred — would require holding PTY open after CLI exit + stdin injection | — |
+| 12 | Daemon-level PTY keep-alive (same-process continue) — daemon `POST /session/:id/input` writes stdin to live PTY; `continueConversationRun` legacy branch tries `writeDaemonSessionInput()` first, falls back to `createDaemonSession` if exited | ✅ Done | `5aebc4c` |
 
 ### 12.2 Terminal-streamed tasks — status matrix
 
@@ -323,7 +319,7 @@ Separate track covering the "user runs task in Terminal mode" experience. Audit 
 | T17 | Running indicator = terminal-icon chip with pulsing ring when live (replaces separate "live" + "PTY" chips) | ✅ Done | `89f5b2a` |
 | T18 | Legacy-adapter continuation — `continueConversationRun` reopens the PTY via `createDaemonSession` instead of bailing on the missing `adapter.execute` | ✅ Done | `a012478` |
 | T19 | Distill PTY output into a clean agent turn on exit (summary, artifact extraction, `<ask_user>` detection) | 🟨 Deferred — by design: terminal mode is "I'm driving the CLI", structured summary/artifacts belong to native mode |
-| T20 | Same-process continue (keep CLI alive across turns, inject prompts via stdin) | 🟨 Deferred — xterm buffer preserved client-side, but underlying CLI restarts per turn; would need interactive-REPL launch mode in `createDetachedSession` |
+| T20 | Same-process continue (keep CLI alive across turns, inject prompts via stdin) — daemon `POST /session/:id/input`; runner probes liveness first, writes to stdin if alive, spawns fresh PTY only on fallback | ✅ Done | `5aebc4c` |
 | T21 | WebTerminal reconnect-after-navigate-away UX | 🟨 Unverified — daemon buffers `session.output` and replays; manual QA needed |
 | T22 | Token bar / context window hidden in terminal fullscreen layout | ✅ Done — fullscreen top strip already omits `TokenBar` (PTY output doesn't self-report usage uniformly) | `4313979` |
 | T23 | Stop-PTY button in the top strip — calls `stopConversation()` → PATCH `{ action: "stop" }` → daemon SIGTERMs the PTY | ✅ Done | `a012478` |
