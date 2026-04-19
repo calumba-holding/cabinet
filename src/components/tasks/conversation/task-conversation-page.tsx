@@ -432,6 +432,145 @@ export function TaskConversationPage({
     );
   }
 
+  // Fullscreen terminal-mode layout: thin dark top strip + WebTerminal fills
+  // the rest. No tabs, no token bar, no prompt header card — the CLI's own
+  // output is the source of truth. Composer pinned to the bottom only when
+  // the PTY has exited (idle).
+  if (isTerminalMode && !isCompact) {
+    const statusTone =
+      task.meta.status === "running"
+        ? "bg-emerald-500/20 text-emerald-300"
+        : task.meta.status === "awaiting-input"
+          ? "bg-amber-500/20 text-amber-300"
+          : task.meta.status === "failed"
+            ? "bg-rose-500/20 text-rose-300"
+            : "bg-zinc-700/60 text-zinc-300";
+    const statusLabel =
+      task.meta.status === "running"
+        ? "live"
+        : task.meta.status === "awaiting-input"
+          ? "awaiting input"
+          : task.meta.status === "idle"
+            ? "exited"
+            : task.meta.status === "failed"
+              ? "failed"
+              : task.meta.status === "done"
+                ? "done"
+                : "archived";
+
+    const copyPrompt = () => {
+      if (!terminalPrompt) return;
+      navigator.clipboard.writeText(terminalPrompt).catch(() => {});
+    };
+
+    return (
+      <div className="flex h-full flex-col bg-zinc-950 text-zinc-100">
+        {/* Thin top strip */}
+        <header className="flex h-10 shrink-0 items-center gap-2 border-b border-zinc-800 bg-zinc-900 px-3">
+          <Link
+            href="/"
+            className="inline-flex size-7 items-center justify-center rounded text-zinc-400 transition-colors hover:bg-zinc-800 hover:text-zinc-100"
+            title="Back"
+          >
+            <ArrowLeft className="size-3.5" />
+          </Link>
+          <Terminal className="size-3.5 shrink-0 text-emerald-400" />
+          <h1 className="min-w-0 flex-1 truncate text-[13px] font-medium text-zinc-100">
+            {task.meta.title}
+          </h1>
+          <span
+            className={cn(
+              "shrink-0 rounded-full px-2 py-0.5 text-[10px] font-medium",
+              statusTone
+            )}
+          >
+            {statusLabel}
+          </span>
+          {task.meta.providerId && (
+            <span
+              className="shrink-0 rounded bg-zinc-800 px-1.5 py-0.5 font-mono text-[10px] text-zinc-400"
+              title={`Provider: ${task.meta.providerId}`}
+            >
+              {task.meta.providerId}
+            </span>
+          )}
+          <span className="shrink-0 rounded bg-emerald-500/15 px-1.5 py-0.5 text-[9px] font-semibold uppercase tracking-wide text-emerald-400">
+            PTY
+          </span>
+          <div className="h-5 w-px bg-zinc-800" />
+          <button
+            type="button"
+            onClick={copyPrompt}
+            disabled={!terminalPrompt}
+            className="inline-flex size-7 items-center justify-center rounded text-zinc-400 transition-colors hover:bg-zinc-800 hover:text-zinc-100 disabled:opacity-40"
+            title="Copy original prompt"
+          >
+            <Copy className="size-3.5" />
+          </button>
+          <Button
+            variant="ghost"
+            size="sm"
+            className="h-7 gap-1 px-2 text-[11px] text-zinc-300 hover:bg-zinc-800 hover:text-zinc-100"
+            disabled={
+              busy ||
+              task.meta.status === "done" ||
+              task.meta.status === "archived"
+            }
+            onClick={handleMarkDone}
+          >
+            <Check className="size-3" />
+            {task.meta.status === "done" ? "Done" : "Mark done"}
+          </Button>
+          <Button
+            variant="ghost"
+            size="sm"
+            className="size-7 p-0 text-zinc-400 hover:bg-zinc-800 hover:text-zinc-100"
+            title="More"
+          >
+            <MoreHorizontal className="size-4" />
+          </Button>
+        </header>
+
+        {/* Terminal fills the rest of the viewport */}
+        <div className="min-h-0 flex-1 bg-zinc-950">
+          <WebTerminal
+            sessionId={task.meta.id}
+            reconnect
+            themeSurface="terminal"
+            onClose={() => {
+              /* PTY ending is handled by the daemon; status updates via SSE. */
+            }}
+          />
+        </div>
+
+        {/* Composer: only shows when the PTY has exited. */}
+        {!readOnly && task.meta.status === "idle" ? (
+          <div className="shrink-0 border-t border-zinc-800 bg-zinc-950">
+            <div className="mx-auto w-full max-w-4xl px-3 py-2">
+              <div className="mb-1.5 flex items-center gap-1.5 text-[10px] text-zinc-500">
+                <CheckCircle2 className="size-3 text-emerald-500" />
+                <span>Session exited — type to continue in the same terminal.</span>
+              </div>
+              <div className="[&_textarea]:bg-zinc-900 [&_textarea]:text-zinc-100 [&_textarea]:placeholder:text-zinc-500 [&_textarea]:border-zinc-800">
+                <TaskComposerPanel
+                  awaitingInput={false}
+                  onSend={handleSend}
+                  initialRuntime={{
+                    providerId: task.meta.providerId,
+                    adapterType: task.meta.adapterType,
+                    model: readRuntimeModel(task.meta.adapterConfig),
+                    effort: readRuntimeEffort(task.meta.adapterConfig),
+                    runtimeMode: "terminal",
+                  }}
+                />
+              </div>
+            </div>
+          </div>
+        ) : null}
+      </div>
+    );
+  }
+
   return (
     <div className="flex h-full flex-col bg-background text-foreground">
       {/* Top bar (hidden in compact variant) */}
