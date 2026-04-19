@@ -77,14 +77,17 @@ A single scrolling column, 840 px max-width, centered on wide viewports. Section
 1.  Top bar             ← Back · Schedule · Active/Stopped · ⋯
 2.  Identity row        Avatar · Name · Status chip · Role · Department
 3.  Composer            Sticky card · suggested prompts row
-4.  Conversations       Up to 7 rows · See all →
-5.  Recent work         Up to 5 files · See all →
-6.  Schedule            Heartbeat + jobs + Add routine · Manage →
-7.  Details             Compact field grid (6 columns)
-8.  Persona instructions  Tiptap editor · no section chrome
+4.  Inbox               (only when non-empty) · up to 5 pending AgentTasks
+5.  Conversations       Up to 7 rows · See all →
+6.  Recent work         Up to 5 files · See all →
+7.  Schedule            Heartbeat + jobs + Add routine · Manage →
+8.  Details             Compact field grid (6 columns)
+9.  Persona instructions  Tiptap editor · no section chrome
 ```
 
 No tabs. No right rail. No embedded mini-calendar on Chat. When the user toggles **Schedule** in the top bar, sections 2–8 are replaced by a full `ScheduleCalendar` filtered to this agent with day/week/month picker; the top bar remains so they can toggle back.
+
+Order is deliberate. **Inbox** (when non-empty) appears between **Composer** and **Conversations** because an assigned task is the most actionable unread item on the page. The section hides entirely when there are no pending tasks — no "Inbox (0)" clutter.
 
 ### 4.1 What does not appear on this page
 
@@ -144,6 +147,43 @@ A thin horizontal bar under the optional demo banner / route chrome.
 - After a successful submit, either:
   - `onOpenConversation` is provided → the parent routes to the task viewer (default inside the main shell).
   - No callback → refresh locally; the new conversation appears at the top of Conversations.
+
+### 5.3b Inbox 🎯 Contract
+
+**What it is.** The agent's queue of `AgentTask`s — tasks assigned by other agents or by the future `@CTO …` mention pattern inside a page. Source of truth: `GET /api/agents/tasks?agent={slug}`; data lives at `data/{cabinetPath}/.agents/{slug}/tasks/{id}.json` per `task-inbox.ts`.
+
+**Visibility.** The section renders **only** when at least one task has `status ∈ {"pending","in_progress"}`. Empty inbox → section hidden. No header, no counter, no empty state.
+
+**Row anatomy.**
+- Status icon (16 px): `Inbox` icon (muted) for pending, spinner for in_progress.
+- Title (13 px, bold).
+- Priority chip (right of title): `P1`/`P2`/`P3`/`P4`/`P5`. Color bucket:
+  - P1 → red (`bg-red-500/10 text-red-600 dark:text-red-400`)
+  - P2 → amber
+  - P3 → muted neutral
+  - P4–P5 → fainter muted
+- Description preview (11 px, single-line truncate) if present.
+- Meta row: `from {fromName || fromAgent} · {relative createdAt}`; if a run is linked, append `· Running →` in primary.
+- **Start** button (right, hidden until row-hover). Present only on `pending` rows without a `linkedConversationId`.
+
+**Default behavior decision.** Tasks **wait in the inbox** until the user explicitly clicks Start. This is deliberate:
+
+1. An agent-assigned task is often a suggestion the user should triage (priority, timing), not a command.
+2. Auto-running on arrival makes mention-bombing weaponizable (a rogue agent or a careless `@CTO` in a shared doc would burn tokens).
+3. Manual start preserves the same "humans define intent" invariant the rest of Cabinet relies on.
+
+Future iteration (Phase C) may add a per-agent `autoRunInboxPriority` setting (e.g. "auto-run P1" or "auto-run from trusted agents only"). Not in v2.
+
+**Start flow.**
+1. POST `/api/agents/conversations` with `userMessage = "${task.title}\n\n${task.description}"`, `agentSlug = slug`, `cabinetPath = persona.cabinetPath`, `mentionedPaths = task.kbRefs`.
+2. On 200, POST `/api/agents/tasks` with `action: "update"`, `status: "in_progress"`, `linkedConversationId = newConversation.id`, `startedAt: now` — per the existing endpoint contract.
+3. Route via `onOpenConversation` (falls back to local refresh).
+
+**Click-body flow.**
+- If `task.linkedConversationId` is set → open that conversation.
+- Else → same as Start flow.
+
+**@-mention integration (future).** When a user types `@CTO …` inside a markdown page and the @-mention resolves to an agent slug, the client POSTs a new `AgentTask` with `fromAgent = "human"` (or the authoring agent), `toAgent = "cto"`, `title = <inline text>`, `description = <surrounding paragraph>`, `kbRefs = [currentPagePath]`, `priority = 3`. The Inbox section picks it up on next refresh. This keeps the mention-to-task bridge a thin client-side call — no new contracts. Scheduling decision: the task waits in the recipient's inbox by default (same as agent-to-agent handoffs today).
 
 ### 5.4 Conversations 🎯 Contract
 

@@ -31,6 +31,7 @@ import {
   Sparkles,
   Trash2,
   Download,
+  Inbox as InboxIcon,
   X,
   XCircle,
   Zap,
@@ -55,6 +56,7 @@ import {
   getAgentDisplayName,
 } from "@/components/agents/agent-identity";
 import type { AgentPersona } from "@/lib/agents/persona-manager";
+import type { AgentTask } from "@/types/agents";
 import type { ConversationMeta } from "@/types/conversations";
 import type {
   CabinetAgentSummary,
@@ -690,6 +692,111 @@ function Composer({
         ))}
       </div>
     </div>
+  );
+}
+
+/* ─── Inbox (assigned AgentTasks) ─── */
+function priorityChipClass(priority: number): string {
+  // 1 = highest, 5 = lowest
+  if (priority <= 1) return "bg-red-500/10 text-red-600 dark:text-red-400";
+  if (priority === 2) return "bg-amber-500/10 text-amber-600 dark:text-amber-400";
+  if (priority === 3) return "bg-muted text-muted-foreground";
+  return "bg-muted/50 text-muted-foreground";
+}
+
+function InboxSection({
+  tasks,
+  onStart,
+  onOpenTask,
+  startingTaskId,
+}: {
+  tasks: AgentTask[];
+  onStart: (task: AgentTask) => void;
+  onOpenTask: (task: AgentTask) => void;
+  startingTaskId: string | null;
+}) {
+  if (tasks.length === 0) return null;
+  const pending = tasks.filter((t) => t.status === "pending" || t.status === "in_progress");
+  if (pending.length === 0) return null;
+
+  return (
+    <Section
+      title="Inbox"
+      meta={`${pending.length} waiting`}
+    >
+      <ul className="space-y-0">
+        {pending.slice(0, 5).map((t) => {
+          const linked = !!t.linkedConversationId;
+          const busy = startingTaskId === t.id;
+          const fromLabel = t.fromName || t.fromAgent;
+          return (
+            <li
+              key={t.id}
+              className="flex items-start gap-3 px-2 py-2.5 -mx-2 rounded-md hover:bg-accent/40 transition-colors group"
+            >
+              <span className="mt-0.5 shrink-0">
+                {t.status === "in_progress" ? (
+                  <Loader2 className="h-3.5 w-3.5 text-primary animate-spin" />
+                ) : (
+                  <InboxIcon className="h-3.5 w-3.5 text-muted-foreground" />
+                )}
+              </span>
+              <button
+                type="button"
+                onClick={() => onOpenTask(t)}
+                className="flex-1 min-w-0 text-left"
+              >
+                <div className="flex items-baseline gap-2">
+                  <span className="text-[13px] font-medium truncate">
+                    {t.title}
+                  </span>
+                  <span
+                    className={cn(
+                      "text-[10px] uppercase tracking-wider font-medium px-1.5 py-0.5 rounded shrink-0",
+                      priorityChipClass(t.priority)
+                    )}
+                  >
+                    P{t.priority}
+                  </span>
+                </div>
+                {t.description && (
+                  <p className="text-[11px] text-muted-foreground/80 mt-0.5 truncate">
+                    {t.description}
+                  </p>
+                )}
+                <p className="text-[10px] text-muted-foreground/60 mt-1 flex items-center gap-2">
+                  <span>from {fromLabel}</span>
+                  <span className="opacity-40">·</span>
+                  <span>{formatRelative(t.createdAt)}</span>
+                  {linked && (
+                    <>
+                      <span className="opacity-40">·</span>
+                      <span className="text-primary">Running →</span>
+                    </>
+                  )}
+                </p>
+              </button>
+              {!linked && t.status === "pending" && (
+                <Button
+                  size="sm"
+                  variant="outline"
+                  className="h-7 text-[11px] gap-1 shrink-0 opacity-0 group-hover:opacity-100 focus-visible:opacity-100 transition-opacity"
+                  onClick={() => onStart(t)}
+                  disabled={busy}
+                >
+                  {busy ? (
+                    <Loader2 className="h-3 w-3 animate-spin" />
+                  ) : (
+                    <Play className="h-3 w-3" />
+                  )}
+                  Start
+                </Button>
+              )}
+            </li>
+          );
+        })}
+      </ul>
+    </Section>
   );
 }
 
@@ -1426,19 +1533,22 @@ export function AgentDetailV2({
   const [persona, setPersona] = useState<AgentPersona | null>(null);
   const [conversations, setConversations] = useState<ConversationMeta[]>([]);
   const [jobs, setJobs] = useState<AgentJob[]>([]);
+  const [inboxTasks, setInboxTasks] = useState<AgentTask[]>([]);
   const [loading, setLoading] = useState(true);
   const [submitting, setSubmitting] = useState(false);
   const [scheduleOpen, setScheduleOpen] = useState(false);
   const [togglingActive, setTogglingActive] = useState(false);
+  const [startingTaskId, setStartingTaskId] = useState<string | null>(null);
 
   const refresh = useCallback(async () => {
     try {
-      const [personaRes, convoRes, jobsRes] = await Promise.all([
+      const [personaRes, convoRes, jobsRes, tasksRes] = await Promise.all([
         fetch(`/api/agents/personas/${slug}`),
         fetch(
           `/api/agents/conversations?agent=${encodeURIComponent(slug)}&limit=50`
         ),
         fetch(`/api/agents/${slug}/jobs`),
+        fetch(`/api/agents/tasks?agent=${encodeURIComponent(slug)}`),
       ]);
       if (personaRes.ok) {
         const data = await personaRes.json();
@@ -1451,6 +1561,10 @@ export function AgentDetailV2({
       if (jobsRes.ok) {
         const data = await jobsRes.json();
         setJobs(data.jobs || []);
+      }
+      if (tasksRes.ok) {
+        const data = await tasksRes.json();
+        setInboxTasks(data.tasks || []);
       }
     } catch {
       // ignore
@@ -1540,6 +1654,72 @@ export function AgentDetailV2({
       await refresh();
     },
     [slug, refresh]
+  );
+
+  const startInboxTask = useCallback(
+    async (task: AgentTask) => {
+      if (!persona) return;
+      setStartingTaskId(task.id);
+      try {
+        const prompt =
+          task.description?.trim()
+            ? `${task.title}\n\n${task.description}`
+            : task.title;
+        const res = await fetch("/api/agents/conversations", {
+          method: "POST",
+          headers: { "Content-Type": "application/json" },
+          body: JSON.stringify({
+            userMessage: prompt,
+            agentSlug: persona.slug,
+            cabinetPath: persona.cabinetPath,
+            source: "manual",
+            mentionedPaths: task.kbRefs || [],
+          }),
+        });
+        if (!res.ok) return;
+        const data = await res.json();
+        const conversation: ConversationMeta | undefined = data?.conversation;
+        if (conversation) {
+          await fetch("/api/agents/tasks", {
+            method: "POST",
+            headers: { "Content-Type": "application/json" },
+            body: JSON.stringify({
+              action: "update",
+              agent: task.toAgent,
+              taskId: task.id,
+              status: "in_progress",
+              cabinetPath: task.cabinetPath,
+              linkedConversationId: conversation.id,
+              linkedConversationCabinetPath: conversation.cabinetPath,
+              startedAt: new Date().toISOString(),
+            }),
+          });
+          if (onOpenConversation) onOpenConversation(conversation);
+          else await refresh();
+        }
+      } finally {
+        setStartingTaskId(null);
+        refresh();
+      }
+    },
+    [persona, onOpenConversation, refresh]
+  );
+
+  const openInboxTask = useCallback(
+    (task: AgentTask) => {
+      if (task.linkedConversationId) {
+        const convo = conversations.find(
+          (c) => c.id === task.linkedConversationId
+        );
+        if (convo && onOpenConversation) {
+          onOpenConversation(convo);
+          return;
+        }
+      }
+      // No linked run yet — start it.
+      startInboxTask(task);
+    },
+    [conversations, onOpenConversation, startInboxTask]
   );
 
   const handleExport = useCallback(() => {
@@ -1660,6 +1840,12 @@ export function AgentDetailV2({
                   submitting={submitting}
                 />
               </div>
+              <InboxSection
+                tasks={inboxTasks}
+                onStart={startInboxTask}
+                onOpenTask={openInboxTask}
+                startingTaskId={startingTaskId}
+              />
               <ConversationsSection
                 conversations={conversations}
                 onOpen={handleOpenConversation}
