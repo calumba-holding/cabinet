@@ -52,6 +52,8 @@ interface PatchBody {
   // `done` / `archived` shortcuts that set the corresponding timestamp
   done?: boolean;
   archived?: boolean;
+  // v2 board: within-lane sort index.
+  boardOrder?: number;
 }
 
 export async function PATCH(
@@ -136,6 +138,9 @@ export async function PATCH(
   else if (body.archived === false) updates.archivedAt = undefined;
   if (body.archivedAt !== undefined) {
     updates.archivedAt = body.archivedAt === null ? undefined : body.archivedAt;
+  }
+  if (typeof body.boardOrder === "number" && Number.isFinite(body.boardOrder)) {
+    updates.boardOrder = body.boardOrder;
   }
 
   const nextMeta: ConversationMeta = {
