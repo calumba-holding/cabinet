@@ -294,7 +294,7 @@ Consolidated list of every item that was raised across this PRD and isn't fully 
 
 **Snapshot:**
 - Provider track (§12.1): 9 / 12 shipped (3 partial).
-- Terminal track (§12.2): 24 / 24 resolved.
+- Terminal track (§12.2): 25 / 25 resolved (T25 added for terminal-resume pipeline).
 - Skills UI (new track): 4 / 4 shipped.
 
 ### 12.1 Status matrix
