@@ -14,6 +14,7 @@ import { useTreeStore } from "@/stores/tree-store";
 import { cn } from "@/lib/utils";
 import type { Turn } from "@/types/tasks";
 import { Markdown } from "./markdown";
+import { ConversationContentViewer } from "@/components/agents/conversation-content-viewer";
 
 function computeRelative(iso: string): string {
   const delta = Date.now() - new Date(iso).getTime();
@@ -144,10 +145,14 @@ export function TurnBlock({ turn }: { turn: Turn }) {
           ) : null}
         </div>
 
-        <Markdown
-          content={turn.content}
-          className="text-[14.5px] leading-[1.65] tracking-[-0.005em] text-foreground/95"
-        />
+        {isUser ? (
+          <Markdown
+            content={turn.content}
+            className="text-[14.5px] leading-[1.65] tracking-[-0.005em] text-foreground/95"
+          />
+        ) : (
+          <ConversationContentViewer text={turn.content} />
+        )}
 
         {artifactPaths.length > 0 ? (
           <div className="mt-3.5 space-y-1.5 rounded-xl border border-border/60 bg-muted/40 p-2 dark:bg-muted/20">
