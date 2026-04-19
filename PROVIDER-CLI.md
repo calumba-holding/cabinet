@@ -251,19 +251,24 @@ Phased work that landed on this branch (see commit trail below):
 
 ## 12. Next Steps
 
-Remaining work on the multi-provider track, in priority order:
+### ✅ Resolved this round (2026-04-19)
 
-1. **Persist session codec per conversation** — wire `AdapterSessionCodec.serialize/deserialize` through `server/cabinet-daemon.ts` so resume params survive across conversations (today they round-trip only within a single run). Store `sessionParams` per conversation/agent under `data/` alongside existing metadata. Retry with `clearSession: true` on stale ids.
+1. ~~**Persist session codec per conversation**~~ — already wired: `conversation-runner.ts` calls `adapter.sessionCodec.serialize(result.sessionParams)` and persists via `writeSession(conversationId, { codecBlob, resumeId, … })`; continuations call `adapter.sessionCodec.deserialize(session.codecBlob)` and pass the rehydrated params back into `execute()`. Stale-session retry (`clearSession: true`) also lives in the runner.
+3. ~~**Dynamic model discovery**~~ — done: `AgentProvider.listModels()` optional hook added; OpenCode (`opencode models`) and Pi (`pi --list-models`) implement it with fallback. New `GET /api/agents/providers/:id/models` route with in-memory 60 s TTL cache exposes the list (payload: `{ models, dynamic, cached, ageMs, ttlMs }`).
+6. ~~**Label legacy PTY adapters as experimental**~~ — superseded: legacy PTY is now a first-class **terminal mode** surfaced via the Native/Terminal toggle in the runtime picker (see §6.1 / §11.20–21). Every provider ships a matching `<provider>_legacy` adapter.
+7. ~~**Integration coverage for adapter lifecycle**~~ — covered: `registry.test.ts` now asserts every registered CLI provider has a legacy PTY adapter; new `legacy-ids.test.ts` asserts the client-safe mirror stays in sync with `LEGACY_ADAPTER_BY_PROVIDER_ID`.
+10. ~~**Model-override param on `/api/agents/headless`**~~ — done: endpoint accepts optional `{ model, effort }`; `provider.buildOneShotInvocation(prompt, workdir, opts)` gained an `OneShotInvocationOptions` parameter. Claude (`--model`) and Codex (`--model` + `-c model_reasoning_effort=…`) wired today; other providers currently ignore the opts until their `buildOneShotInvocation` is extended.
+
+### Still deferred
+
 2. **Skills injection through the daemon** — wire `listSkills` / `syncSkills` so a curated skill set is symlinked into the per-adapter skills home (`~/.claude/skills`, `~/.cursor/skills`, etc.) before `execute()`. Requires a decision on where Cabinet stores the skill catalog.
-3. **Dynamic model discovery** — implement `listModels()` for OpenCode (`opencode models`) and Pi (`pi --list-models`) with a 60 s cache so the runtime picker reflects each user's actual provider catalog.
 4. **Per-provider directory refactor** — split each flat `<provider>-local.ts` + `<provider>-stream.ts` pair into `adapters/<provider>-local/{index,execute,parse,test,skills}.ts` and extract the shared helpers into `_shared/{stream-json,cli-args,stderr-filter,session-codec,skills-injection,health-check}.ts`. Structural cleanup, not a functional gap.
-5. **Port remaining live surfaces to native view** — extend the transcript-based renderer to `src/components/agents/agent-detail.tsx`, `src/components/agents/agent-live-panel.tsx`, and non-interactive portions of `src/components/ai-panel/ai-panel.tsx`.
-6. **Label legacy PTY adapters as experimental** — explicitly mark the legacy runtime as optional/experimental in every UI surface where it's selectable. Keep `WebTerminal` as the interactive/debug subsystem for direct CLI usage and future tmux-like workflows.
-7. **Integration coverage for adapter lifecycle** — tests around adapter selection, session resume path (including stale-session retry), and the structured-session persistence wiring from step 1.
+5. **Port remaining live surfaces to native view** — superseded-ish: with terminal mode as a first-class runtime, `WebTerminal` legitimately owns the PTY surface. Remaining opportunity: ensure `agent-live-panel.tsx` doesn't render `WebTerminal` for structured-adapter conversations.
 8. **Reduce "provider = PTY CLI" assumptions** — continue auditing code paths that assume a terminal-backed CLI; ensure API-only providers can slot in cleanly once we add them.
 9. **Reasoning-effort policy per provider** — decide how far to push effort controls. Cursor has none, OpenCode/Pi have per-variant levels, Codex has low/medium/high, Claude/Gemini/Grok/Copilot have none. Some providers should expose model choice with no effort at all.
-10. **Model-override param on `/api/agents/headless`** — currently the headless endpoint only accepts `{ providerId, prompt }`. Extend to accept optional `model` + `effort` so `/providers-demo` can test non-default models without spinning up a full conversation. Unlocks per-provider model testing in the demo.
+10b. **Model-override for the remaining 6 providers** — extend `buildOneShotInvocation` on Gemini / Cursor / OpenCode / Pi / Grok / Copilot to translate `opts.model` + `opts.effort` into each CLI's own flags.
 11. **Polish placeholder glyphs** — replace the monogram SVGs for `cursor`, `opencode`, `pi`, `grok`, `copilot` with official artwork where licensing allows.
+12. **Daemon-level PTY keep-alive** — currently each terminal-mode continuation spawns a fresh CLI in the same `sessionId`. The xterm scrollback is preserved on the client, but a literal "same process reused" would require holding the PTY open after CLI exit and injecting new prompts via stdin.
 
 ## 13. Operational Notes
 
