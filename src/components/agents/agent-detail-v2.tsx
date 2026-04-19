@@ -1256,7 +1256,29 @@ function DetailsSection({
           mono
           readOnly
         />
+        <Field
+          label="Skills"
+          value={
+            persona.skills && persona.skills.length > 0
+              ? persona.skills.join(", ")
+              : "—"
+          }
+          className="col-span-6"
+          mono
+          readOnly
+        />
       </div>
+      {persona.skills && persona.skills.length > 0 ? (
+        <p className="mt-2 px-1 text-[10.5px] text-muted-foreground/70">
+          Injected into every run via <code className="rounded bg-muted px-1 py-0.5">--add-dir</code>{" "}
+          (Claude) or the adapter&apos;s skill-dir flag. Edit the agent&apos;s markdown frontmatter
+          <code className="rounded bg-muted px-1 py-0.5">skills:</code> field to change. Catalog:{" "}
+          <a href="#settings/skills" className="text-foreground underline-offset-2 hover:underline">
+            Settings → Skills
+          </a>
+          .
+        </p>
+      ) : null}
     </Section>
   );
 }

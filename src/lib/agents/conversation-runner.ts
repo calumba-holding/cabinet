@@ -275,6 +275,25 @@ export async function startConversationRun(
   const resolvedAdapterType =
     input.adapterType || defaultAdapterTypeForProvider(resolvedProviderId);
 
+  // Skills injection: read the persona's `skills:` list and materialize each
+  // into a managed tmpdir. The resulting `skillsDir` + slug list are merged
+  // into adapterConfig so (a) adapters can forward the dir to the CLI (e.g.
+  // Claude `--add-dir`), and (b) the task viewer can display which skills
+  // were attached to this run. No-op when the persona has no skills or the
+  // catalog is empty.
+  const skillsPersona =
+    input.agentSlug && input.agentSlug !== "general"
+      ? await readPersona(input.agentSlug, input.cabinetPath)
+      : null;
+  // We defer the actual symlink materialization until we know the meta.id.
+  // For now, capture the slug list we'll attach.
+  const requestedSkillSlugs = skillsPersona?.skills?.length
+    ? skillsPersona.skills
+    : null;
+  const baseAdapterConfig: Record<string, unknown> | undefined = requestedSkillSlugs
+    ? { ...(input.adapterConfig || {}), skills: requestedSkillSlugs }
+    : input.adapterConfig;
+
   const meta = await createConversation({
     agentSlug: input.agentSlug,
     cabinetPath: input.cabinetPath,
@@ -283,27 +302,23 @@ export async function startConversationRun(
     prompt: input.prompt,
     providerId: resolvedProviderId,
     adapterType: resolvedAdapterType,
-    adapterConfig: input.adapterConfig,
+    adapterConfig: baseAdapterConfig,
     mentionedPaths: input.mentionedPaths,
     jobId: input.jobId,
     jobName: input.jobName,
     scheduledAt: input.scheduledAt,
   });
 
-  // Skills injection: materialize the agent's selected skills into a managed
-  // tmpdir and pass the path through adapterConfig so the adapter can wire it
-  // into the CLI (e.g. Claude `--add-dir`). No-op when the persona has no
-  // skills or the catalog is empty.
-  const skillsPersona =
-    input.agentSlug && input.agentSlug !== "general"
-      ? await readPersona(input.agentSlug, input.cabinetPath)
-      : null;
-  const skillsSync = skillsPersona?.skills?.length
-    ? syncSkillsToTmpdir(meta.id, skillsPersona.skills)
+  const skillsSync = requestedSkillSlugs
+    ? syncSkillsToTmpdir(meta.id, requestedSkillSlugs)
     : null;
   const spawnAdapterConfig: Record<string, unknown> | undefined = skillsSync
-    ? { ...(input.adapterConfig || {}), skillsDir: skillsSync.dir }
-    : input.adapterConfig;
+    ? {
+        ...(baseAdapterConfig || {}),
+        skillsDir: skillsSync.dir,
+        skills: skillsSync.resolved.map((entry) => entry.slug),
+      }
+    : baseAdapterConfig;
 
   try {
     await createDaemonSession({

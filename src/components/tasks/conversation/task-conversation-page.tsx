@@ -172,6 +172,28 @@ function readRuntimeEffort(config?: Record<string, unknown>): string | undefined
   return typeof value === "string" && value.trim() ? value.trim() : undefined;
 }
 
+/**
+ * Derives the list of skill slugs attached to a run from its adapterConfig.
+ * `skillsDir` is a per-run tmpdir materialized by the runner; the directory
+ * name itself isn't useful for display, so we list the skill slugs out of
+ * `skills` if the runner persisted them, falling back to the tmpdir basename.
+ * Returns `null` when no skills were attached so callers can skip the chip.
+ */
+function readRuntimeSkills(config?: Record<string, unknown>): string[] | null {
+  if (!config) return null;
+  const skills = config.skills;
+  if (Array.isArray(skills)) {
+    const slugs = skills.filter(
+      (value): value is string => typeof value === "string" && value.trim() !== ""
+    );
+    if (slugs.length > 0) return slugs;
+  }
+  // Fallback: the runner always sets skillsDir when it attached anything, so
+  // presence alone is a signal even if the slug list wasn't persisted.
+  const dir = config.skillsDir;
+  return typeof dir === "string" && dir.trim() ? [] : null;
+}
+
 const DEFAULT_CONTEXT_WINDOW = 200_000;
 
 export interface TaskConversationPageProps {
@@ -253,6 +275,7 @@ export function TaskConversationPage({
   const isTerminalMode = task ? isLegacyAdapterType(task.meta.adapterType) : false;
   const firstUserTurn = task?.turns.find((t) => t.role === "user") || null;
   const terminalPrompt = firstUserTurn?.content || task?.meta.title || "";
+  const attachedSkills = task ? readRuntimeSkills(task.meta.adapterConfig) : null;
 
   const lastTurn = task ? task.turns[task.turns.length - 1] : null;
   const showWrapUp =
@@ -505,6 +528,17 @@ export function TaskConversationPage({
               {task.meta.providerId}
             </span>
           )}
+          {attachedSkills && attachedSkills.length > 0 && (
+            <span
+              className="shrink-0 inline-flex items-center gap-1 rounded bg-violet-500/15 px-1.5 py-0.5 text-[10px] font-medium text-violet-300"
+              title={`Skills attached: ${attachedSkills.join(", ")}`}
+            >
+              <Sparkles className="size-3" />
+              {attachedSkills.length === 1
+                ? attachedSkills[0]
+                : `${attachedSkills.length} skills`}
+            </span>
+          )}
           <div className="h-5 w-px bg-zinc-800" />
           <button
             type="button"
@@ -621,6 +655,17 @@ export function TaskConversationPage({
               >
                 <Terminal className="size-3" />
                 PTY
+              </span>
+            )}
+            {attachedSkills && attachedSkills.length > 0 && (
+              <span
+                className="inline-flex items-center gap-1 rounded bg-violet-500/15 px-1.5 py-0.5 text-[9px] font-medium text-violet-700 dark:text-violet-400"
+                title={`Skills attached: ${attachedSkills.join(", ")}`}
+              >
+                <Sparkles className="size-3" />
+                {attachedSkills.length === 1
+                  ? attachedSkills[0]
+                  : `${attachedSkills.length} skills`}
               </span>
             )}
             <h1 className="truncate text-[14px] font-semibold tracking-tight">
