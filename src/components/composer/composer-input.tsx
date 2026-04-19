@@ -29,6 +29,7 @@ export interface ComposerInputProps {
     disabled?: boolean;
     loading?: boolean;
   };
+  mentionDropdownPlacement?: "above" | "below";
   onKeyDown?: (e: React.KeyboardEvent<HTMLTextAreaElement>) => void;
 }
 
@@ -48,6 +49,7 @@ export function ComposerInput({
   variant = "card",
   items = [],
   secondaryAction,
+  mentionDropdownPlacement = "above",
   onKeyDown,
 }: ComposerInputProps) {
   useEffect(() => {
@@ -74,6 +76,7 @@ export function ComposerInput({
               items={composer.filteredItems}
               activeIndex={composer.dropdownIndex}
               onSelect={composer.insertMention}
+              placement={mentionDropdownPlacement}
             />
           )}
           <textarea

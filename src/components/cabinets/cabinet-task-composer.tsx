@@ -1,23 +1,25 @@
 "use client";
 
 import { useEffect, useMemo, useRef, useState } from "react";
+import { ChevronDown } from "lucide-react";
 import { ComposerInput } from "@/components/composer/composer-input";
 import {
   TaskRuntimePicker,
   type TaskRuntimeSelection,
 } from "@/components/composer/task-runtime-picker";
 import {
-  Select,
-  SelectContent,
-  SelectGroup,
-  SelectItem,
-  SelectTrigger,
-  SelectValue,
-} from "@/components/ui/select";
+  DropdownMenu,
+  DropdownMenuContent,
+  DropdownMenuItem,
+  DropdownMenuTrigger,
+} from "@/components/ui/dropdown-menu";
 import { useComposer, type MentionableItem } from "@/hooks/use-composer";
 import { createConversation } from "@/lib/agents/conversation-client";
 import { flattenTree } from "@/lib/tree-utils";
 import { useTreeStore } from "@/stores/tree-store";
+import { getAgentColor, tintFromHex } from "@/lib/agents/cron-compute";
+import { resolveAgentIcon } from "@/lib/agents/icon-catalog";
+import { cn } from "@/lib/utils";
 import type { CabinetAgentSummary } from "@/types/cabinets";
 import { getGreeting } from "./cabinet-utils";
 
@@ -124,12 +126,6 @@ export function CabinetTaskComposer({
     ? `What should ${selectedAgent.name} work on?`
     : "Choose an agent and describe the next task.";
 
-  const selectedAgentMeta = selectedAgent
-    ? selectedAgent.inherited
-      ? `${selectedAgent.role} · ${selectedAgent.cabinetName}`
-      : selectedAgent.role
-    : null;
-
   return (
     <div ref={rootRef} className="space-y-5">
       <div className="space-y-2">
@@ -157,58 +153,95 @@ export function CabinetTaskComposer({
         minHeight="72px"
         maxHeight="220px"
         className="w-full"
+        mentionDropdownPlacement="below"
         actionsStart={
-          <TaskRuntimePicker
-            value={taskRuntime}
-            onChange={setTaskRuntime}
-          />
-        }
-        footer={
-          <div className="flex flex-wrap items-end justify-between gap-3 px-4 pb-4 pt-1">
-            <div className="flex min-w-[220px] flex-col gap-2">
-              <span className="text-[10px] font-semibold uppercase tracking-[0.18em] text-muted-foreground/70">
-                Assigned agent
-              </span>
-              <Select
-                items={assignableAgents.map((agent) => ({
-                  label: agent.name,
-                  value: agent.scopedId,
-                }))}
-                value={selectedAgent?.scopedId || null}
-                onValueChange={(value) => {
-                  const nextAgent =
-                    assignableAgents.find((agent) => agent.scopedId === value) || null;
-                  setSelectedAgent(nextAgent);
-                }}
-                disabled={assignableAgents.length === 0}
-              >
-                <SelectTrigger className="min-w-[220px] rounded-full bg-background px-3">
-                  <SelectValue placeholder="No visible agents" />
-                </SelectTrigger>
-                <SelectContent align="start">
-                  <SelectGroup>
-                    {assignableAgents.map((agent) => (
-                      <SelectItem key={agent.scopedId} value={agent.scopedId}>
-                        <span className="text-sm leading-none">{agent.emoji || "🤖"}</span>
-                        <span className="truncate">
-                          {agent.name}
-                          {agent.inherited ? ` · ${agent.cabinetName}` : ""}
-                        </span>
-                      </SelectItem>
-                    ))}
-                  </SelectGroup>
-                </SelectContent>
-              </Select>
-            </div>
-
-            {selectedAgentMeta ? (
-              <p className="max-w-sm text-[11px] leading-5 text-muted-foreground">
-                {selectedAgentMeta}
-              </p>
-            ) : null}
-          </div>
+          <>
+            <AgentPickerCompact
+              agents={assignableAgents}
+              selected={selectedAgent}
+              onSelect={setSelectedAgent}
+            />
+            <TaskRuntimePicker
+              value={taskRuntime}
+              onChange={setTaskRuntime}
+            />
+          </>
         }
       />
     </div>
+  );
+}
+
+function AgentPickerCompact({
+  agents,
+  selected,
+  onSelect,
+}: {
+  agents: CabinetAgentSummary[];
+  selected: CabinetAgentSummary | null;
+  onSelect: (agent: CabinetAgentSummary) => void;
+}) {
+  const disabled = agents.length === 0;
+  return (
+    <DropdownMenu>
+      <DropdownMenuTrigger
+        className={cn(
+          "inline-flex h-8 items-center gap-1.5 rounded-md border border-border/70 bg-background pl-1 pr-2 text-muted-foreground transition-colors hover:bg-accent hover:text-accent-foreground disabled:pointer-events-none disabled:opacity-50"
+        )}
+        disabled={disabled}
+        title={selected ? `Assigned to ${selected.displayName ?? selected.name}` : "Pick an agent"}
+      >
+        {selected ? (
+          <>
+            <AgentAvatar agent={selected} />
+            <span className="text-[11px] font-medium text-foreground">
+              {selected.displayName ?? selected.name}
+            </span>
+          </>
+        ) : (
+          <span className="px-1 text-[11px]">No agents</span>
+        )}
+        <ChevronDown className="size-3 text-muted-foreground/70" />
+      </DropdownMenuTrigger>
+      <DropdownMenuContent align="start" className="max-h-[320px] overflow-y-auto p-1">
+        {agents.map((agent) => {
+          const isSelected = selected?.scopedId === agent.scopedId;
+          return (
+            <DropdownMenuItem
+              key={agent.scopedId}
+              onSelect={() => onSelect(agent)}
+              className={cn(
+                "flex items-center gap-2 rounded-md px-2 py-1.5 text-[12px]",
+                isSelected && "bg-accent text-accent-foreground"
+              )}
+            >
+              <AgentAvatar agent={agent} />
+              <span className="flex min-w-0 flex-col leading-tight">
+                <span className="truncate text-[12px] font-medium text-foreground">
+                  {agent.displayName ?? agent.name}
+                </span>
+                <span className="truncate text-[10px] text-muted-foreground">
+                  {agent.role}
+                  {agent.inherited ? ` · ${agent.cabinetName}` : ""}
+                </span>
+              </span>
+            </DropdownMenuItem>
+          );
+        })}
+      </DropdownMenuContent>
+    </DropdownMenu>
+  );
+}
+
+function AgentAvatar({ agent }: { agent: CabinetAgentSummary }) {
+  const tint = agent.color ? tintFromHex(agent.color) : getAgentColor(agent.slug);
+  const Icon = resolveAgentIcon(agent.slug, agent.iconKey ?? null);
+  return (
+    <span
+      className="inline-flex size-6 shrink-0 items-center justify-center rounded-full"
+      style={{ backgroundColor: tint.bg, color: tint.text }}
+    >
+      <Icon className="size-3.5" />
+    </span>
   );
 }

@@ -9,6 +9,13 @@ interface MentionDropdownProps {
   activeIndex: number;
   onSelect: (item: MentionableItem) => void;
   maxItems?: number;
+  /**
+   * Where to anchor the dropdown relative to the textarea.
+   * Defaults to "above" — composers near the bottom of the screen flow up.
+   * Use "below" when the composer sits at the top of the page so the
+   * suggestions don't get clipped by the chrome above.
+   */
+  placement?: "above" | "below";
 }
 
 export function MentionDropdown({
@@ -16,6 +23,7 @@ export function MentionDropdown({
   activeIndex,
   onSelect,
   maxItems = 8,
+  placement = "above",
 }: MentionDropdownProps) {
   const agents = items.filter((i) => i.type === "agent");
   const pages = items.filter((i) => i.type === "page");
@@ -31,7 +39,12 @@ export function MentionDropdown({
   let runningIndex = 0;
 
   return (
-    <div className="absolute inset-x-0 bottom-full z-20 mb-2 max-h-[280px] overflow-y-auto rounded-xl border border-border bg-popover p-1 shadow-lg">
+    <div
+      className={cn(
+        "absolute inset-x-0 z-20 max-h-[280px] overflow-y-auto rounded-xl border border-border bg-popover p-1 shadow-lg",
+        placement === "below" ? "top-full mt-2" : "bottom-full mb-2"
+      )}
+    >
       {visibleAgents.length > 0 && (
         <>
           <div className="px-3 py-1.5 text-[10px] font-semibold uppercase tracking-wider text-muted-foreground/60">
