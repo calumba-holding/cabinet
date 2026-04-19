@@ -1,6 +1,5 @@
 import type { Metadata } from "next";
 import { Inter, JetBrains_Mono, Instrument_Serif } from "next/font/google";
-import Script from "next/script";
 import { ThemeProvider } from "@/components/theme-provider";
 import { ThemeInitializer } from "@/components/layout/theme-initializer";
 import "./globals.css";
@@ -42,9 +41,6 @@ export default function RootLayout({
       suppressHydrationWarning
     >
       <body className="min-h-full flex flex-col font-sans">
-        <Script id="cabinet-electron-detect" strategy="beforeInteractive">
-          {`if(typeof window!=="undefined"&&window.CabinetDesktop)document.documentElement.classList.add("electron-desktop")`}
-        </Script>
         <ThemeProvider
           attribute="class"
           defaultTheme="light"

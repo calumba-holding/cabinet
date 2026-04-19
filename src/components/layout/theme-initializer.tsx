@@ -18,6 +18,13 @@ export function ThemeInitializer() {
   const { setTheme } = useTheme();
 
   useEffect(() => {
+    if (
+      typeof window !== "undefined" &&
+      (window as unknown as { CabinetDesktop?: unknown }).CabinetDesktop
+    ) {
+      document.documentElement.classList.add("electron-desktop");
+    }
+
     // Load Google Fonts for all themes
     if (!document.getElementById("theme-fonts-link")) {
       const link = document.createElement("link");
