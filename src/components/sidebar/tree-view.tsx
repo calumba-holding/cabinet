@@ -113,6 +113,7 @@ export function TreeView() {
 
   const [cabinetExpanded, setCabinetExpanded] = useState(true);
   const [agentsExpanded, setAgentsExpanded] = useState(true);
+  const [tasksExpanded, setTasksExpanded] = useState(true);
   const [kbExpanded, setKbExpanded] = useState(true);
   const [agents, setAgents] = useState<AgentSummary[]>([]);
   const [cabinetAgentScopeName, setCabinetAgentScopeName] = useState<string | null>(null);
@@ -455,8 +456,6 @@ export function TreeView() {
                   agents.length > 0 ? (
                     agents.map((agent) => {
                       const displayName = getAgentDisplayName(agent);
-                      const showSubtitle =
-                        !!agent.role && agent.role !== displayName;
                       return (
                         <ContextMenu key={agent.scopedId || agent.slug}>
                           <ContextMenuTrigger>
@@ -494,15 +493,8 @@ export function TreeView() {
                                 }}
                                 size="sm"
                               />
-                              <span className="flex min-w-0 flex-1 flex-col leading-tight">
-                                <span className="truncate text-[12px] text-foreground/75">
-                                  {displayName}
-                                </span>
-                                {showSubtitle && (
-                                  <span className="truncate text-[10px] text-muted-foreground">
-                                    {agent.role}
-                                  </span>
-                                )}
+                              <span className="min-w-0 flex-1 truncate text-[12px] text-foreground/75">
+                                {displayName}
                               </span>
                               <span
                                 className={cn(
@@ -618,7 +610,17 @@ export function TreeView() {
               className="group flex items-center gap-1.5 px-3 pt-2 pb-1 w-full"
               style={pad(0)}
             >
-              <ChevronRight className="h-3 w-3 shrink-0 invisible" />
+              <button
+                onClick={() => setTasksExpanded(!tasksExpanded)}
+                className="text-muted-foreground/50 hover:text-foreground/80 transition-colors shrink-0"
+              >
+                <ChevronRight
+                  className={cn(
+                    "h-3 w-3 shrink-0 transition-transform duration-150",
+                    tasksExpanded && "rotate-90"
+                  )}
+                />
+              </button>
               <button
                 onClick={() => {
                   if (activeCabinet) {
@@ -667,12 +669,15 @@ export function TreeView() {
             </div>
 
             {/* ── Recent tasks (depth 1) ──────────────────── */}
-            <RecentTasks
-              active
-              padStyle={pad(1)}
-              itemClass={itemClass}
-              cabinetPath={activeCabinet?.path}
-            />
+            {tasksExpanded && (
+              <RecentTasks
+                active
+                padStyle={pad(1)}
+                itemClass={itemClass}
+                cabinetPath={activeCabinet?.path}
+                agents={agents}
+              />
+            )}
 
             {/* ── Divider ──────────────────────────────────── */}
             <div className="mx-3 my-1.5 border-t border-border" />
