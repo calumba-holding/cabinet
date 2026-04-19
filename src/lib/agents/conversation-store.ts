@@ -833,6 +833,36 @@ export async function replaceConversationArtifacts(
   await writeFileContent(artifactsPathFs(id, cabinetPath), JSON.stringify(artifacts, null, 2));
 }
 
+/**
+ * Agents occasionally copy the cabinet epilogue block (```cabinet SUMMARY: ...
+ * ARTIFACT: ... ```) into the body of a KB file they're writing, instead of
+ * keeping it as a pure transcript meta-annotation. This strips a trailing
+ * ```cabinet ... ``` fence from each .md artifact so the file stays clean.
+ * Defensive: the prompt also tells the agent not to do this, but some models
+ * slip up when the file content IS the bulk of the response.
+ */
+const CABINET_TRAILER_REGEX = /\n*```cabinet\b[\s\S]*?\n```[\s\r\n]*$/i;
+
+export async function sanitizeArtifactCabinetBlocks(
+  artifactPaths: string[]
+): Promise<void> {
+  const dataDirWithSep = DATA_DIR.endsWith(path.sep) ? DATA_DIR : DATA_DIR + path.sep;
+  for (const relPath of artifactPaths) {
+    if (!relPath.toLowerCase().endsWith(".md")) continue;
+    const resolved = path.resolve(DATA_DIR, relPath);
+    if (!resolved.startsWith(dataDirWithSep) && resolved !== DATA_DIR) continue;
+    try {
+      const content = await fs.readFile(resolved, "utf8");
+      if (!CABINET_TRAILER_REGEX.test(content)) continue;
+      const stripped = content.replace(CABINET_TRAILER_REGEX, "").replace(/\s+$/, "");
+      const trailing = content.endsWith("\n") ? "\n" : "";
+      await fs.writeFile(resolved, stripped + trailing, "utf8");
+    } catch {
+      // File missing or unreadable — skip. This is best-effort cleanup.
+    }
+  }
+}
+
 export async function finalizeConversation(
   id: string,
   input: {
@@ -905,6 +935,7 @@ export async function finalizeConversation(
   await Promise.all([
     writeConversationMeta(meta),
     replaceConversationArtifacts(id, artifacts, cp),
+    sanitizeArtifactCabinetBlocks(meta.artifactPaths),
   ]);
 
   // Broadcast a task.updated so every subscribed surface (task page, tasks
@@ -1544,6 +1575,9 @@ export async function appendAgentTurn(
     exitCode: input.pending ? meta.exitCode : (input.exitCode ?? meta.exitCode ?? null),
   };
   await writeConversationMeta(updatedMeta);
+  if (!input.pending && turn.artifacts?.length) {
+    await sanitizeArtifactCabinetBlocks(turn.artifacts);
+  }
 
   const seq = await appendEventLog(
     id,
@@ -1635,6 +1669,9 @@ export async function updateAgentTurn(
       : nextTurn.exitCode ?? meta.exitCode ?? null,
   };
   await writeConversationMeta(updatedMeta);
+  if (!nextTurn.pending && nextTurn.artifacts?.length) {
+    await sanitizeArtifactCabinetBlocks(nextTurn.artifacts);
+  }
 
   const seq = await appendEventLog(
     id,

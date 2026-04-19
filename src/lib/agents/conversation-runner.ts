@@ -69,10 +69,16 @@ function buildCabinetEpilogueInstructions(): string {
     "Cabinet uses this marker to pause the task and highlight the composer.",
     "Do not include the tags around rhetorical questions or code samples.",
     "",
-    "At the end of your response, include a ```cabinet block with these fields:",
+    "At the very end of your chat response (the text you send back to the",
+    "user — NOT inside any file you create or edit), include a ```cabinet",
+    "block with these fields:",
     "SUMMARY: one short summary line",
     "CONTEXT: optional lightweight memory/context summary",
     "ARTIFACT: relative/path/to/file for every KB file you created or updated",
+    "",
+    "This block is metadata for the Cabinet runner only. Never write a",
+    "```cabinet ... ``` block inside the body of any .md file you save —",
+    "the file should contain only its own content.",
   ].join("\n");
 }
 
