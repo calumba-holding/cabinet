@@ -628,7 +628,7 @@ function AvatarEditorPopover({
         <div className="p-3 space-y-3">
           <div>
             <p className="text-[10px] uppercase tracking-wider text-muted-foreground mb-2 font-medium">Icon</p>
-            <div className="grid grid-cols-8 gap-1">
+            <div className="grid grid-cols-8 gap-1 max-h-56 overflow-y-auto pr-1">
               {ICON_PICKER_KEYS.map((key) => {
                 const IconComp = ICON_CATALOG[key];
                 const isSelected = persona.iconKey === key;
@@ -687,7 +687,7 @@ function AvatarEditorPopover({
         <div className="p-3 space-y-3">
           <div>
             <p className="text-[10px] uppercase tracking-wider text-muted-foreground mb-2 font-medium">Preset</p>
-            <div className="grid grid-cols-6 gap-1.5">
+            <div className="grid grid-cols-8 gap-1">
               {AVATAR_PRESETS.map((preset) => {
                 const isSelected = persona.avatar === preset.id;
                 return (
@@ -697,7 +697,7 @@ function AvatarEditorPopover({
                     title={preset.label}
                     onClick={() => { onSaveFields({ avatar: preset.id, iconKey: "" }); onClose(); }}
                     className={cn(
-                      "relative h-10 w-10 rounded-lg overflow-hidden border-2 transition-all",
+                      "relative h-8 w-8 rounded-md overflow-hidden border-2 transition-all",
                       isSelected ? "border-primary" : "border-transparent hover:border-border"
                     )}
                   >
@@ -705,7 +705,7 @@ function AvatarEditorPopover({
                     <img src={preset.file} alt={preset.label} className="h-full w-full object-cover" />
                     {isSelected && (
                       <span className="absolute inset-0 flex items-center justify-center bg-black/30">
-                        <Check className="h-4 w-4 text-white" />
+                        <Check className="h-3 w-3 text-white" />
                       </span>
                     )}
                   </button>
