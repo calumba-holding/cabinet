@@ -142,6 +142,8 @@ CONTEXT: Optional lightweight context summary to remember later.
 ARTIFACT: relative/path/to/created-or-updated-kb-file
 \`\`\`
 
+Emit one ARTIFACT: line per file you created or updated. Do not combine multiple files on a single ARTIFACT: line.
+
 Now execute your heartbeat. Check your focus areas, process inbox, review goals, and take action.`;
 
   const baseCwd = cabinetPath ? path.join(DATA_DIR, cabinetPath) : DATA_DIR;

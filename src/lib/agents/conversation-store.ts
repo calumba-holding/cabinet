@@ -191,28 +191,56 @@ export function extractConversationRequest(prompt: string): string {
   return normalized.trim();
 }
 
-function normalizeArtifactPath(rawPath: string): string | null {
+// Agents sometimes cram multiple files onto one ARTIFACT: line (e.g.
+// "ARTIFACT: a.md, b.md"). Split on commas / semicolons / whitespace between
+// path-like tokens before normalizing each one.
+export function normalizeArtifactPaths(rawPath: string): string[] {
   const trimmed = sanitizeCabinetFieldValue(rawPath).trim();
-  if (!trimmed) return null;
-  if (isPlaceholderCabinetValue(trimmed)) return null;
-  if (trimmed.includes("for every KB file")) return null;
+  if (!trimmed) return [];
+  if (isPlaceholderCabinetValue(trimmed)) return [];
+  if (trimmed.includes("for every KB file")) return [];
   if (compactCabinetValue(trimmed).includes(PLACEHOLDER_ARTIFACT_FINGERPRINT)) {
-    return null;
+    return [];
   }
   if (
     /(?:\*\*|##\s|User request:|Working Style|Current Context|Output Structure|Brand voice|You are the\b)/i.test(
       trimmed
     )
   ) {
-    return null;
+    return [];
   }
 
+  const candidates = splitArtifactCandidates(trimmed);
+  const normalizedPaths: string[] = [];
+  for (const candidate of candidates) {
+    const normalized = normalizeSingleArtifactCandidate(candidate);
+    if (normalized && !normalizedPaths.includes(normalized)) {
+      normalizedPaths.push(normalized);
+    }
+  }
+  return normalizedPaths;
+}
+
+function splitArtifactCandidates(value: string): string[] {
+  const hasMultiFileSeparator = /[,;]|\s{2,}/.test(value);
+  const hasMultipleExtensions =
+    (value.match(/\.[A-Za-z0-9]+(?=[\s,;]|$)/g)?.length ?? 0) > 1;
+  if (!hasMultiFileSeparator && !hasMultipleExtensions) {
+    return [value];
+  }
+  return value
+    .split(/[\s,;]+/)
+    .map((part) => part.trim())
+    .filter(Boolean);
+}
+
+function normalizeSingleArtifactCandidate(raw: string): string | null {
   const candidate = (() => {
-    const extensionMatch = trimmed.match(/^(.+?\.[A-Za-z0-9]+)(?:\s|$)/);
+    const extensionMatch = raw.match(/^(.+?\.[A-Za-z0-9]+)(?:\s|$)/);
     if (extensionMatch?.[1]) {
       return extensionMatch[1];
     }
-    return trimmed;
+    return raw;
   })();
 
   if (candidate.startsWith("/data/")) {
@@ -288,9 +316,10 @@ export function parseCabinetBlock(output: string, prompt?: string): ParsedCabine
         continue;
       }
       if (line.startsWith("ARTIFACT:")) {
-        const normalized = normalizeArtifactPath(line.slice("ARTIFACT:".length));
-        if (normalized && !artifactPaths.includes(normalized)) {
-          artifactPaths.push(normalized);
+        for (const normalized of normalizeArtifactPaths(line.slice("ARTIFACT:".length))) {
+          if (!artifactPaths.includes(normalized)) {
+            artifactPaths.push(normalized);
+          }
         }
       }
     }
@@ -334,9 +363,10 @@ export function parseCabinetBlock(output: string, prompt?: string): ParsedCabine
       continue;
     }
     if (field === "ARTIFACT") {
-      const normalized = normalizeArtifactPath(value);
-      if (normalized && !artifactPaths.includes(normalized)) {
-        artifactPaths.push(normalized);
+      for (const normalized of normalizeArtifactPaths(value)) {
+        if (!artifactPaths.includes(normalized)) {
+          artifactPaths.push(normalized);
+        }
       }
     }
   }

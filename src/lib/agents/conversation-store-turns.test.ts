@@ -229,3 +229,31 @@ test("backward compat: existing single-shot conversations without withTurns look
   assert.equal(detail.meta.id, meta.id);
   assert.match(detail.transcript, /Legacy reply/);
 });
+
+test("ARTIFACT line with comma-separated paths yields one artifact per file", async () => {
+  const meta = await makeSingleShotConversation(
+    "Multi-artifact",
+    "User request:\nmake two files",
+    [
+      "Done.",
+      "",
+      "```cabinet",
+      "SUMMARY: wrote two files",
+      "ARTIFACT: cv-lab/cv.md, PROGRESS.md",
+      "```",
+    ].join("\n")
+  );
+  assert.deepEqual(meta.artifactPaths, ["cv-lab/cv.md", "PROGRESS.md"]);
+});
+
+test("normalizeArtifactPaths splits mixed separators and rejects placeholders", () => {
+  assert.deepEqual(
+    store.normalizeArtifactPaths("a/one.md, b/two.md ; c/three.md"),
+    ["a/one.md", "b/two.md", "c/three.md"]
+  );
+  assert.deepEqual(
+    store.normalizeArtifactPaths("relative/path/to/file for every KB file you created or updated"),
+    []
+  );
+  assert.deepEqual(store.normalizeArtifactPaths("solo/only.md"), ["solo/only.md"]);
+});

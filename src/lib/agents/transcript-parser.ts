@@ -104,14 +104,12 @@ function parseCodeBlock(
         nonEmpty.length > 0 && nonEmpty.every((line) => STRUCTURED_RE.test(line));
 
       if (allStructured) {
-        const fields = nonEmpty.map((line) => {
+        const fields = nonEmpty.flatMap((line) => {
           const structuredMatch = line.match(STRUCTURED_RE)!;
-          return {
-            label: structuredMatch[2]
-              ? `${structuredMatch[1]} [${structuredMatch[2]}]`
-              : structuredMatch[1],
-            value: structuredMatch[3],
-          };
+          const label = structuredMatch[2]
+            ? `${structuredMatch[1]} [${structuredMatch[2]}]`
+            : structuredMatch[1];
+          return expandStructuredField(structuredMatch[1], label, structuredMatch[3]);
         });
         return { block: { type: "cabinet", fields }, endIdx: i + 1 };
       }
@@ -135,6 +133,32 @@ function parseStructuredLine(line: string): Block | null {
   if (!match) return null;
   const label = match[2] ? `${match[1]} [${match[2]}]` : match[1];
   return { type: "structured", label, value: match[3] };
+}
+
+// Agents occasionally squash multiple files onto one `ARTIFACT:` line
+// ("ARTIFACT: a.md, b.md"). Split those into one field per path so the
+// UI renders a badge per file instead of one badge with a comma list.
+function expandStructuredField(
+  kind: string,
+  label: string,
+  value: string
+): { label: string; value: string }[] {
+  if (kind !== "ARTIFACT") return [{ label, value }];
+  const parts = splitArtifactLineValue(value);
+  if (parts.length <= 1) return [{ label, value }];
+  return parts.map((part) => ({ label, value: part }));
+}
+
+function splitArtifactLineValue(value: string): string[] {
+  const trimmed = value.trim();
+  if (!trimmed) return [];
+  const hasSeparator = /[,;]|\s{2,}/.test(trimmed);
+  const extensionCount = trimmed.match(/\.[A-Za-z0-9]+(?=[\s,;]|$)/g)?.length ?? 0;
+  if (!hasSeparator && extensionCount <= 1) return [trimmed];
+  return trimmed
+    .split(/[\s,;]+/)
+    .map((part) => part.trim())
+    .filter(Boolean);
 }
 
 export function parseTranscript(raw: string): Block[] {
