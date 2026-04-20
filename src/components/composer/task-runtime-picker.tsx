@@ -1020,11 +1020,12 @@ function TerminalProviderPanel({
             Hacker mode
           </span>
           <span className="text-zinc-300">
-            Streaming a CLI through Cabinet&apos;s UI isn&apos;t as rich as the
-            native transcript view — you lose artifact extraction, live
-            summaries, and the structured task board &quot;what happened&quot; panels.
-            Great if you want to watch the CLI talk to itself; less great if
-            you want Cabinet to organize the output.
+            Cabinet still writes to your KB — the agent uses its own tools.
+            What you lose is the structured UI layer: no artifact extraction
+            from the stream, no live summaries, no &quot;what happened&quot;
+            panels. You&apos;re watching the raw CLI. Think of it as running
+            your own tmux inside Cabinet — for hackers who want to drive the
+            CLI directly.
           </span>
         </p>
         <p>
