@@ -2,7 +2,8 @@
 
 import Link from "next/link";
 import { useEffect, useMemo, useState } from "react";
-import { ArrowLeft, ArrowRightLeft, Loader2 } from "lucide-react";
+import { ArrowLeft, ArrowRightLeft, Bot, Clock3, HeartPulse, Loader2 } from "lucide-react";
+import { cn } from "@/lib/utils";
 import {
   DndContext,
   DragOverlay,
@@ -20,7 +21,7 @@ import { ScheduleView } from "./schedule-view";
 import { DetailPanel } from "./detail-panel";
 import { ViewToggle, type BoardViewMode } from "./view-toggle";
 import { DensityToggle, type BoardDensity } from "./density-toggle";
-import { FilterBar, type TriggerFilter } from "./filter-bar";
+import { FilterBar, TriggerChip, type TriggerFilter } from "./filter-bar";
 import { UndoToast, type PendingUndo } from "./undo-toast";
 import { ConfirmPopover, type PendingConfirm } from "./confirm-popover";
 import { NewTaskDialog } from "./new-task-dialog";
@@ -37,6 +38,7 @@ import { usePersistentState } from "./use-persistent-state";
 import { TaskCard } from "./task-card";
 import { CARD_DROP_PREFIX } from "./dnd-keys";
 import { deriveLane, laneSort, type LaneKey } from "./lane-rules";
+import { CABINET_VISIBILITY_OPTIONS } from "@/lib/cabinets/visibility";
 import { ROOT_CABINET_PATH } from "@/lib/cabinets/paths";
 import { useAppStore } from "@/stores/app-store";
 import type { CabinetVisibilityMode } from "@/types/cabinets";
@@ -229,68 +231,124 @@ export function TasksBoardV2({
           <ViewToggle value={view} onChange={setView} />
           <DensityToggle value={density} onChange={setDensity} />
         </div>
-        {selection.size > 0 && (
-          <div className="ml-auto flex items-center gap-2 rounded-full border border-sky-500/40 bg-sky-500/10 px-2.5 py-0.5 text-[11px] font-medium text-sky-600 dark:text-sky-300">
-            <span>
-              {selection.size} selected
-            </span>
-            <span className="h-3 w-px bg-sky-500/30" aria-hidden />
-            <ReassignMenu
-              agents={overview?.agents ?? []}
-              onSelect={async (slug) => {
-                const selectedTasks = tasks.filter(
-                  (t) => selection.has(t.id) && t.agentSlug !== slug
-                );
-                if (selectedTasks.length === 0) return;
-                try {
-                  await Promise.all(
-                    selectedTasks.map((t) =>
-                      reassignConversation(t.id, slug, t.cabinetPath).catch((err) =>
-                        console.error("[board-v2] bulk reassign failed", t.id, err)
-                      )
-                    )
-                  );
-                  clearSelection();
-                  await refresh();
-                } catch (err) {
-                  console.error("[board-v2] bulk reassign failed", err);
-                }
-              }}
-              triggerClassName="inline-flex items-center gap-1 rounded px-1.5 text-[10.5px] text-sky-700 hover:bg-sky-500/20 dark:text-sky-300"
-            >
-              <ArrowRightLeft className="size-3" />
-              Reassign
-            </ReassignMenu>
-            <span className="h-3 w-px bg-sky-500/30" aria-hidden />
-            <button
-              type="button"
-              onClick={clearSelection}
-              className="rounded px-1 text-[10.5px] text-sky-700 hover:bg-sky-500/20 dark:text-sky-300"
-              title="Clear selection (Esc)"
-            >
-              Clear
-            </button>
+
+        {/* right-side: depth, trigger, selection, count */}
+        <div className="ml-auto flex items-center gap-2">
+          {/* visibility depth segmented */}
+          <div className="inline-flex overflow-hidden rounded-md border border-border/60 bg-card">
+            {CABINET_VISIBILITY_OPTIONS.map((opt) => {
+              const active = visibilityMode === opt.value;
+              return (
+                <button
+                  key={opt.value}
+                  type="button"
+                  onClick={() => {
+                    setVisibilityMode(opt.value);
+                    setCabinetVisibilityMode(cabinetPath, opt.value);
+                  }}
+                  title={opt.label}
+                  className={cn(
+                    "px-2 py-0.5 text-[10.5px] font-medium transition-colors",
+                    active
+                      ? "bg-foreground text-background"
+                      : "text-muted-foreground hover:bg-muted/60 hover:text-foreground"
+                  )}
+                >
+                  {opt.shortLabel}
+                </button>
+              );
+            })}
           </div>
-        )}
-        <span
-          className={`text-[11px] text-muted-foreground ${selection.size > 0 ? "ml-2" : "ml-auto"}`}
-        >
-          {agentFilter ? `${filteredTasks.length} of ${tasks.length}` : `${tasks.length}`}
-          {" "}task{tasks.length === 1 ? "" : "s"}
-        </span>
+
+          <div className="h-3.5 w-px bg-border/60" />
+
+          {/* trigger filter chips */}
+          <div className="flex items-center gap-1">
+            <TriggerChip active={triggerFilter === "all"} onClick={() => setTriggerFilter("all")}>
+              All
+            </TriggerChip>
+            <TriggerChip
+              active={triggerFilter === "manual"}
+              onClick={() => setTriggerFilter("manual")}
+              icon={<Bot className="size-3" />}
+              tone="sky"
+            >
+              Manual
+            </TriggerChip>
+            <TriggerChip
+              active={triggerFilter === "job"}
+              onClick={() => setTriggerFilter("job")}
+              icon={<Clock3 className="size-3" />}
+              tone="emerald"
+            >
+              Jobs
+            </TriggerChip>
+            <TriggerChip
+              active={triggerFilter === "heartbeat"}
+              onClick={() => setTriggerFilter("heartbeat")}
+              icon={<HeartPulse className="size-3" />}
+              tone="pink"
+            >
+              Heartbeat
+            </TriggerChip>
+          </div>
+
+          {selection.size > 0 && (
+            <>
+              <div className="h-3.5 w-px bg-border/60" />
+              <div className="flex items-center gap-2 rounded-full border border-sky-500/40 bg-sky-500/10 px-2.5 py-0.5 text-[11px] font-medium text-sky-600 dark:text-sky-300">
+                <span>{selection.size} selected</span>
+                <span className="h-3 w-px bg-sky-500/30" aria-hidden />
+                <ReassignMenu
+                  agents={overview?.agents ?? []}
+                  onSelect={async (slug) => {
+                    const selectedTasks = tasks.filter(
+                      (t) => selection.has(t.id) && t.agentSlug !== slug
+                    );
+                    if (selectedTasks.length === 0) return;
+                    try {
+                      await Promise.all(
+                        selectedTasks.map((t) =>
+                          reassignConversation(t.id, slug, t.cabinetPath).catch((err) =>
+                            console.error("[board-v2] bulk reassign failed", t.id, err)
+                          )
+                        )
+                      );
+                      clearSelection();
+                      await refresh();
+                    } catch (err) {
+                      console.error("[board-v2] bulk reassign failed", err);
+                    }
+                  }}
+                  triggerClassName="inline-flex items-center gap-1 rounded px-1.5 text-[10.5px] text-sky-700 hover:bg-sky-500/20 dark:text-sky-300"
+                >
+                  <ArrowRightLeft className="size-3" />
+                  Reassign
+                </ReassignMenu>
+                <span className="h-3 w-px bg-sky-500/30" aria-hidden />
+                <button
+                  type="button"
+                  onClick={clearSelection}
+                  className="rounded px-1 text-[10.5px] text-sky-700 hover:bg-sky-500/20 dark:text-sky-300"
+                  title="Clear selection (Esc)"
+                >
+                  Clear
+                </button>
+              </div>
+            </>
+          )}
+
+          <span className="text-[11px] text-muted-foreground">
+            {agentFilter ? `${filteredTasks.length} of ${tasks.length}` : `${tasks.length}`}
+            {" "}task{tasks.length === 1 ? "" : "s"}
+          </span>
+        </div>
       </header>
 
       <FilterBar
         agents={overview?.agents ?? []}
         agentFilter={agentFilter}
         onAgentChange={setAgentFilter}
-        visibilityMode={visibilityMode}
-        onVisibilityChange={(mode) => {
-          setVisibilityMode(mode);
-          setCabinetVisibilityMode(cabinetPath, mode);
-        }}
-        triggerFilter={triggerFilter}
-        onTriggerChange={setTriggerFilter}
       />
 
     <DndContext

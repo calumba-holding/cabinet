@@ -233,6 +233,7 @@ export function TaskConversationPage({
   const [wrapUpDismissed, setWrapUpDismissed] = useState(false);
   const [busy, setBusy] = useState(false);
   const settleTimerRef = useRef<ReturnType<typeof setTimeout> | null>(null);
+  const chatScrollRef = useRef<HTMLDivElement>(null);
 
   // Terminal-mode viewer tabs: Terminal (xterm stream) vs Details
   // (structured prompt/result/artifacts cards via ConversationResultView).
@@ -333,6 +334,13 @@ export function TaskConversationPage({
       if (settleTimerRef.current) clearTimeout(settleTimerRef.current);
     };
   }, []);
+
+  // Scroll chat to bottom on initial load and whenever turns arrive
+  useEffect(() => {
+    if (chatScrollRef.current) {
+      chatScrollRef.current.scrollTop = chatScrollRef.current.scrollHeight;
+    }
+  }, [task?.turns.length]);
 
   const runtimeLabel = useMemo(() => (task ? buildRuntimeLabel(task) : ""), [task]);
   const contextWindow = task?.meta.runtime?.contextWindow ?? DEFAULT_CONTEXT_WINDOW;
@@ -1072,7 +1080,7 @@ export function TaskConversationPage({
             </div>
           ) : (
           <>
-          <div className="flex-1 min-h-0 overflow-y-auto">
+          <div ref={chatScrollRef} className="flex-1 min-h-0 overflow-y-auto">
             {tokenPct >= 80 && task.meta.status !== "done" && !readOnly ? (
               <div className="mx-auto mx-6 my-4 max-w-3xl">
                 <div
