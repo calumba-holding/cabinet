@@ -71,6 +71,8 @@ import { cronToHuman } from "@/lib/agents/cron-utils";
 import { getAgentColor, tintFromHex } from "@/lib/agents/cron-compute";
 import { ScheduleCalendar } from "@/components/cabinets/schedule-calendar";
 import { SchedulePicker } from "@/components/mission-control/schedule-picker";
+import { NewRoutineDialog } from "@/components/agents/new-routine-dialog";
+import type { JobConfig } from "@/types/jobs";
 import {
   TaskRuntimePicker,
   type TaskRuntimeSelection,
@@ -1212,7 +1214,8 @@ function ScheduleSection({
   jobs,
   onToggleJob,
   onRunJob,
-  onAddJob,
+  onAddRoutine,
+  onEditRoutine,
   onRunHeartbeat,
   onManage,
 }: {
@@ -1220,39 +1223,11 @@ function ScheduleSection({
   jobs: AgentJob[];
   onToggleJob: (id: string) => void;
   onRunJob: (id: string) => void;
-  onAddJob: (draft: { name: string; schedule: string; prompt: string }) => Promise<void>;
+  onAddRoutine: () => void;
+  onEditRoutine: (job: AgentJob) => void;
   onRunHeartbeat: () => void;
   onManage: () => void;
 }) {
-  const [adding, setAdding] = useState(false);
-  const [name, setName] = useState("");
-  const [schedule, setSchedule] = useState("0 9 * * 1-5");
-  const [prompt, setPrompt] = useState("");
-  const [saving, setSaving] = useState(false);
-
-  const reset = () => {
-    setName("");
-    setSchedule("0 9 * * 1-5");
-    setPrompt("");
-    setAdding(false);
-  };
-
-  const canSave = name.trim().length > 0 && prompt.trim().length > 0;
-
-  const handleCreate = async () => {
-    if (!canSave) return;
-    setSaving(true);
-    try {
-      await onAddJob({
-        name: name.trim(),
-        schedule,
-        prompt: prompt.trim(),
-      });
-      reset();
-    } finally {
-      setSaving(false);
-    }
-  };
 
   return (
     <Section
@@ -1290,11 +1265,18 @@ function ScheduleSection({
             key={job.id}
             className="flex items-center gap-3 px-2 py-2.5 -mx-2 rounded-md hover:bg-accent/30 transition-colors"
           >
-            <Briefcase className="h-3.5 w-3.5 text-muted-foreground shrink-0" />
-            <span className="flex-1 text-[13px] truncate">{job.name}</span>
-            <span className="text-[11px] text-muted-foreground tabular-nums">
-              {cronToHuman(job.schedule)}
-            </span>
+            <button
+              type="button"
+              onClick={() => onEditRoutine(job)}
+              className="flex flex-1 items-center gap-3 text-left"
+              title="Edit routine"
+            >
+              <Briefcase className="h-3.5 w-3.5 text-muted-foreground shrink-0" />
+              <span className="flex-1 text-[13px] truncate">{job.name}</span>
+              <span className="text-[11px] text-muted-foreground tabular-nums">
+                {cronToHuman(job.schedule)}
+              </span>
+            </button>
             <button
               onClick={() => onToggleJob(job.id)}
               className={cn(
@@ -1318,81 +1300,15 @@ function ScheduleSection({
           </li>
         ))}
         {/* Add */}
-        {!adding ? (
-          <li>
-            <button
-              onClick={() => setAdding(true)}
-              className="w-full flex items-center gap-3 px-2 py-2.5 -mx-2 rounded-md text-muted-foreground hover:bg-accent/30 hover:text-foreground transition-colors text-left"
-            >
-              <Plus className="h-3.5 w-3.5 shrink-0" />
-              <span className="flex-1 text-[13px]">Add routine</span>
-            </button>
-          </li>
-        ) : (
-          <li className="mt-2">
-            <div className="rounded-lg border border-border bg-card/40 p-3 space-y-3">
-              <div>
-                <label className="text-[10px] uppercase tracking-wider text-muted-foreground font-medium">
-                  Name
-                </label>
-                <input
-                  autoFocus
-                  value={name}
-                  onChange={(e) => setName(e.target.value)}
-                  placeholder="e.g. PR babysitter"
-                  className="mt-1 w-full bg-muted/30 border border-transparent hover:border-border/60 focus:border-border focus:bg-background rounded-md px-2.5 py-1.5 text-[13px] focus:outline-none focus:ring-1 focus:ring-primary/30 transition-colors"
-                  onKeyDown={(e) => {
-                    if (e.key === "Escape") reset();
-                  }}
-                />
-              </div>
-              <div>
-                <label className="text-[10px] uppercase tracking-wider text-muted-foreground font-medium">
-                  Schedule
-                </label>
-                <div className="mt-1">
-                  <SchedulePicker value={schedule} onChange={setSchedule} />
-                </div>
-              </div>
-              <div>
-                <label className="text-[10px] uppercase tracking-wider text-muted-foreground font-medium">
-                  Prompt
-                </label>
-                <textarea
-                  value={prompt}
-                  onChange={(e) => setPrompt(e.target.value)}
-                  placeholder="What should this routine do each run? This is sent to the agent."
-                  rows={3}
-                  className="mt-1 w-full resize-none bg-muted/30 border border-transparent hover:border-border/60 focus:border-border focus:bg-background rounded-md px-2.5 py-1.5 text-[13px] leading-relaxed focus:outline-none focus:ring-1 focus:ring-primary/30 transition-colors"
-                />
-              </div>
-              <div className="flex justify-end gap-2 pt-1">
-                <Button
-                  variant="ghost"
-                  size="sm"
-                  className="h-7 text-[11px]"
-                  onClick={reset}
-                  disabled={saving}
-                >
-                  Cancel
-                </Button>
-                <Button
-                  size="sm"
-                  className="h-7 text-[11px] gap-1.5"
-                  onClick={handleCreate}
-                  disabled={!canSave || saving}
-                >
-                  {saving ? (
-                    <Loader2 className="h-3 w-3 animate-spin" />
-                  ) : (
-                    <Plus className="h-3 w-3" />
-                  )}
-                  Create routine
-                </Button>
-              </div>
-            </div>
-          </li>
-        )}
+        <li>
+          <button
+            onClick={onAddRoutine}
+            className="w-full flex items-center gap-3 px-2 py-2.5 -mx-2 rounded-md text-muted-foreground hover:bg-accent/30 hover:text-foreground transition-colors text-left"
+          >
+            <Plus className="h-3.5 w-3.5 shrink-0" />
+            <span className="flex-1 text-[13px]">Add routine</span>
+          </button>
+        </li>
       </ul>
     </Section>
   );
@@ -1931,6 +1847,8 @@ export function AgentDetailV2({
   const [scheduleOpen, setScheduleOpen] = useState(false);
   const [togglingActive, setTogglingActive] = useState(false);
   const [startingTaskId, setStartingTaskId] = useState<string | null>(null);
+  const [routineDialogOpen, setRoutineDialogOpen] = useState(false);
+  const [routineEditJob, setRoutineEditJob] = useState<JobConfig | null>(null);
 
   const refresh = useCallback(async () => {
     try {
@@ -2042,18 +1960,6 @@ export function AgentDetailV2({
     });
     refresh();
   }, [slug, refresh]);
-
-  const addJob = useCallback(
-    async (draft: { name: string; schedule: string; prompt: string }) => {
-      await fetch(`/api/agents/${slug}/jobs`, {
-        method: "POST",
-        headers: { "Content-Type": "application/json" },
-        body: JSON.stringify(draft),
-      });
-      await refresh();
-    },
-    [slug, refresh]
-  );
 
   const startInboxTask = useCallback(
     async (task: AgentTask) => {
@@ -2297,7 +2203,14 @@ export function AgentDetailV2({
                 jobs={jobs}
                 onToggleJob={toggleJob}
                 onRunJob={runJob}
-                onAddJob={addJob}
+                onAddRoutine={() => {
+                  setRoutineEditJob(null);
+                  setRoutineDialogOpen(true);
+                }}
+                onEditRoutine={(job) => {
+                  setRoutineEditJob(job as unknown as JobConfig);
+                  setRoutineDialogOpen(true);
+                }}
                 onRunHeartbeat={runHeartbeat}
                 onManage={() => setScheduleOpen(true)}
               />
@@ -2313,6 +2226,29 @@ export function AgentDetailV2({
             </div>
           </div>
         )}
+        <NewRoutineDialog
+          open={routineDialogOpen}
+          onOpenChange={setRoutineDialogOpen}
+          agent={{
+            slug: persona.slug,
+            name: persona.name,
+            role: persona.role,
+            cabinetPath: persona.cabinetPath || cabinetPath,
+            provider: persona.provider,
+            adapterType: persona.adapterType,
+            iconKey: persona.iconKey ?? null,
+            color: persona.color ?? null,
+          }}
+          existingJob={routineEditJob}
+          onSaved={() => {
+            setRoutineEditJob(null);
+            void refresh();
+          }}
+          onDeleted={() => {
+            setRoutineEditJob(null);
+            void refresh();
+          }}
+        />
       </div>
     </TooltipProvider>
   );
