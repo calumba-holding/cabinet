@@ -2,7 +2,7 @@
 
 import Link from "next/link";
 import { useEffect, useMemo, useState } from "react";
-import { ArrowLeft, Loader2 } from "lucide-react";
+import { ArrowLeft, ArrowRightLeft, Loader2 } from "lucide-react";
 import {
   DndContext,
   DragOverlay,
@@ -17,7 +17,6 @@ import { useBoardData } from "./use-board-data";
 import { KanbanView } from "./kanban-view";
 import { ListView } from "./list-view";
 import { ScheduleView } from "./schedule-view";
-import { PeopleRail } from "./people-rail";
 import { DetailPanel } from "./detail-panel";
 import { ViewToggle, type BoardViewMode } from "./view-toggle";
 import { DensityToggle, type BoardDensity } from "./density-toggle";
@@ -25,6 +24,8 @@ import { FilterBar, type TriggerFilter } from "./filter-bar";
 import { UndoToast, type PendingUndo } from "./undo-toast";
 import { ConfirmPopover, type PendingConfirm } from "./confirm-popover";
 import { NewTaskDialog } from "./new-task-dialog";
+import { ReassignMenu } from "./reassign-menu";
+import { reassignConversation } from "./board-actions";
 import {
   ScheduleJobDialog,
   ScheduleHeartbeatDialog,
@@ -200,7 +201,6 @@ export function TasksBoardV2({
 
   const handleDragEnd = useDragHandler({
     byLane: filteredByLane,
-    agentsBySlug,
     selection,
     clearSelection,
     onUndoQueued: setPendingUndo,
@@ -234,6 +234,34 @@ export function TasksBoardV2({
             <span>
               {selection.size} selected
             </span>
+            <span className="h-3 w-px bg-sky-500/30" aria-hidden />
+            <ReassignMenu
+              agents={overview?.agents ?? []}
+              onSelect={async (slug) => {
+                const selectedTasks = tasks.filter(
+                  (t) => selection.has(t.id) && t.agentSlug !== slug
+                );
+                if (selectedTasks.length === 0) return;
+                try {
+                  await Promise.all(
+                    selectedTasks.map((t) =>
+                      reassignConversation(t.id, slug, t.cabinetPath).catch((err) =>
+                        console.error("[board-v2] bulk reassign failed", t.id, err)
+                      )
+                    )
+                  );
+                  clearSelection();
+                  await refresh();
+                } catch (err) {
+                  console.error("[board-v2] bulk reassign failed", err);
+                }
+              }}
+              triggerClassName="inline-flex items-center gap-1 rounded px-1.5 text-[10.5px] text-sky-700 hover:bg-sky-500/20 dark:text-sky-300"
+            >
+              <ArrowRightLeft className="size-3" />
+              Reassign
+            </ReassignMenu>
+            <span className="h-3 w-px bg-sky-500/30" aria-hidden />
             <button
               type="button"
               onClick={clearSelection}
@@ -286,6 +314,7 @@ export function TasksBoardV2({
             {view === "kanban" && (
               <KanbanView
                 byLane={filteredByLane}
+                agents={overview?.agents ?? []}
                 agentsBySlug={agentsBySlug}
                 selectedId={selectedId}
                 selection={selection}
@@ -301,6 +330,7 @@ export function TasksBoardV2({
             {view === "list" && (
               <ListView
                 tasks={flatList}
+                agents={overview?.agents ?? []}
                 agentsBySlug={agentsBySlug}
                 selectedId={selectedId}
                 now={now}
@@ -348,8 +378,6 @@ export function TasksBoardV2({
             )}
           </main>
         )}
-
-        <PeopleRail agents={overview?.agents ?? []} />
 
         {selected && selectedLane && (
           <DetailPanel

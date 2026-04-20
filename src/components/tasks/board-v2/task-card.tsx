@@ -26,6 +26,7 @@ export function TaskCard({
   task,
   lane,
   agent,
+  agents,
   isActive,
   now,
   onClick,
@@ -35,6 +36,8 @@ export function TaskCard({
   task: TaskMeta;
   lane: LaneKey;
   agent: CabinetAgentSummary | undefined;
+  /** Full agent list for the reassign dropdown inside RowActions. */
+  agents?: CabinetAgentSummary[];
   isActive: boolean;
   now: number;
   onClick: (e?: React.MouseEvent) => void;
@@ -57,6 +60,7 @@ export function TaskCard({
       {onRefresh ? (
         <RowActions
           task={task}
+          agents={agents}
           onRefresh={onRefresh}
           className={cn(
             "absolute z-10",

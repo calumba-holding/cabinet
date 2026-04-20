@@ -132,6 +132,7 @@ function SortableTaskCard({
   task,
   lane,
   agent,
+  agents,
   isActive,
   isSelected,
   now,
@@ -142,6 +143,7 @@ function SortableTaskCard({
   task: TaskMeta;
   lane: LaneKey;
   agent: CabinetAgentSummary | undefined;
+  agents?: CabinetAgentSummary[];
   isActive: boolean;
   isSelected: boolean;
   now: number;
@@ -173,6 +175,7 @@ function SortableTaskCard({
         task={task}
         lane={lane}
         agent={agent}
+        agents={agents}
         isActive={isActive}
         now={now}
         onClick={(e) =>
@@ -216,6 +219,7 @@ function DroppableLane({
 
 export function KanbanView({
   byLane,
+  agents,
   agentsBySlug,
   selectedId,
   selection,
@@ -228,6 +232,8 @@ export function KanbanView({
   density = "comfortable",
 }: {
   byLane: Record<LaneKey, TaskMeta[]>;
+  /** Full cabinet agent list — used for the Reassign dropdown. */
+  agents?: CabinetAgentSummary[];
   agentsBySlug: Map<string, CabinetAgentSummary>;
   selectedId: string | null;
   selection: Set<string>;
@@ -374,6 +380,7 @@ export function KanbanView({
                           task={task}
                           lane={lane.key}
                           agent={agentsBySlug.get(task.agentSlug ?? "")}
+                          agents={agents}
                           isActive={selectedId === task.id}
                           isSelected={selection.has(task.id)}
                           now={now}

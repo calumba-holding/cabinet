@@ -64,6 +64,7 @@ function TriggerBadge({ trigger }: { trigger: TaskMeta["trigger"] }) {
 
 export function ListView({
   tasks,
+  agents,
   agentsBySlug,
   selectedId,
   now,
@@ -76,6 +77,8 @@ export function ListView({
    * Lane-bucketed byLane is NOT used here; pass in the flat list directly.
    */
   tasks: TaskMeta[];
+  /** Full cabinet agent list — used for the Reassign dropdown in row actions. */
+  agents?: CabinetAgentSummary[];
   agentsBySlug: Map<string, CabinetAgentSummary>;
   selectedId: string | null;
   now: number;
@@ -107,6 +110,7 @@ export function ListView({
                 {onRefresh ? (
                   <RowActions
                     task={task}
+                    agents={agents}
                     onRefresh={onRefresh}
                     className="absolute right-24 top-1/2 z-10 -translate-y-1/2"
                   />

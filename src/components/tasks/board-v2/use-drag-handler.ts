@@ -3,11 +3,9 @@
 import { useCallback } from "react";
 import type { DragEndEvent } from "@dnd-kit/core";
 import type { TaskMeta } from "@/types/tasks";
-import type { CabinetAgentSummary } from "@/types/cabinets";
 import type { LaneKey } from "./lane-rules";
 import {
   archiveConversation,
-  reassignConversation,
   restartConversation,
   restoreConversation,
   setConversationBoardOrder,
@@ -15,16 +13,11 @@ import {
 } from "./board-actions";
 import type { PendingUndo } from "./undo-toast";
 import type { PendingConfirm } from "./confirm-popover";
-import {
-  AGENT_DROP_PREFIX,
-  CARD_DROP_PREFIX,
-  LANE_DROP_PREFIX,
-} from "./dnd-keys";
+import { CARD_DROP_PREFIX, LANE_DROP_PREFIX } from "./dnd-keys";
 import { shorten } from "./kanban-view";
 
 interface Args {
   byLane: Record<LaneKey, TaskMeta[]>;
-  agentsBySlug: Map<string, CabinetAgentSummary>;
   /**
    * Multi-selection set (task ids). When the dragged card is a member of
    * this set and the set has more than one member, the drop action fans
@@ -65,7 +58,6 @@ function computeBoardOrder(
 
 export function useDragHandler({
   byLane,
-  agentsBySlug,
   selection,
   clearSelection,
   onUndoQueued,
@@ -101,47 +93,6 @@ export function useDragHandler({
       const bulkTasks: TaskMeta[] = isBulk
         ? (Object.values(byLane).flat() as TaskMeta[]).filter((t) => selection.has(t.id))
         : [task];
-
-      // ── Agent handoff drop (Phase 4) ────────────────────────────────
-      if (overId.startsWith(AGENT_DROP_PREFIX)) {
-        const toSlug = overId.slice(AGENT_DROP_PREFIX.length);
-        const toAgent = agentsBySlug.get(toSlug);
-        if (!toAgent) return;
-        // Narrow to tasks not already owned by the target agent.
-        const targets = bulkTasks.filter((t) => t.agentSlug !== toSlug);
-        if (targets.length === 0) return;
-        // Record original owners so undo can fan back correctly.
-        const originals = targets.map((t) => ({
-          id: t.id,
-          fromSlug: t.agentSlug,
-          cabinetPath: t.cabinetPath,
-        }));
-        try {
-          await Promise.all(
-            targets.map((t) => reassignConversation(t.id, toSlug, t.cabinetPath))
-          );
-          if (isBulk) clearSelection();
-          await onRefresh();
-          onUndoQueued({
-            id: `reassign:${activeId}`,
-            message:
-              targets.length === 1
-                ? `Reassigned "${shorten(targets[0].title)}" to ${toAgent.displayName ?? toAgent.name}`
-                : `Reassigned ${targets.length} tasks to ${toAgent.displayName ?? toAgent.name}`,
-            undo: async () => {
-              await Promise.all(
-                originals
-                  .filter((o) => o.fromSlug)
-                  .map((o) => reassignConversation(o.id, o.fromSlug!, o.cabinetPath))
-              );
-              await onRefresh();
-            },
-          });
-        } catch (err) {
-          console.error("[board-v2] reassign failed", err);
-        }
-        return;
-      }
 
       // ── Resolve target lane from lane or card drop id ───────────────
       let targetLane: LaneKey | null = null;
@@ -337,6 +288,6 @@ export function useDragHandler({
 
       // Other cross-lane drops with no defined action: ignore.
     },
-    [byLane, agentsBySlug, selection, clearSelection, onUndoQueued, onConfirmRequested, onRefresh]
+    [byLane, selection, clearSelection, onUndoQueued, onConfirmRequested, onRefresh]
   );
 }

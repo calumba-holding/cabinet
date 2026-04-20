@@ -1,13 +1,16 @@
 "use client";
 
 import { useState } from "react";
-import { Loader2, RotateCcw, Square, Trash2 } from "lucide-react";
+import { ArrowRightLeft, Loader2, RotateCcw, Square, Trash2 } from "lucide-react";
 import { cn } from "@/lib/utils";
 import {
   deleteConversation,
+  reassignConversation,
   restartConversation,
   stopConversation,
 } from "./board-actions";
+import { ReassignMenu } from "./reassign-menu";
+import type { CabinetAgentSummary } from "@/types/cabinets";
 import type { TaskMeta, TaskStatus } from "@/types/tasks";
 
 /**
@@ -17,15 +20,20 @@ import type { TaskMeta, TaskStatus } from "@/types/tasks";
  */
 export function RowActions({
   task,
+  agents = [],
   onRefresh,
   className,
 }: {
   task: TaskMeta;
+  agents?: CabinetAgentSummary[];
   onRefresh?: () => Promise<void> | void;
   className?: string;
 }) {
-  const [busy, setBusy] = useState<"stop" | "restart" | "delete" | null>(null);
+  const [busy, setBusy] = useState<
+    "stop" | "restart" | "delete" | "reassign" | null
+  >(null);
   const visibility = visibilityFor(task.status);
+  const canReassign = agents.length > 0 && task.status !== "archived";
 
   async function run(kind: "stop" | "restart" | "delete") {
     if (busy) return;
@@ -46,7 +54,27 @@ export function RowActions({
     }
   }
 
-  if (!visibility.stop && !visibility.restart && !visibility.delete) return null;
+  async function handleReassign(toSlug: string) {
+    if (busy || toSlug === task.agentSlug) return;
+    setBusy("reassign");
+    try {
+      await reassignConversation(task.id, toSlug, task.cabinetPath);
+      if (onRefresh) await onRefresh();
+    } catch (err) {
+      console.error("[board-v2] reassign failed", err);
+    } finally {
+      setBusy(null);
+    }
+  }
+
+  if (
+    !visibility.stop &&
+    !visibility.restart &&
+    !visibility.delete &&
+    !canReassign
+  ) {
+    return null;
+  }
 
   return (
     <div
@@ -80,6 +108,21 @@ export function RowActions({
           disabled={!!busy}
           icon={busy === "restart" ? <Loader2 className="size-3.5 animate-spin" /> : <RotateCcw className="size-3.5" />}
         />
+      ) : null}
+      {canReassign ? (
+        <ReassignMenu
+          agents={agents}
+          currentSlug={task.agentSlug}
+          onSelect={handleReassign}
+          triggerClassName="inline-flex size-6 items-center justify-center rounded-md bg-muted text-muted-foreground transition-colors hover:bg-primary/20 hover:text-primary disabled:opacity-50"
+        >
+          {busy === "reassign" ? (
+            <Loader2 className="size-3.5 animate-spin" />
+          ) : (
+            <ArrowRightLeft className="size-3.5" />
+          )}
+          <span className="sr-only">Reassign</span>
+        </ReassignMenu>
       ) : null}
       {visibility.delete ? (
         <ActionButton
