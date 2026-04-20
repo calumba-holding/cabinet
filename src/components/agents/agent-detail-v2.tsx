@@ -1850,6 +1850,8 @@ export function AgentDetailV2({
   const [routineDialogOpen, setRoutineDialogOpen] = useState(false);
   const [routineEditJob, setRoutineEditJob] = useState<JobConfig | null>(null);
 
+  const effectiveCabinetPath = persona?.cabinetPath ?? cabinetPath;
+
   const refresh = useCallback(async () => {
     try {
       const cabinetQuery = cabinetPath
@@ -1953,13 +1955,15 @@ export function AgentDetailV2({
   );
 
   const runHeartbeat = useCallback(async () => {
+    const body: Record<string, unknown> = { action: "run" };
+    if (effectiveCabinetPath) body.cabinetPath = effectiveCabinetPath;
     await fetch(`/api/agents/personas/${slug}`, {
       method: "PUT",
       headers: { "Content-Type": "application/json" },
-      body: JSON.stringify({ action: "run" }),
+      body: JSON.stringify(body),
     });
     refresh();
-  }, [slug, refresh]);
+  }, [slug, refresh, effectiveCabinetPath]);
 
   const startInboxTask = useCallback(
     async (task: AgentTask) => {
@@ -2039,7 +2043,10 @@ export function AgentDetailV2({
       `Delete agent "${name}"?\n\nThis removes the persona file and scheduled jobs. Past conversations stay on disk.`
     );
     if (!confirmed) return;
-    const res = await fetch(`/api/agents/personas/${slug}`, {
+    const qs = effectiveCabinetPath
+      ? `?cabinetPath=${encodeURIComponent(effectiveCabinetPath)}`
+      : "";
+    const res = await fetch(`/api/agents/personas/${slug}${qs}`, {
       method: "DELETE",
     });
     if (res.ok) {
@@ -2048,18 +2055,20 @@ export function AgentDetailV2({
     } else {
       window.alert("Delete failed. Check the console for details.");
     }
-  }, [persona, slug, onBack]);
+  }, [persona, slug, onBack, effectiveCabinetPath]);
 
   const toggleActive = useCallback(async () => {
     setTogglingActive(true);
+    const body: Record<string, unknown> = { action: "toggle" };
+    if (effectiveCabinetPath) body.cabinetPath = effectiveCabinetPath;
     await fetch(`/api/agents/personas/${slug}`, {
       method: "PUT",
       headers: { "Content-Type": "application/json" },
-      body: JSON.stringify({ action: "toggle" }),
+      body: JSON.stringify(body),
     });
     setTogglingActive(false);
     refresh();
-  }, [slug, refresh]);
+  }, [slug, refresh, effectiveCabinetPath]);
 
   const saveField = useCallback(
     async (field: string, value: string) => {
@@ -2074,6 +2083,7 @@ export function AgentDetailV2({
           .map((t) => t.trim())
           .filter(Boolean);
       }
+      if (effectiveCabinetPath) body.cabinetPath = effectiveCabinetPath;
       await fetch(`/api/agents/personas/${slug}`, {
         method: "PUT",
         headers: { "Content-Type": "application/json" },
@@ -2081,7 +2091,7 @@ export function AgentDetailV2({
       });
       refresh();
     },
-    [slug, refresh]
+    [slug, refresh, effectiveCabinetPath]
   );
 
   const applyOptimistic = useCallback(
@@ -2095,27 +2105,31 @@ export function AgentDetailV2({
     async (fields: Record<string, string>) => {
       // Optimistic update — apply immediately so the avatar changes at once
       setPersona((prev) => prev ? { ...prev, ...fields } : prev);
+      const body: Record<string, unknown> = { ...fields };
+      if (effectiveCabinetPath) body.cabinetPath = effectiveCabinetPath;
       const res = await fetch(`/api/agents/personas/${slug}`, {
         method: "PUT",
         headers: { "Content-Type": "application/json" },
-        body: JSON.stringify(fields),
+        body: JSON.stringify(body),
       });
       // Only re-fetch on failure to revert — success means server already matches
       if (!res.ok) refresh();
     },
-    [slug, refresh]
+    [slug, refresh, effectiveCabinetPath]
   );
 
   const saveSkills = useCallback(
     async (slugs: string[]) => {
+      const body: Record<string, unknown> = { skills: slugs };
+      if (effectiveCabinetPath) body.cabinetPath = effectiveCabinetPath;
       await fetch(`/api/agents/personas/${slug}`, {
         method: "PUT",
         headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({ skills: slugs }),
+        body: JSON.stringify(body),
       });
       refresh();
     },
-    [slug, refresh]
+    [slug, refresh, effectiveCabinetPath]
   );
 
   const artifacts = useMemo(

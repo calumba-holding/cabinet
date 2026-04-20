@@ -3,7 +3,7 @@ import matter from "gray-matter";
 import cron from "node-cron";
 import { DATA_DIR } from "@/lib/storage/path-utils";
 import { discoverCabinetPaths } from "@/lib/cabinets/discovery";
-import { normalizeCabinetPath } from "@/lib/cabinets/paths";
+import { normalizeCabinetPath, ROOT_CABINET_PATH } from "@/lib/cabinets/paths";
 import {
   readFileContent,
   writeFileContent,
@@ -37,6 +37,33 @@ function resolveMessagesDir(cabinetPath?: string): string {
 
 function resolveHistoryDir(cabinetPath?: string): string {
   return path.join(resolveAgentsDir(cabinetPath), ".history");
+}
+
+/**
+ * Walks all cabinets looking for `.agents/<slug>/persona.md`. Slugs are
+ * globally unique, so at most one cabinet contains a match. Returns the
+ * cabinetPath (or undefined when found at the root / not found at all).
+ * Callers fall back to the root dir when undefined.
+ */
+export async function findPersonaCabinetPath(slug: string): Promise<string | undefined> {
+  const cabinetPaths = await discoverCabinetPaths();
+  for (const cp of cabinetPaths) {
+    const agentsDir =
+      cp === ROOT_CABINET_PATH ? AGENTS_DIR : path.join(DATA_DIR, cp, ".agents");
+    const candidate = path.join(agentsDir, slug, "persona.md");
+    if (await fileExists(candidate)) {
+      return cp === ROOT_CABINET_PATH ? undefined : cp;
+    }
+  }
+  return undefined;
+}
+
+async function resolveCabinetForSlug(
+  slug: string,
+  cabinetPath: string | undefined
+): Promise<string | undefined> {
+  if (cabinetPath !== undefined) return cabinetPath;
+  return findPersonaCabinetPath(slug);
 }
 
 // Track currently running heartbeats
@@ -158,7 +185,8 @@ export async function listAllPersonas(): Promise<AgentPersona[]> {
 }
 
 export async function readPersona(slug: string, cabinetPath?: string): Promise<AgentPersona | null> {
-  const agentsDir = resolveAgentsDir(cabinetPath);
+  const resolved = await resolveCabinetForSlug(slug, cabinetPath);
+  const agentsDir = resolveAgentsDir(resolved);
   const filePath = path.join(agentsDir, slug, "persona.md");
   if (!(await fileExists(filePath))) return null;
 
@@ -195,7 +223,7 @@ export async function readPersona(slug: string, cabinetPath?: string): Promise<A
     channels: (data.channels as string[]) || ["general"],
     workspace: (data.workspace as string) || `workspace`,
     setupComplete: data.setupComplete === true,
-    cabinetPath: normalizeCabinetPath(cabinetPath, true),
+    cabinetPath: normalizeCabinetPath(resolved, true),
     displayName:
       typeof data.displayName === "string" && data.displayName.trim()
         ? data.displayName.trim()
@@ -222,7 +250,7 @@ export async function readPersona(slug: string, cabinetPath?: string): Promise<A
 
   // Load stats — check agent dir first, then legacy shared dir
   const agentStatsPath = path.join(agentsDir, slug, "memory", "stats.json");
-  const legacyStatsPath = path.join(resolveMemoryDir(cabinetPath), slug, "stats.json");
+  const legacyStatsPath = path.join(resolveMemoryDir(resolved), slug, "stats.json");
   const statsPath = (await fileExists(agentStatsPath)) ? agentStatsPath : legacyStatsPath;
   if (await fileExists(statsPath)) {
     try {
@@ -255,14 +283,15 @@ export async function readPersona(slug: string, cabinetPath?: string): Promise<A
 }
 
 export async function writePersona(slug: string, persona: Partial<AgentPersona> & { body?: string }, cabinetPath?: string): Promise<void> {
-  const agentsDir = resolveAgentsDir(cabinetPath);
+  const resolved = await resolveCabinetForSlug(slug, cabinetPath);
+  const agentsDir = resolveAgentsDir(resolved);
   await ensureDirectory(agentsDir);
   // Use directory-based structure: {slug}/persona.md
   const agentDir = path.join(agentsDir, slug);
   await ensureDirectory(agentDir);
   const filePath = path.join(agentDir, "persona.md");
 
-  const existing = await readPersona(slug, cabinetPath);
+  const existing = await readPersona(slug, resolved);
   const merged = { ...existing, ...persona };
 
   const frontmatter: Record<string, unknown> = {
@@ -318,8 +347,9 @@ export async function writePersona(slug: string, persona: Partial<AgentPersona> 
 }
 
 export async function deletePersona(slug: string, cabinetPath?: string): Promise<void> {
+  const resolved = await resolveCabinetForSlug(slug, cabinetPath);
   const fs = await import("fs/promises");
-  const agentDir = path.join(resolveAgentsDir(cabinetPath), slug);
+  const agentDir = path.join(resolveAgentsDir(resolved), slug);
   await fs.rm(agentDir, { recursive: true, force: true });
   unregisterHeartbeat(slug);
 }
@@ -327,7 +357,8 @@ export async function deletePersona(slug: string, cabinetPath?: string): Promise
 // --- Memory ---
 
 export async function readMemory(slug: string, file: string, cabinetPath?: string): Promise<string> {
-  const memDir = path.join(resolveMemoryDir(cabinetPath), slug);
+  const resolved = await resolveCabinetForSlug(slug, cabinetPath);
+  const memDir = path.join(resolveMemoryDir(resolved), slug);
   await ensureDirectory(memDir);
   const filePath = path.join(memDir, file);
   if (!(await fileExists(filePath))) return "";
@@ -335,13 +366,15 @@ export async function readMemory(slug: string, file: string, cabinetPath?: strin
 }
 
 export async function writeMemory(slug: string, file: string, content: string, cabinetPath?: string): Promise<void> {
-  const memDir = path.join(resolveMemoryDir(cabinetPath), slug);
+  const resolved = await resolveCabinetForSlug(slug, cabinetPath);
+  const memDir = path.join(resolveMemoryDir(resolved), slug);
   await ensureDirectory(memDir);
   await writeFileContent(path.join(memDir, file), content);
 }
 
 export async function listMemoryFiles(slug: string, cabinetPath?: string): Promise<string[]> {
-  const memDir = path.join(resolveMemoryDir(cabinetPath), slug);
+  const resolved = await resolveCabinetForSlug(slug, cabinetPath);
+  const memDir = path.join(resolveMemoryDir(resolved), slug);
   await ensureDirectory(memDir);
   const entries = await listDirectory(memDir);
   return entries.filter((e) => !e.isDirectory).map((e) => e.name);
@@ -355,7 +388,8 @@ export async function sendMessage(
   message: string,
   cabinetPath?: string
 ): Promise<void> {
-  const inboxDir = path.join(resolveMessagesDir(cabinetPath), to);
+  const resolved = await resolveCabinetForSlug(to, cabinetPath);
+  const inboxDir = path.join(resolveMessagesDir(resolved), to);
   await ensureDirectory(inboxDir);
   const timestamp = new Date().toISOString();
   const filename = `${timestamp.replace(/[:.]/g, "-")}_from_${from}.md`;
@@ -364,7 +398,8 @@ export async function sendMessage(
 }
 
 export async function readInbox(slug: string, cabinetPath?: string): Promise<Array<{ from: string; timestamp: string; message: string; filename: string }>> {
-  const inboxDir = path.join(resolveMessagesDir(cabinetPath), slug);
+  const resolved = await resolveCabinetForSlug(slug, cabinetPath);
+  const inboxDir = path.join(resolveMessagesDir(resolved), slug);
   await ensureDirectory(inboxDir);
   const entries = await listDirectory(inboxDir);
   const messages: Array<{ from: string; timestamp: string; message: string; filename: string }> = [];
@@ -385,7 +420,8 @@ export async function readInbox(slug: string, cabinetPath?: string): Promise<Arr
 }
 
 export async function clearInbox(slug: string, cabinetPath?: string): Promise<void> {
-  const inboxDir = path.join(resolveMessagesDir(cabinetPath), slug);
+  const resolved = await resolveCabinetForSlug(slug, cabinetPath);
+  const inboxDir = path.join(resolveMessagesDir(resolved), slug);
   const fs = await import("fs/promises");
   const entries = await listDirectory(inboxDir).catch(() => []);
   for (const entry of entries) {
@@ -399,7 +435,8 @@ export async function clearInbox(slug: string, cabinetPath?: string): Promise<vo
 
 export async function recordHeartbeat(record: HeartbeatRecord & { cabinetPath?: string }): Promise<void> {
   const slug = record.agentSlug;
-  const histDir = resolveHistoryDir(record.cabinetPath);
+  const resolved = await resolveCabinetForSlug(slug, record.cabinetPath);
+  const histDir = resolveHistoryDir(resolved);
 
   // Append to history log
   const historyFile = path.join(histDir, `${slug}.jsonl`);
@@ -411,7 +448,7 @@ export async function recordHeartbeat(record: HeartbeatRecord & { cabinetPath?: 
   });
 
   // Update stats
-  const memDir = path.join(resolveMemoryDir(record.cabinetPath), slug);
+  const memDir = path.join(resolveMemoryDir(resolved), slug);
   await ensureDirectory(memDir);
   const statsPath = path.join(memDir, "stats.json");
   let stats = { heartbeatsUsed: 0, lastHeartbeat: "" };
@@ -424,7 +461,8 @@ export async function recordHeartbeat(record: HeartbeatRecord & { cabinetPath?: 
 }
 
 export async function getHeartbeatHistory(slug: string, limit = 20, cabinetPath?: string): Promise<HeartbeatRecord[]> {
-  const historyFile = path.join(resolveHistoryDir(cabinetPath), `${slug}.jsonl`);
+  const resolved = await resolveCabinetForSlug(slug, cabinetPath);
+  const historyFile = path.join(resolveHistoryDir(resolved), `${slug}.jsonl`);
   if (!(await fileExists(historyFile))) return [];
 
   const raw = await readFileContent(historyFile);
