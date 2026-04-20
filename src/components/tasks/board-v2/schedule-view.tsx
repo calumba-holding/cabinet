@@ -15,6 +15,7 @@ import {
 import { ScheduleList } from "@/components/cabinets/schedule-list";
 import type { CabinetAgentSummary, CabinetJobSummary } from "@/types/cabinets";
 import type { ConversationMeta } from "@/types/conversations";
+import type { ScheduleEvent } from "@/lib/agents/cron-compute";
 
 type ScheduleSubView = "calendar" | "list";
 
@@ -28,11 +29,15 @@ export function ScheduleView({
   jobs,
   conversations,
   onConversationClick,
+  onJobClick,
+  onHeartbeatClick,
 }: {
   agents: CabinetAgentSummary[];
   jobs: CabinetJobSummary[];
   conversations: ConversationMeta[];
   onConversationClick: (id: string) => void;
+  onJobClick?: (job: CabinetJobSummary, agent: CabinetAgentSummary) => void;
+  onHeartbeatClick?: (agent: CabinetAgentSummary) => void;
 }) {
   const [sub, setSub] = useState<ScheduleSubView>("calendar");
   const [mode, setMode] = useState<CalendarMode>("week");
@@ -163,9 +168,18 @@ export function ScheduleView({
             jobs={jobs}
             manualConversations={conversations}
             scheduledConversations={scheduledConversationsMap}
-            onEventClick={(ev) => {
+            onEventClick={(ev: ScheduleEvent) => {
               if (ev.sourceType === "manual" && ev.conversationId) {
                 onConversationClick(ev.conversationId);
+                return;
+              }
+              if (ev.sourceType === "job" && ev.jobRef && ev.agentRef && onJobClick) {
+                onJobClick(ev.jobRef, ev.agentRef);
+                return;
+              }
+              if (ev.sourceType === "heartbeat" && ev.agentRef && onHeartbeatClick) {
+                onHeartbeatClick(ev.agentRef);
+                return;
               }
             }}
             onDayClick={(date) => {
@@ -180,6 +194,8 @@ export function ScheduleView({
               jobs={jobs}
               manualConversations={conversations}
               onManualClick={(c) => onConversationClick(c.id)}
+              onJobClick={onJobClick}
+              onHeartbeatClick={onHeartbeatClick}
             />
           </div>
         )}

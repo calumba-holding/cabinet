@@ -9,6 +9,7 @@ import type { TaskMeta } from "@/types/tasks";
 import type { CabinetAgentSummary } from "@/types/cabinets";
 import type { LaneKey } from "./lane-rules";
 import { AgentPill } from "./agent-pill";
+import { RowActions } from "./row-actions";
 import { StatusIcon, deriveCardState } from "./status-icon";
 
 function relTime(fromIso: string | undefined, now: number): string {
@@ -28,6 +29,7 @@ export function TaskCard({
   isActive,
   now,
   onClick,
+  onRefresh,
   density = "comfortable",
 }: {
   task: TaskMeta;
@@ -36,6 +38,7 @@ export function TaskCard({
   isActive: boolean;
   now: number;
   onClick: (e?: React.MouseEvent) => void;
+  onRefresh?: () => Promise<void> | void;
   density?: "compact" | "comfortable";
 }) {
   const state = deriveCardState(task, lane);
@@ -50,11 +53,22 @@ export function TaskCard({
     typeof task.adapterConfig?.model === "string" ? task.adapterConfig.model : undefined;
   const showModelRow = !!(providerIcon || modelName);
   return (
+    <div className="group relative w-full">
+      {onRefresh ? (
+        <RowActions
+          task={task}
+          onRefresh={onRefresh}
+          className={cn(
+            "absolute z-10",
+            compact ? "right-1.5 top-1.5" : "right-2 top-2"
+          )}
+        />
+      ) : null}
     <button
       type="button"
       onClick={(e) => onClick(e)}
       className={cn(
-        "group relative w-full rounded-md border bg-card text-left transition-all",
+        "relative w-full rounded-md border bg-card text-left transition-all",
         "hover:border-foreground/30 hover:shadow-sm",
         compact ? "px-2.5 py-2" : "p-3",
         isActive ? "border-foreground/50 shadow-sm" : "border-border/60",
@@ -121,5 +135,6 @@ export function TaskCard({
         </div>
       )}
     </button>
+    </div>
   );
 }

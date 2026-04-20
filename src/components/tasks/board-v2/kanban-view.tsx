@@ -10,8 +10,11 @@ import {
   Loader2,
   MessageCircleQuestion,
   Plus,
+  RotateCcw,
+  Square,
   type LucideIcon,
 } from "lucide-react";
+import { restartConversation, stopConversation } from "./board-actions";
 import { useDroppable } from "@dnd-kit/core";
 import {
   SortableContext,
@@ -48,12 +51,16 @@ function LaneHeader({
   collapsed,
   onToggle,
   onAddTask,
+  onKillAll,
+  onRestartAll,
 }: {
   lane: LaneDef;
   count: number;
   collapsed: boolean;
   onToggle?: () => void;
   onAddTask?: () => void;
+  onKillAll?: () => void;
+  onRestartAll?: () => void;
 }) {
   const LaneIcon = lane.icon;
   return (
@@ -85,6 +92,28 @@ function LaneHeader({
             <ChevronDown className="size-3.5 text-muted-foreground" />
           ))}
       </button>
+      {onKillAll ? (
+        <button
+          type="button"
+          onClick={onKillAll}
+          className="inline-flex items-center gap-0.5 rounded-md px-1 py-0.5 text-[9.5px] font-medium text-muted-foreground transition-colors hover:bg-destructive/15 hover:text-destructive"
+          title="Stop all running tasks in this lane"
+        >
+          <Square className="size-2.5" />
+          Kill
+        </button>
+      ) : null}
+      {onRestartAll ? (
+        <button
+          type="button"
+          onClick={onRestartAll}
+          className="inline-flex items-center gap-0.5 rounded-md px-1 py-0.5 text-[9.5px] font-medium text-muted-foreground transition-colors hover:bg-primary/15 hover:text-primary"
+          title="Restart all tasks in this lane"
+        >
+          <RotateCcw className="size-2.5" />
+          Restart
+        </button>
+      ) : null}
       {onAddTask ? (
         <button
           type="button"
@@ -107,6 +136,7 @@ function SortableTaskCard({
   isSelected,
   now,
   onClick,
+  onRefresh,
   density,
 }: {
   task: TaskMeta;
@@ -116,6 +146,7 @@ function SortableTaskCard({
   isSelected: boolean;
   now: number;
   onClick: (modifiers: { shift: boolean; meta: boolean }) => void;
+  onRefresh?: () => Promise<void> | void;
   density: "compact" | "comfortable";
 }) {
   const { attributes, listeners, setNodeRef, transform, transition, isDragging } = useSortable({
@@ -150,6 +181,7 @@ function SortableTaskCard({
             meta: !!(e?.metaKey || e?.ctrlKey),
           })
         }
+        onRefresh={onRefresh}
         density={density}
       />
     </div>
@@ -192,6 +224,7 @@ export function KanbanView({
   onToggleSelection,
   onClearSelection,
   onAddTask,
+  onRefresh,
   density = "comfortable",
 }: {
   byLane: Record<LaneKey, TaskMeta[]>;
@@ -203,15 +236,69 @@ export function KanbanView({
   onToggleSelection: (id: string) => void;
   onClearSelection: () => void;
   onAddTask?: () => void;
+  onRefresh?: () => Promise<void> | void;
   density?: "compact" | "comfortable";
 }) {
   const [archiveOpen, setArchiveOpen] = useState(false);
+  const [bulkBusy, setBulkBusy] = useState<string | null>(null);
+
+  async function killLane(laneKey: LaneKey, laneItems: TaskMeta[]) {
+    if (bulkBusy) return;
+    const running = laneItems.filter(
+      (t) => t.status === "running" || t.status === "awaiting-input"
+    );
+    if (running.length === 0) return;
+    setBulkBusy(`kill:${laneKey}`);
+    try {
+      await Promise.all(
+        running.map((t) =>
+          stopConversation(t.id, t.cabinetPath).catch((err) =>
+            console.error("[board-v2] bulk stop failed", t.id, err)
+          )
+        )
+      );
+      if (onRefresh) await onRefresh();
+    } finally {
+      setBulkBusy(null);
+    }
+  }
+
+  async function restartLane(laneKey: LaneKey, laneItems: TaskMeta[]) {
+    if (bulkBusy) return;
+    // For Needs attention, only restart failed items (awaiting-input can't be restarted cleanly).
+    // For Running, restart everything (stop-then-fresh-run).
+    const restartable = laneItems.filter(
+      (t) =>
+        t.status === "failed" ||
+        t.status === "done" ||
+        t.status === "idle" ||
+        t.status === "running"
+    );
+    if (restartable.length === 0) return;
+    setBulkBusy(`restart:${laneKey}`);
+    try {
+      await Promise.all(
+        restartable.map((t) =>
+          restartConversation(t.id, t.cabinetPath).catch((err) =>
+            console.error("[board-v2] bulk restart failed", t.id, err)
+          )
+        )
+      );
+      if (onRefresh) await onRefresh();
+    } finally {
+      setBulkBusy(null);
+    }
+  }
+
   return (
     <div className="flex min-h-0 w-full min-w-0 flex-1 gap-3 overflow-x-auto overflow-y-hidden p-4">
       {LANES.map((lane) => {
         const items = byLane[lane.key];
         const isArchive = lane.key === "archive";
         const isInbox = lane.key === "inbox";
+        const isRunning = lane.key === "running";
+        const isNeeds = lane.key === "needs";
+        const failedCount = items.filter((t) => t.status === "failed").length;
         const collapsed = isArchive && !archiveOpen;
         return (
           <DroppableLane
@@ -242,6 +329,20 @@ export function KanbanView({
                   collapsed={false}
                   onToggle={isArchive ? () => setArchiveOpen(false) : undefined}
                   onAddTask={isInbox && onAddTask ? onAddTask : undefined}
+                  onKillAll={
+                    isRunning && items.length > 0 && onRefresh
+                      ? () => void killLane(lane.key, items)
+                      : undefined
+                  }
+                  onRestartAll={
+                    onRefresh
+                      ? isRunning && items.length > 0
+                        ? () => void restartLane(lane.key, items)
+                        : isNeeds && failedCount > 0
+                          ? () => void restartLane(lane.key, items.filter((t) => t.status === "failed"))
+                          : undefined
+                      : undefined
+                  }
                 />
                 <div className="flex min-h-0 flex-1 flex-col gap-2 overflow-y-auto px-2 pb-2 pt-1">
                   <SortableContext
@@ -284,6 +385,7 @@ export function KanbanView({
                               onSelect(task.id);
                             }
                           }}
+                          onRefresh={onRefresh}
                           density={density}
                         />
                       ))

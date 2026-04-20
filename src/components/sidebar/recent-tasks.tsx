@@ -17,6 +17,11 @@ function normalizeConversation(meta: ConversationMeta): TaskMeta {
 // "Done, recently" = idle or done whose last activity landed within this window.
 const DONE_FRESH_MS = 60 * 60 * 1000; // 1 hour
 const MAX_VISIBLE = 6;
+// Fetch a larger slice from the API (which still sorts by startedAt) so we
+// can re-rank by lastActivityAt locally. 30 is generous — we'd rather pull a
+// few extra KB than miss a long-running conversation whose lastActivityAt is
+// fresher than several freshly-created-but-idle ones.
+const FETCH_POOL = 30;
 
 /**
  * Minimal agent shape the sidebar passes down. We only need the slug + the
@@ -68,7 +73,7 @@ export function RecentTasks({
     let cancelled = false;
 
     const loadTasks = async () => {
-      const params = new URLSearchParams({ limit: String(MAX_VISIBLE) });
+      const params = new URLSearchParams({ limit: String(FETCH_POOL) });
       if (cabinetPath) params.set("cabinetPath", cabinetPath);
       try {
         const res = await fetch(`/api/agents/conversations?${params.toString()}`, {
@@ -77,7 +82,22 @@ export function RecentTasks({
         const data = await res.json();
         if (cancelled) return;
         const convos = Array.isArray(data.conversations) ? data.conversations : [];
-        setTasks(convos.map(normalizeConversation));
+        // API sorts by startedAt DESC. Re-sort by lastActivityAt ?? startedAt
+        // so actively-streaming conversations outrank freshly-created idle
+        // ones. Then take the top MAX_VISIBLE.
+        const ranked = convos
+          .map(normalizeConversation)
+          .sort((a: TaskMeta, b: TaskMeta) => {
+            const ta = new Date(
+              a.lastActivityAt ?? a.completedAt ?? a.startedAt ?? 0
+            ).getTime();
+            const tb = new Date(
+              b.lastActivityAt ?? b.completedAt ?? b.startedAt ?? 0
+            ).getTime();
+            return tb - ta;
+          })
+          .slice(0, MAX_VISIBLE);
+        setTasks(ranked);
       } catch {
         if (!cancelled) setTasks([]);
       }

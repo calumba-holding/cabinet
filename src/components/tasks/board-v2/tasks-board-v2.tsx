@@ -24,6 +24,13 @@ import { DensityToggle, type BoardDensity } from "./density-toggle";
 import { FilterBar, type TriggerFilter } from "./filter-bar";
 import { UndoToast, type PendingUndo } from "./undo-toast";
 import { ConfirmPopover, type PendingConfirm } from "./confirm-popover";
+import { NewTaskDialog } from "./new-task-dialog";
+import {
+  ScheduleJobDialog,
+  ScheduleHeartbeatDialog,
+  type JobDialogState,
+  type HeartbeatDialogState,
+} from "./schedule-dialogs";
 import { useDragHandler } from "./use-drag-handler";
 import { usePersistentState } from "./use-persistent-state";
 import { TaskCard } from "./task-card";
@@ -61,7 +68,6 @@ export function TasksBoardV2({
     setVisibilityMode(visibilityModeProp);
   }, [visibilityModeProp]);
   const setCabinetVisibilityMode = useAppStore((s) => s.setCabinetVisibilityMode);
-  const setSection = useAppStore((s) => s.setSection);
 
   const {
     byLane,
@@ -115,6 +121,17 @@ export function TasksBoardV2({
   const [pendingUndo, setPendingUndo] = useState<PendingUndo | null>(null);
   const [pendingConfirm, setPendingConfirm] = useState<PendingConfirm | null>(null);
   const [dragTaskId, setDragTaskId] = useState<string | null>(null);
+  const [newTaskOpen, setNewTaskOpen] = useState(false);
+  const [jobDialog, setJobDialog] = useState<JobDialogState | null>(null);
+  const [heartbeatDialog, setHeartbeatDialog] = useState<HeartbeatDialogState | null>(null);
+
+  // Sidebar "+ Tasks" pill dispatches `cabinet:open-create-task` after routing
+  // to section=tasks. Listen for it so the pill actually opens the composer.
+  useEffect(() => {
+    const handler = () => setNewTaskOpen(true);
+    window.addEventListener("cabinet:open-create-task", handler);
+    return () => window.removeEventListener("cabinet:open-create-task", handler);
+  }, []);
 
   // Esc clears selection (the detail panel has its own Esc handler when
   // open so that one wins — clearing selection fires when nothing else
@@ -170,9 +187,7 @@ export function TasksBoardV2({
     return sorted;
   }, [filteredTasks]);
 
-  const handleAddTask = () => {
-    setSection({ type: "cabinet", cabinetPath });
-  };
+  const handleAddTask = () => setNewTaskOpen(true);
 
   const selected = selectedId ? tasks.find((t) => t.id === selectedId) ?? null : null;
   const selectedLane = selected ? deriveLane(selected, now) : null;
@@ -279,6 +294,7 @@ export function TasksBoardV2({
                 onToggleSelection={toggleSelection}
                 onClearSelection={clearSelection}
                 onAddTask={handleAddTask}
+                onRefresh={refresh}
                 density={density}
               />
             )}
@@ -289,6 +305,7 @@ export function TasksBoardV2({
                 selectedId={selectedId}
                 now={now}
                 onSelect={setSelectedId}
+                onRefresh={refresh}
                 density={density}
               />
             )}
@@ -304,6 +321,29 @@ export function TasksBoardV2({
                 }
                 conversations={filteredConversations}
                 onConversationClick={setSelectedId}
+                onJobClick={(job, agent) => {
+                  setJobDialog({
+                    agentSlug: agent.slug,
+                    agentName: agent.name,
+                    cabinetPath: agent.cabinetPath || cabinetPath,
+                    draft: {
+                      id: job.id,
+                      name: job.name,
+                      schedule: job.schedule,
+                      prompt: job.prompt || "",
+                      enabled: job.enabled,
+                    },
+                  });
+                }}
+                onHeartbeatClick={(agent) => {
+                  setHeartbeatDialog({
+                    agentSlug: agent.slug,
+                    agentName: agent.name,
+                    cabinetPath: agent.cabinetPath || cabinetPath,
+                    heartbeat: agent.heartbeat || "0 9 * * 1-5",
+                    active: agent.active,
+                  });
+                }}
               />
             )}
           </main>
@@ -348,6 +388,30 @@ export function TasksBoardV2({
       <ConfirmPopover
         pending={pendingConfirm}
         onDismiss={() => setPendingConfirm(null)}
+      />
+
+      <NewTaskDialog
+        open={newTaskOpen}
+        onOpenChange={setNewTaskOpen}
+        cabinetPath={cabinetPath}
+        agents={overview?.agents ?? []}
+        onStarted={(id) => {
+          void refresh();
+          setSelectedId(id);
+        }}
+      />
+
+      <ScheduleJobDialog
+        state={jobDialog}
+        onStateChange={setJobDialog}
+        onClose={() => setJobDialog(null)}
+        onRefresh={refresh}
+      />
+      <ScheduleHeartbeatDialog
+        state={heartbeatDialog}
+        onStateChange={setHeartbeatDialog}
+        onClose={() => setHeartbeatDialog(null)}
+        onRefresh={refresh}
       />
     </div>
   );

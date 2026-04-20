@@ -92,6 +92,28 @@ export async function stopConversation(id: string, cabinetPath?: string): Promis
 }
 
 /**
+ * Deletes a conversation record (meta + transcript + artifacts). DELETE
+ * handler is at /api/agents/conversations/[id]. No undo — the legacy board
+ * didn't offer one either; the drag-to-archive flow is the soft-delete.
+ */
+export async function deleteConversation(
+  id: string,
+  cabinetPath?: string
+): Promise<void> {
+  const params = new URLSearchParams();
+  if (cabinetPath) params.set("cabinetPath", cabinetPath);
+  const qs = params.toString();
+  const res = await fetch(
+    `/api/agents/conversations/${encodeURIComponent(id)}${qs ? `?${qs}` : ""}`,
+    { method: "DELETE" }
+  );
+  if (!res.ok) {
+    const text = await res.text().catch(() => "");
+    throw new Error(`delete ${id} failed: ${res.status} ${text}`);
+  }
+}
+
+/**
  * Restarts a finalized conversation by spawning a fresh run from its
  * original prompt. Returns the new conversation meta.
  * Backed by `PATCH { action: "restart" }`.

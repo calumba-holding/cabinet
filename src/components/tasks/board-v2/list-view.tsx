@@ -6,6 +6,7 @@ import type { TaskMeta } from "@/types/tasks";
 import type { CabinetAgentSummary } from "@/types/cabinets";
 import type { LaneKey } from "./lane-rules";
 import { AgentPill } from "./agent-pill";
+import { RowActions } from "./row-actions";
 import { StatusIcon, deriveCardState } from "./status-icon";
 
 /**
@@ -67,6 +68,7 @@ export function ListView({
   selectedId,
   now,
   onSelect,
+  onRefresh,
   density = "comfortable",
 }: {
   /**
@@ -78,6 +80,7 @@ export function ListView({
   selectedId: string | null;
   now: number;
   onSelect: (id: string) => void;
+  onRefresh?: () => Promise<void> | void;
   density?: "compact" | "comfortable";
   /** Kept in the type for API symmetry even though unused today. */
   _lane?: LaneKey;
@@ -100,7 +103,14 @@ export function ListView({
             const state = deriveCardState(task, "archive");
             const isSelected = selectedId === task.id;
             return (
-              <li key={task.id}>
+              <li key={task.id} className="group relative">
+                {onRefresh ? (
+                  <RowActions
+                    task={task}
+                    onRefresh={onRefresh}
+                    className="absolute right-24 top-1/2 z-10 -translate-y-1/2"
+                  />
+                ) : null}
                 <button
                   type="button"
                   onClick={() => onSelect(task.id)}
