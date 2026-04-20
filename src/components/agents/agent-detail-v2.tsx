@@ -687,7 +687,7 @@ function AvatarEditorPopover({
         <div className="p-3 space-y-3">
           <div>
             <p className="text-[10px] uppercase tracking-wider text-muted-foreground mb-2 font-medium">Preset</p>
-            <div className="grid grid-cols-8 gap-1">
+            <div className="grid grid-cols-8 gap-1 max-h-56 overflow-y-auto pr-1">
               {AVATAR_PRESETS.map((preset) => {
                 const isSelected = persona.avatar === preset.id;
                 return (

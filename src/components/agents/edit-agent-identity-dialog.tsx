@@ -319,7 +319,7 @@ export function EditAgentIdentityDialog({
             {/* Avatar */}
             <div className="space-y-1.5">
               <Label>Avatar</Label>
-              <div className="grid grid-cols-6 gap-2">
+              <div className="grid grid-cols-6 gap-2 max-h-64 overflow-y-auto pr-1">
                 <button
                   type="button"
                   onClick={() =>
