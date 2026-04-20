@@ -647,10 +647,16 @@ function handlePtyConnection(ws: WebSocket, req: http.IncomingMessage): void {
       const cached = completedOutput.get(sessionId);
       let replay = cached?.output || null;
       let source: "cache" | "disk" | null = cached ? "cache" : null;
+      let replayMeta: Awaited<ReturnType<typeof readConversationMeta>> = null;
+      try {
+        replayMeta = await readConversationMeta(sessionId);
+      } catch {
+        replayMeta = null;
+      }
 
       if (!replay) {
         try {
-          const meta = await readConversationMeta(sessionId);
+          const meta = replayMeta;
           if (meta) {
             const transcript = await readConversationTranscript(
               sessionId,
@@ -670,6 +676,27 @@ function handlePtyConnection(ws: WebSocket, req: http.IncomingMessage): void {
       }
 
       if (ws.readyState !== WebSocket.OPEN) return;
+
+      // Prefix the replay with a provenance banner so the user can always
+      // verify which CLI actually ran (transcripts can accumulate stale
+      // tails from earlier buggy spawn paths — see T21 history). Also emit
+      // a clear-screen + cursor-home so xterm renders the replay from the
+      // top instead of auto-scrolling to whatever was last written.
+      const banner = replayMeta
+        ? [
+            "\x1b[2J\x1b[H", // clear screen + home cursor
+            `\x1b[90m[cabinet] \x1b[36m${replayMeta.providerId ?? "unknown"}\x1b[90m · ` +
+              `${replayMeta.adapterType ?? "?"}\x1b[0m\r\n` +
+              `\x1b[90mstarted ${replayMeta.startedAt ?? "?"}` +
+              (replayMeta.completedAt
+                ? ` · finished ${replayMeta.completedAt}`
+                : "") +
+              `\x1b[0m\r\n` +
+              `\x1b[90m─────────────────────────────────────────\x1b[0m\r\n`,
+          ].join("")
+        : "\x1b[2J\x1b[H";
+      ws.send(banner);
+
       if (replay) {
         ws.send(replay);
         const note =
