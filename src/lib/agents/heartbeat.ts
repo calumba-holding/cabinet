@@ -134,15 +134,17 @@ TASK_CREATE [target-agent-slug] [priority 1-5]: title | description (optional â€
 TASK_COMPLETE [task-id]: result summary (mark a pending task as completed)
 \`\`\`
 
-Also include a second block at the very end:
+REQUIRED: also include a second block at the very end. A heartbeat without this
+block is treated as incomplete and you will be asked to emit it again.
 
 \`\`\`cabinet
-SUMMARY: One short summary line of what happened.
+SUMMARY: One short summary line of what happened. (always required)
 CONTEXT: Optional lightweight context summary to remember later.
 ARTIFACT: relative/path/to/created-or-updated-kb-file
 \`\`\`
 
 Emit one ARTIFACT: line per file you created or updated. Do not combine multiple files on a single ARTIFACT: line.
+If you did not create or modify any file this heartbeat, still emit exactly one line \`ARTIFACT: none\` so the block is well-formed.
 
 Now execute your heartbeat. Check your focus areas, process inbox, review goals, and take action.`;
 

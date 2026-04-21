@@ -1,5 +1,7 @@
 # Progress
 
+[2026-04-21] Added satirical CV for Dobby the house-elf to have-fun/ (cv-dobby.md, order 53), extending the Harry Potter CV series with the free elf — Malfoy Manor staff (former), Hogwarts kitchens (current), kept in Dobby's signature third-person voice throughout. Includes a posthumous entry for the Malfoy Manor rescue, a note on what freedom actually means for house-elves, and a reference list anchored by Harry Potter.
+
 [2026-04-21] Added satirical CV for Molly Weasley to have-fun/ (cv-molly-weasley.md, order 52), extending the Harry Potter CV series with the Burrow matriarch — homemaker of nine, Order of the Phoenix (both intakes), Gryffindor, and the occasional duellist whose single most-cited professional outcome was the defence of her daughter at the Battle of Hogwarts. Tone matches Luna Lovegood and Arthur Weasley, with Molly's characteristic warmth, directness on loss, and one line of steel.
 
 [2026-04-21] Added satirical CV for Newt Scamander to have-fun/ (cv-newt-scamander.md), extending the Harry Potter CV series with the magizoologist, author of Fantastic Beasts and Where to Find Them, sometime operative for Albus Dumbledore through the Grindelwald conflict, and Hufflepuff alum (expulsion noted, by his own request). Tone matches the existing Arthur Weasley / Neville Longbottom entries.
@@ -850,3 +852,5 @@
 [2026-04-21] Added satirical CV for Regulus Arcturus Black to have-fun/ (cv-regulus-black.md, order 49) — framed as an in-character final document written in late 1979 on the eve of the cave expedition with Kreacher, pairing thematically with the existing Sirius Black CV and extending the Harry Potter CV library. Indexed in have-fun/index.md.
 
 [2026-04-21] Added satirical CV for Madame Rosmerta to have-fun/ (cv-madame-rosmerta.md, order 50) — a Hogsmeade publican's CV framed as a family-record document she never got around to writing: thirty-eight years at the Three Broomsticks, Hogsmeade Traders' Guild member, past Chair of the Wizarding Publicans' Association, with a frank, on-her-own-terms note on the 1996–1997 Imperius affair. Indexed in have-fun/index.md.
+
+[2026-04-21] Added satirical CV for George Weasley to have-fun/ (cv-george-weasley.md, order 53) — in-character application circa 2010: co-founder of Weasley's Wizard Wheezes, Order of the Phoenix veteran, Potterwatch's "Rapier", with a candid personal note on the lost ear and on Fred. Indexed in have-fun/index.md.

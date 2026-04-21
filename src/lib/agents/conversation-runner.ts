@@ -20,6 +20,7 @@ import {
   enqueueConversationNotification,
   extractAgentTurnContent,
   finalizeConversation,
+  isCabinetBlockMissing,
   readConversationMeta,
   readConversationTurns,
   readSession,
@@ -65,6 +66,30 @@ interface StartConversationInput {
   onComplete?: (completion: ConversationCompletion) => Promise<void> | void;
 }
 
+const CABINET_BLOCK_RETRY_PROMPT = [
+  "Your previous reply finished without the required ```cabinet``` block, so",
+  "Cabinet has no record of what you just did. Emit the block now — only the",
+  "block, no extra prose, no rework:",
+  "",
+  "```cabinet",
+  "SUMMARY: one short summary line of the previous turn",
+  "CONTEXT: optional lightweight memory note (omit the line if none)",
+  "ARTIFACT: <relative path you created or modified>",
+  "```",
+  "",
+  "Emit one ARTIFACT: line per file you touched in the previous turn. If you",
+  "did not create or modify any file, emit exactly one line `ARTIFACT: none`.",
+].join("\n");
+
+function buildCabinetRequirementHeader(): string {
+  return [
+    "Reminder (full spec at the end of this prompt): every reply must end with",
+    "a ```cabinet``` fenced block containing SUMMARY, optional CONTEXT, and one",
+    "ARTIFACT: line per file you created or modified. For read-only turns emit",
+    "`ARTIFACT: none`. Replies without the block are treated as incomplete.",
+  ].join("\n");
+}
+
 async function buildCabinetEpilogueInstructions(options: {
   canDispatch?: boolean;
   cabinetPath?: string;
@@ -76,13 +101,17 @@ async function buildCabinetEpilogueInstructions(options: {
     "Cabinet uses this marker to pause the task and highlight the composer.",
     "Do not include the tags around rhetorical questions or code samples.",
     "",
-    "At the very end of your chat response (the text you send back to the",
-    "user — NOT inside any file you create or edit), include a ```cabinet",
-    "block with these fields:",
-    "SUMMARY: one short summary line",
+    "REQUIRED: every reply must end with a ```cabinet``` fenced block. This is",
+    "how Cabinet records what the task did — a reply without it is treated as",
+    "incomplete and you will be asked to emit the block again. Put the block",
+    "at the very end of your chat response (the text you send back to the",
+    "user — NOT inside any file you create or edit), with these fields:",
+    "SUMMARY: one short summary line (always required)",
     "CONTEXT: optional lightweight memory/context summary",
     "ARTIFACT: relative/path/to/file",
     "Emit one ARTIFACT: line per file you created or updated. Do not list multiple files on a single ARTIFACT: line.",
+    "If you did not create or modify any file (e.g. a read-only or Q&A turn),",
+    "still emit exactly one line `ARTIFACT: none` so the block is well-formed.",
     "",
     "This block is metadata for the Cabinet runner only. Never write a",
     "```cabinet ... ``` block inside the body of any .md file you save —",
@@ -269,6 +298,8 @@ export async function buildManualConversationPrompt(input: {
       : baseCwd;
 
   const prompt = [
+    buildCabinetRequirementHeader(),
+    "",
     buildAgentContextHeader(persona, input.agentSlug),
     "",
     ...buildKnowledgeBaseScopeInstructions(baseCwd, input.cabinetPath),
@@ -337,6 +368,8 @@ export async function buildEditorConversationPrompt(input: {
       : baseCwd;
 
   const prompt = [
+    buildCabinetRequirementHeader(),
+    "",
     buildAgentContextHeader(persona, "editor"),
     "",
     `You are editing the page at /data/${input.pagePath}.`,
@@ -509,7 +542,7 @@ export async function waitForConversationCompletion(
 
       const normalizedStatus = data.status === "completed" ? "completed" : "failed";
       const currentMeta = await readConversationMeta(conversationId);
-      const finalMeta =
+      let finalMeta =
         currentMeta?.status === "running"
           ? await finalizeConversation(conversationId, {
               status: normalizedStatus,
@@ -532,6 +565,31 @@ export async function waitForConversationCompletion(
 
       if (!finalMeta) {
         throw new Error(`Conversation ${conversationId} disappeared during completion`);
+      }
+
+      // If the run finished successfully but the agent forgot the required
+      // ```cabinet``` metadata block, ask it once to emit the block now. The
+      // agent still has full context of the work it just did, so the retry is
+      // scoped to this conversation — no cross-agent bleed like a git-diff
+      // fallback would have. One retry only; a second miss is recorded as-is.
+      if (
+        normalizedStatus === "completed" &&
+        isCabinetBlockMissing(data.output || "")
+      ) {
+        try {
+          const retryMeta = await continueConversationRun(conversationId, {
+            userMessage: CABINET_BLOCK_RETRY_PROMPT,
+            cabinetPath: finalMeta.cabinetPath,
+          });
+          if (retryMeta) {
+            finalMeta = retryMeta;
+          }
+        } catch (error) {
+          console.error(
+            `Cabinet-block retry failed for ${conversationId}:`,
+            error
+          );
+        }
       }
 
       // Always publish a terminal task.updated on the Next.js side. The
@@ -656,6 +714,8 @@ export async function startJobConversation(
         : baseCwd;
 
   const prompt = [
+    buildCabinetRequirementHeader(),
+    "",
     buildAgentContextHeader(persona, job.agentSlug || "agent"),
     "",
     "This is a scheduled or manual Cabinet job.",
@@ -1034,6 +1094,8 @@ async function buildContinuationPrompt(options: {
 
   // Replay: cold start; rebuild the full agent context and append history.
   return [
+    buildCabinetRequirementHeader(),
+    "",
     buildAgentContextHeader(options.persona, options.meta.agentSlug),
     "",
     ...buildKnowledgeBaseScopeInstructions(options.baseCwd, options.meta.cabinetPath),

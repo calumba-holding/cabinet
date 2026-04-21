@@ -801,6 +801,16 @@ function hasMeaningfulCabinetResult(transcript: string, prompt?: string): boolea
   return Boolean(parsed.summary || parsed.contextSummary || parsed.artifactPaths.length > 0);
 }
 
+/**
+ * True when the agent's reply does not contain a usable `cabinet` metadata
+ * block. The runner uses this to trigger a single synthetic follow-up turn
+ * asking the agent to emit the block before recording the run as complete.
+ */
+export function isCabinetBlockMissing(output: string, prompt?: string): boolean {
+  if (!output || !output.trim()) return true;
+  return !hasMeaningfulCabinetResult(output, prompt);
+}
+
 export function transcriptShowsCompletedRun(transcript: string, prompt?: string): boolean {
   // Keep this prompt-aware. A looser regex here will treat the echoed prompt's
   // cabinet instructions as a finished run and force the UI out of streaming mode.

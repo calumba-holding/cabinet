@@ -257,3 +257,41 @@ test("normalizeArtifactPaths splits mixed separators and rejects placeholders", 
   );
   assert.deepEqual(store.normalizeArtifactPaths("solo/only.md"), ["solo/only.md"]);
 });
+
+test("isCabinetBlockMissing returns true when the agent reply has no cabinet block", () => {
+  const prose =
+    "Built [index.html](/Users/me/Development/cabinet/data/x/y/index.html). It has a dark theme and some nice graphs.";
+  assert.equal(store.isCabinetBlockMissing(prose), true);
+});
+
+test("isCabinetBlockMissing returns false for a well-formed cabinet block (with or without ARTIFACT)", () => {
+  const withArtifact = [
+    "Done.",
+    "",
+    "```cabinet",
+    "SUMMARY: added poem",
+    "ARTIFACT: poems/index.md",
+    "```",
+  ].join("\n");
+  assert.equal(store.isCabinetBlockMissing(withArtifact), false);
+
+  const readOnly = [
+    "Here is what I found.",
+    "",
+    "```cabinet",
+    "SUMMARY: answered question",
+    "ARTIFACT: none",
+    "```",
+  ].join("\n");
+  assert.equal(store.isCabinetBlockMissing(readOnly), false);
+});
+
+test("isCabinetBlockMissing returns true for empty output", () => {
+  assert.equal(store.isCabinetBlockMissing(""), true);
+  assert.equal(store.isCabinetBlockMissing("   \n\n  "), true);
+});
+
+test("isCabinetBlockMissing returns true for an empty cabinet fence (no fields)", () => {
+  const empty = "Done.\n```cabinet\n```";
+  assert.equal(store.isCabinetBlockMissing(empty), true);
+});
