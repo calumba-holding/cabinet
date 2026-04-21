@@ -2,7 +2,7 @@
 
 import Link from "next/link";
 import { useEffect, useMemo, useState } from "react";
-import { ArrowLeft, ArrowRightLeft, Bot, Clock3, HeartPulse, Loader2 } from "lucide-react";
+import { ArrowLeft, ArrowRightLeft, Bot, Clock3, HeartPulse, Loader2, Trash2 } from "lucide-react";
 import { cn } from "@/lib/utils";
 import {
   DndContext,
@@ -26,7 +26,7 @@ import { UndoToast, type PendingUndo } from "./undo-toast";
 import { ConfirmPopover, type PendingConfirm } from "./confirm-popover";
 import { NewTaskDialog } from "./new-task-dialog";
 import { ReassignMenu } from "./reassign-menu";
-import { reassignConversation } from "./board-actions";
+import { deleteConversation, reassignConversation } from "./board-actions";
 import {
   ScheduleJobDialog,
   ScheduleHeartbeatDialog,
@@ -342,6 +342,46 @@ export function TasksBoardV2({
             {agentFilter ? `${filteredTasks.length} of ${tasks.length}` : `${tasks.length}`}
             {" "}task{tasks.length === 1 ? "" : "s"}
           </span>
+
+          {filteredTasks.length > 0 && (
+            <button
+              type="button"
+              onClick={() => {
+                const toDelete = filteredTasks.slice();
+                const count = toDelete.length;
+                const narrowed = !!agentFilter || triggerFilter !== "all";
+                setPendingConfirm({
+                  id: `delete-all-${Date.now()}`,
+                  title: `Delete ${count} task${count === 1 ? "" : "s"}?`,
+                  body: `This permanently removes conversation meta, transcripts, and artifacts for every task currently shown${
+                    narrowed ? " by the active filters" : ""
+                  }. This can't be undone.`,
+                  confirmLabel: `Delete ${count}`,
+                  destructive: true,
+                  onConfirm: async () => {
+                    const ids = new Set(toDelete.map((t) => t.id));
+                    await Promise.all(
+                      toDelete.map((t) =>
+                        deleteConversation(t.id, t.cabinetPath).catch((err) =>
+                          console.error("[board-v2] bulk delete failed", t.id, err)
+                        )
+                      )
+                    );
+                    if (selectedId && ids.has(selectedId)) setSelectedId(null);
+                    clearSelection();
+                    await refresh();
+                  },
+                });
+              }}
+              title={`Delete all ${filteredTasks.length} shown task${
+                filteredTasks.length === 1 ? "" : "s"
+              }`}
+              aria-label="Delete all shown tasks"
+              className="inline-flex size-5 items-center justify-center rounded-md text-muted-foreground/70 transition-colors hover:bg-destructive/10 hover:text-destructive"
+            >
+              <Trash2 className="size-3" />
+            </button>
+          )}
         </div>
       </header>
 

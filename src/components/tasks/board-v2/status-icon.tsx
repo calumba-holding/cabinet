@@ -36,7 +36,7 @@ const STATUS_STYLE: Record<
     label: "Running",
     animate: "animate-spin [animation-duration:1.6s]",
   },
-  ask: { icon: MessageCircleQuestion, color: "text-amber-500", label: "Needs reply" },
+  ask: { icon: MessageCircleQuestion, color: "text-amber-500", label: "Your turn — reply or approve" },
   failed: { icon: AlertCircle, color: "text-red-500", label: "Failed" },
   "just-done": { icon: CheckCircle2, color: "text-emerald-500", label: "Just finished" },
   handoff: { icon: ArrowDownToLine, color: "text-violet-500", label: "Waiting to start" },

@@ -54,7 +54,6 @@ export function TaskCard({
   const providerIcon = task.providerId ? providerIcons.get(task.providerId) : null;
   const modelName =
     typeof task.adapterConfig?.model === "string" ? task.adapterConfig.model : undefined;
-  const showModelRow = !!(providerIcon || modelName);
   return (
     <div className="group relative w-full">
       {onRefresh ? (
@@ -80,9 +79,30 @@ export function TaskCard({
           "border-l-2 border-l-emerald-500/60 bg-[linear-gradient(to_right,rgba(16,185,129,0.035),transparent_30%)]"
       )}
     >
-      <div className="flex items-center gap-2">
-        <StatusIcon state={state} />
-        <AgentPill agent={agent} slug={task.agentSlug ?? "editor"} />
+      <div className="flex items-start gap-2">
+        <span className={cn("shrink-0", compact ? "mt-px" : "mt-0.5")}>
+          <StatusIcon state={state} />
+        </span>
+        <p
+          className={cn(
+            "flex-1 line-clamp-2 text-[13px] leading-snug text-foreground",
+            compact ? "pr-14" : "pr-[88px]"
+          )}
+        >
+          {task.title}
+        </p>
+      </div>
+      <div
+        className={cn(
+          "flex items-center gap-1.5 text-[10.5px] text-muted-foreground",
+          compact ? "mt-1.5" : "mt-2.5"
+        )}
+      >
+        <AgentPill
+          agent={agent}
+          slug={task.agentSlug ?? "editor"}
+          size={compact ? "sm" : "md"}
+        />
         {groupSize > 0 && (
           <span
             title={`${groupSize} heartbeat runs collapsed — showing the latest`}
@@ -91,53 +111,36 @@ export function TaskCard({
             <HeartPulse className="size-2.5" />+{groupSize - 1}
           </span>
         )}
+        {!compact && providerIcon ? (
+          <span
+            className="inline-flex size-4 items-center justify-center rounded border border-border/60 bg-background/60"
+            title={providerIcon.name}
+          >
+            <ProviderGlyph
+              icon={providerIcon.icon}
+              asset={providerIcon.iconAsset}
+              className="size-3"
+            />
+          </span>
+        ) : null}
+        {!compact && modelName ? (
+          <span className="truncate font-mono text-[10px] text-foreground/60">
+            {modelName}
+          </span>
+        ) : null}
         {isTerminal && (
           <span
             title="Running in terminal (PTY) mode"
-            className="ml-auto inline-flex items-center gap-0.5 rounded bg-emerald-500/15 px-1 py-0.5 text-[9px] font-semibold uppercase tracking-wide text-emerald-600 dark:text-emerald-400"
+            className="inline-flex items-center gap-0.5 rounded bg-emerald-500/15 px-1 py-0.5 text-[9px] font-semibold uppercase tracking-wide text-emerald-600 dark:text-emerald-400"
           >
             <Terminal className="size-2.5" />
             PTY
           </span>
         )}
+        <span className="ml-auto whitespace-nowrap tabular-nums">
+          {relTime(lastActivity, now)}
+        </span>
       </div>
-      <p
-        className={cn(
-          "line-clamp-2 text-[13px] leading-snug text-foreground",
-          compact ? "mt-1" : "mt-2"
-        )}
-      >
-        {task.title}
-      </p>
-      {!compact && showModelRow && (
-        <div className="mt-2 flex items-center gap-1.5 text-[10.5px] text-muted-foreground">
-          {providerIcon ? (
-            <span
-              className="inline-flex size-5 items-center justify-center rounded border border-border/60 bg-background/60"
-              title={providerIcon.name}
-            >
-              <ProviderGlyph
-                icon={providerIcon.icon}
-                asset={providerIcon.iconAsset}
-                className="size-4"
-              />
-            </span>
-          ) : null}
-          {modelName ? (
-            <span className="truncate font-mono text-[10.5px] text-foreground/70">
-              {modelName}
-            </span>
-          ) : null}
-          <span className="ml-auto opacity-0 transition-opacity group-hover:opacity-100">
-            {relTime(lastActivity, now)}
-          </span>
-        </div>
-      )}
-      {!compact && !showModelRow && (
-        <div className="mt-2 flex items-center gap-2 text-[10.5px] text-muted-foreground opacity-0 transition-opacity group-hover:opacity-100">
-          <span>{relTime(lastActivity, now)}</span>
-        </div>
-      )}
     </button>
     </div>
   );

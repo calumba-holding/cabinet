@@ -1,6 +1,6 @@
 "use client";
 
-import { useState } from "react";
+import { useEffect, useRef, useState } from "react";
 import {
   Archive,
   ChevronLeft,
@@ -38,9 +38,9 @@ interface LaneDef {
 }
 
 const LANES: LaneDef[] = [
-  { key: "inbox", label: "Inbox", hint: "Waiting for you to start", icon: Inbox },
-  { key: "needs", label: "Needs attention", hint: "Asked a question or failed", icon: MessageCircleQuestion },
-  { key: "running", label: "Running", hint: "Live right now", icon: Loader2, spin: true },
+  { key: "inbox", label: "Inbox", hint: "Drafted — waiting for you to start", icon: Inbox },
+  { key: "needs", label: "Your turn", hint: "Agent asked a question or needs approval", icon: MessageCircleQuestion },
+  { key: "running", label: "Running", hint: "Agents working right now", icon: Loader2, spin: true },
   { key: "done", label: "Just Finished", hint: "Completed in the last hour", icon: CheckCircle2 },
   { key: "archive", label: "Archive", hint: "Older and acknowledged", icon: Archive },
 ];
@@ -238,11 +238,12 @@ export function KanbanView({
   onRefresh?: () => Promise<void> | void;
   density?: "compact" | "comfortable";
 }) {
-  // Persisted set of collapsed lane keys. Default: Archive collapsed, rest
-  // open — matches the original "Archive takes a narrow column" behavior.
+  // Persisted set of collapsed lane keys. Default: Archive + Running collapsed,
+  // rest open. Running auto-toggles with its content (see effect below), but a
+  // manual toggle in between transitions still sticks.
   const [collapsedCsv, setCollapsedCsv] = usePersistentState<string>(
     "cabinet.tasks.v2.collapsedLanes",
-    "archive",
+    "archive,running",
     (raw) => raw
   );
   const collapsedLanes: Set<LaneKey> = new Set(
@@ -257,6 +258,48 @@ export function KanbanView({
     else next.add(key);
     setCollapsedCsv([...next].join(","));
   };
+
+  // Auto-collapse the Running lane when nothing is running; auto-expand when a
+  // run starts. Fires on the empty ↔ non-empty transition (plus an initial
+  // align on mount when runs are already live), so manual collapse/expand
+  // clicks between transitions still stick.
+  const runningCount = byLane.running.length;
+  const priorRunningRef = useRef<number | null>(null);
+  useEffect(() => {
+    const prev = priorRunningRef.current;
+    priorRunningRef.current = runningCount;
+    const parse = () =>
+      new Set(
+        collapsedCsv
+          .split(",")
+          .map((s) => s.trim())
+          .filter(Boolean) as LaneKey[]
+      );
+    if (prev === null) {
+      if (runningCount > 0) {
+        const next = parse();
+        if (next.has("running")) {
+          next.delete("running");
+          setCollapsedCsv([...next].join(","));
+        }
+      }
+      return;
+    }
+    if (prev === 0 && runningCount > 0) {
+      const next = parse();
+      if (next.has("running")) {
+        next.delete("running");
+        setCollapsedCsv([...next].join(","));
+      }
+    } else if (prev > 0 && runningCount === 0) {
+      const next = parse();
+      if (!next.has("running")) {
+        next.add("running");
+        setCollapsedCsv([...next].join(","));
+      }
+    }
+  }, [runningCount, collapsedCsv, setCollapsedCsv]);
+
   const [bulkBusy, setBulkBusy] = useState<string | null>(null);
 
   async function killLane(laneKey: LaneKey, laneItems: TaskMeta[]) {

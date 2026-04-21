@@ -16,9 +16,10 @@ import type {
 /**
  * Map ConversationMeta → TaskMeta (UI shape). The UI status is derived:
  * - meta.archivedAt → "archived"
+ * - unresolved pendingActions OR awaitingInput → "awaiting-input"
+ *   (pending approval blocks "done" — the user still owes a decision)
  * - meta.doneAt → "done"
  * - meta.status === "running" → "running"
- * - meta.awaitingInput → "awaiting-input"
  * - meta.status === "failed" → "failed"
  * - otherwise (completed) → "idle"
  */
@@ -60,9 +61,10 @@ export function conversationMetaToTaskMeta(meta: ConversationMeta): TaskMeta {
 
 export function deriveStatus(meta: ConversationMeta): TaskStatus {
   if (meta.archivedAt) return "archived";
+  const hasPendingActions = (meta.pendingActions?.length ?? 0) > 0;
+  if (meta.awaitingInput || hasPendingActions) return "awaiting-input";
   if (meta.doneAt) return "done";
   if (meta.status === "running") return "running";
-  if (meta.awaitingInput) return "awaiting-input";
   if (meta.status === "failed") return "failed";
   return "idle";
 }
