@@ -1,5 +1,9 @@
 # Progress
 
+[2026-04-21] Fix task composer agent dropdown selection: switched `DropdownMenuItem` from `onSelect` to `onClick`. Base-ui's `Menu.Item` doesn't wire `onSelect` to clicks, so agent picks were silently dropped; matches the pattern already used in `reassign-menu.tsx` and `cabinet-task-composer.tsx`.
+
+[2026-04-21] Task composer agent dropdown (`new-task-dialog.tsx`) now renders the real `AgentAvatar` shared component in both the trigger button and each menu item, replacing the raw emoji span. Shows uploaded avatar images when set, and falls back to the tinted icon when none — matching how the sidebar and reassign menu already render agents.
+
 [2026-04-21] Extracted `ConversationApprovalPanel` (`src/components/agents/conversation-approval-panel.tsx`) as the single shared entrypoint for the dispatch-approval UI. Wraps `PendingActionsPanel` with the null/empty guard and an `onApproved` callback, accepts any meta shape with `id`, `cabinetPath`, `pendingActions`, `dispatchedActions` (both `ConversationMeta` and `TaskMeta` satisfy it). All three conversation views now mount it — `conversation-result-view.tsx`, `conversation-live-view.tsx`, and `task-conversation-page.tsx` — and each carries a sibling-view comment above the render so a future change here automatically propagates (or at minimum leaves a breadcrumb). The mistake this fixes: I added the raw panel to two of the three views and missed the task-viewer page because its render site lives in a different component tree.
 
 [2026-04-21] Added `data/experiments/inclined-plane/` as a pure HTML/CSS/JS Galileo inclined-plane simulator. The app includes an `.app` marker, adjustable angle and friction controls, an animated ball on the ramp, live time/velocity/acceleration/position readouts, and a canvas position-vs-time graph that updates during each run.

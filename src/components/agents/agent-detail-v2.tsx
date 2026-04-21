@@ -31,6 +31,7 @@ import {
   Plus,
   Power,
   Send,
+  Share2,
   Sparkles,
   Trash2,
   Download,
@@ -500,6 +501,40 @@ function TopBar({
               : "Resume this agent — re-enables heartbeat and scheduled jobs."}
           </TooltipContent>
         </Tooltip>
+
+        {(() => {
+          const canDispatch =
+            typeof persona.canDispatch === "boolean"
+              ? persona.canDispatch
+              : persona.type === "lead";
+          return (
+            <Tooltip>
+              <TooltipTrigger
+                render={
+                  <button
+                    type="button"
+                    onClick={onToggleCanDispatch}
+                    className={cn(
+                      "inline-flex items-center gap-1.5 h-7 rounded-md border px-2.5 text-[12px] font-medium transition-colors",
+                      canDispatch
+                        ? "border-border hover:bg-accent/40"
+                        : "border-dashed border-border/60 text-muted-foreground hover:bg-accent/30"
+                    )}
+                    style={canDispatch ? { color: palette.text } : undefined}
+                  >
+                    <Share2 className="h-3.5 w-3.5" />
+                    {canDispatch ? "Can dispatch" : "No dispatch"}
+                  </button>
+                }
+              />
+              <TooltipContent>
+                {canDispatch
+                  ? "This agent can propose LAUNCH_TASK / SCHEDULE_* actions for teammates. Toggle off to revoke."
+                  : "Let this agent delegate tasks to other Cabinet agents. Proposals still require human approval before dispatch."}
+              </TooltipContent>
+            </Tooltip>
+          );
+        })()}
 
         <DropdownMenu>
           <DropdownMenuTrigger

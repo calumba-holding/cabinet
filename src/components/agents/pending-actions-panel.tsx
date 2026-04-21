@@ -1,6 +1,6 @@
 "use client";
 
-import { useMemo, useState } from "react";
+import { useEffect, useMemo, useState } from "react";
 import { AlertTriangle, Check, Loader2, ShieldAlert, X } from "lucide-react";
 import type {
   ActionWarning,
@@ -10,6 +10,15 @@ import type {
 } from "@/types/actions";
 import { HARD_WARNINGS } from "@/types/actions";
 import { Button } from "@/components/ui/button";
+import {
+  DropdownMenu,
+  DropdownMenuContent,
+  DropdownMenuItem,
+  DropdownMenuTrigger,
+} from "@/components/ui/dropdown-menu";
+import { useAppStore } from "@/stores/app-store";
+import { formatEffortName, getModelEffortLevels } from "@/lib/agents/runtime-options";
+import type { ProviderInfo } from "@/types/agents";
 import { cn } from "@/lib/utils";
 
 const TYPE_COLORS: Record<string, string> = {
@@ -19,6 +28,11 @@ const TYPE_COLORS: Record<string, string> = {
 };
 
 const VISIBLE_ROW_CAP = 100;
+
+interface RuntimeOverride {
+  model?: string;
+  effort?: string;
+}
 
 function actionHeadline(action: AgentAction): string {
   if (action.type === "SCHEDULE_JOB") {
@@ -34,11 +48,183 @@ function hasHard(warnings: ActionWarning[]): boolean {
   return warnings.some((w) => HARD_WARNINGS.has(w.code));
 }
 
+function mergedRuntime(
+  action: AgentAction,
+  override: RuntimeOverride | undefined
+): RuntimeOverride {
+  return {
+    model: override?.model ?? action.model,
+    effort: override?.effort ?? action.effort,
+  };
+}
+
+function pruneOverride(
+  override: RuntimeOverride | undefined
+): RuntimeOverride | undefined {
+  if (!override) return undefined;
+  const out: RuntimeOverride = {};
+  if (override.model) out.model = override.model;
+  if (override.effort) out.effort = override.effort;
+  return out.model || out.effort ? out : undefined;
+}
+
+interface ActionRuntimePickerProps {
+  action: AgentAction;
+  override: RuntimeOverride | undefined;
+  provider: ProviderInfo | undefined;
+  disabled: boolean;
+  onChange: (next: RuntimeOverride | undefined) => void;
+}
+
+function ActionRuntimePicker({
+  action,
+  override,
+  provider,
+  disabled,
+  onChange,
+}: ActionRuntimePickerProps) {
+  const current = mergedRuntime(action, override);
+  const overridden = !!(override?.model || override?.effort);
+
+  const modelOptions = provider?.models || [];
+  const effortOptions = useMemo(
+    () => getModelEffortLevels(provider, current.model),
+    [provider, current.model]
+  );
+
+  const setModel = (modelId: string | undefined) => {
+    const merged: RuntimeOverride = { ...(override || {}) };
+    if (modelId) merged.model = modelId;
+    else delete merged.model;
+    onChange(pruneOverride(merged));
+  };
+
+  const setEffort = (effortId: string | undefined) => {
+    const merged: RuntimeOverride = { ...(override || {}) };
+    if (effortId) merged.effort = effortId;
+    else delete merged.effort;
+    onChange(pruneOverride(merged));
+  };
+
+  const reset = () => onChange(undefined);
+
+  const currentModelLabel =
+    modelOptions.find((m) => m.id === current.model)?.name ||
+    current.model ||
+    "Default model";
+  const currentEffortLabel =
+    formatEffortName(current.effort) || "Default effort";
+
+  return (
+    <div className="mt-1.5 flex flex-wrap items-center gap-1.5 text-[10.5px]">
+      <DropdownMenu>
+        <DropdownMenuTrigger
+          render={
+            <Button
+              variant="ghost"
+              size="sm"
+              className="h-6 gap-1 px-1.5 font-mono text-[10.5px] text-muted-foreground hover:text-foreground"
+              disabled={disabled || modelOptions.length === 0}
+              title={
+                modelOptions.length === 0
+                  ? "No models available for this conversation's provider"
+                  : "Override the model for this dispatched task"
+              }
+            >
+              <span className="text-muted-foreground">model</span>
+              <span className="max-w-[140px] truncate">
+                {currentModelLabel}
+              </span>
+            </Button>
+          }
+        />
+        <DropdownMenuContent align="start" className="max-h-72 w-56 overflow-y-auto">
+          <DropdownMenuItem onClick={() => setModel(undefined)}>
+            <span className="mr-2 inline-flex size-3 items-center justify-center">
+              {!override?.model ? "✓" : ""}
+            </span>
+            Use default
+          </DropdownMenuItem>
+          {modelOptions.map((model) => (
+            <DropdownMenuItem
+              key={model.id}
+              onClick={() => setModel(model.id)}
+            >
+              <span className="mr-2 inline-flex size-3 items-center justify-center">
+                {current.model === model.id ? "✓" : ""}
+              </span>
+              <span className="truncate">{model.name || model.id}</span>
+            </DropdownMenuItem>
+          ))}
+        </DropdownMenuContent>
+      </DropdownMenu>
+
+      <DropdownMenu>
+        <DropdownMenuTrigger
+          render={
+            <Button
+              variant="ghost"
+              size="sm"
+              className="h-6 gap-1 px-1.5 font-mono text-[10.5px] text-muted-foreground hover:text-foreground"
+              disabled={disabled || effortOptions.length === 0}
+              title={
+                effortOptions.length === 0
+                  ? "No effort levels available for this model"
+                  : "Override the reasoning effort for this dispatched task"
+              }
+            >
+              <span className="text-muted-foreground">effort</span>
+              <span className="max-w-[110px] truncate">
+                {currentEffortLabel}
+              </span>
+            </Button>
+          }
+        />
+        <DropdownMenuContent align="start" className="max-h-72 w-48 overflow-y-auto">
+          <DropdownMenuItem onClick={() => setEffort(undefined)}>
+            <span className="mr-2 inline-flex size-3 items-center justify-center">
+              {!override?.effort ? "✓" : ""}
+            </span>
+            Use default
+          </DropdownMenuItem>
+          {effortOptions.map((effort) => (
+            <DropdownMenuItem
+              key={effort.id}
+              onClick={() => setEffort(effort.id)}
+            >
+              <span className="mr-2 inline-flex size-3 items-center justify-center">
+                {current.effort === effort.id ? "✓" : ""}
+              </span>
+              <span className="truncate">
+                {formatEffortName(effort.id) || effort.id}
+              </span>
+            </DropdownMenuItem>
+          ))}
+        </DropdownMenuContent>
+      </DropdownMenu>
+
+      {overridden && (
+        <button
+          type="button"
+          className="text-[10px] text-muted-foreground hover:text-foreground"
+          onClick={reset}
+          disabled={disabled}
+        >
+          reset
+        </button>
+      )}
+    </div>
+  );
+}
+
 export interface PendingActionsPanelProps {
   conversationId: string;
   cabinetPath?: string;
   pending: PendingAction[];
   dispatched?: DispatchedAction[];
+  /** Parent conversation's provider; scopes the per-row runtime picker. */
+  parentProviderId?: string;
+  parentAdapterType?: string;
   onRefresh?: () => void;
 }
 
@@ -47,12 +233,29 @@ export function PendingActionsPanel({
   cabinetPath,
   pending,
   dispatched,
+  parentProviderId,
   onRefresh,
 }: PendingActionsPanelProps) {
   const [selected, setSelected] = useState<Set<string>>(new Set());
   const [submitting, setSubmitting] = useState<null | "approve" | "reject">(null);
   const [error, setError] = useState<string | null>(null);
   const [showAll, setShowAll] = useState(false);
+  const [overrides, setOverrides] = useState<Record<string, RuntimeOverride>>({});
+
+  const providers = useAppStore((s) => s.providers);
+  const providersLoaded = useAppStore((s) => s.providersLoaded);
+  const loadProviders = useAppStore((s) => s.loadProviders);
+  const defaultProviderId = useAppStore((s) => s.defaultProviderId);
+
+  useEffect(() => {
+    if (!providersLoaded) void loadProviders();
+  }, [providersLoaded, loadProviders]);
+
+  const provider = useMemo(() => {
+    const targetId = parentProviderId || defaultProviderId || undefined;
+    if (!targetId) return providers[0];
+    return providers.find((p) => p.id === targetId) || providers[0];
+  }, [providers, parentProviderId, defaultProviderId]);
 
   const blockedByDispatcher = useMemo(
     () =>
@@ -90,14 +293,43 @@ export function PendingActionsPanel({
     setSelected(new Set());
   };
 
+  const setOverrideFor = (id: string, next: RuntimeOverride | undefined) => {
+    setOverrides((prev) => {
+      const copy = { ...prev };
+      if (!next) delete copy[id];
+      else copy[id] = next;
+      return copy;
+    });
+  };
+
+  const buildEdits = (
+    ids: string[]
+  ): Record<string, Partial<AgentAction>> | undefined => {
+    const edits: Record<string, Partial<AgentAction>> = {};
+    for (const id of ids) {
+      const over = overrides[id];
+      if (!over) continue;
+      const patch: Partial<AgentAction> = {};
+      if (over.model) patch.model = over.model;
+      if (over.effort) patch.effort = over.effort;
+      if (patch.model || patch.effort) edits[id] = patch;
+    }
+    return Object.keys(edits).length > 0 ? edits : undefined;
+  };
+
   const submit = async (mode: "approve" | "reject", ids: string[]) => {
     if (ids.length === 0) return;
     setSubmitting(mode);
     setError(null);
     try {
       const body: Record<string, unknown> = { cabinetPath };
-      if (mode === "approve") body.approve = ids;
-      else body.reject = ids;
+      if (mode === "approve") {
+        body.approve = ids;
+        const edits = buildEdits(ids);
+        if (edits) body.edits = edits;
+      } else {
+        body.reject = ids;
+      }
       const res = await fetch(
         `/api/agents/conversations/${encodeURIComponent(conversationId)}/actions`,
         {
@@ -111,6 +343,7 @@ export function PendingActionsPanel({
         throw new Error(txt || `HTTP ${res.status}`);
       }
       clearSelection();
+      setOverrides({});
       onRefresh?.();
     } catch (err) {
       setError(err instanceof Error ? err.message : "Failed to submit");
@@ -302,6 +535,15 @@ export function PendingActionsPanel({
                         );
                       })}
                     </div>
+                  )}
+                  {!hard && !blockedByDispatcher && (
+                    <ActionRuntimePicker
+                      action={item.action}
+                      override={overrides[item.id]}
+                      provider={provider}
+                      disabled={submitting !== null}
+                      onChange={(next) => setOverrideFor(item.id, next)}
+                    />
                   )}
                 </div>
               </li>

@@ -129,6 +129,8 @@ Every editor view has a **Source** toggle in the top-right. Click it to see (and
     
     *Example:* Drag a card from **Backlog** to **In Progress** → Cabinet kicks off the linked agent run automatically.
     
+-   **Agent-to-Agent Dispatch** — any agent with the **Can dispatch** toggle flipped on (agent detail header) can propose tasks, scheduled runs, and recurring jobs for teammates. Every proposal is queued for one-click human approval with inline **model** / **effort** overrides per row. See [[Delegating Between Agents]] for the full guide.
+    
 -   **Web Terminal** — `` Cmd+` `` toggles an interactive terminal. Good for focused CLI work.
     
     *Example:* Open the terminal, run `git log --oneline`, paste interesting hashes into a page as references.
@@ -167,6 +169,8 @@ Every editor view has a **Source** toggle in the top-right. Click it to see (and
 -   [[Apps and Repos]] — Embedded apps, full-screen mode, and linked repos
     
 -   [[Symlinks and Load Knowledge]] — Direct symlinks, `.cabinet-meta`, `.repo.yaml`, and `CABINET_DATA_DIR`
+    
+-   [[Delegating Between Agents]] — Agent-to-agent dispatch, `LAUNCH_TASK` / `SCHEDULE_*` proposals, approval panel, per-row model/effort overrides
     
 
 ## Supported File Types

@@ -8,6 +8,10 @@ interface ApprovalPanelMeta {
   cabinetPath?: string;
   pendingActions?: PendingAction[];
   dispatchedActions?: DispatchedAction[];
+  /** Parent conversation's provider — used to scope the per-row model/effort
+   *  picker. Child sub-tasks inherit compatible runtime from the parent. */
+  providerId?: string;
+  adapterType?: string;
 }
 
 /**
@@ -33,6 +37,8 @@ export function ConversationApprovalPanel({
       cabinetPath={meta.cabinetPath}
       pending={meta.pendingActions || []}
       dispatched={meta.dispatchedActions}
+      parentProviderId={meta.providerId}
+      parentAdapterType={meta.adapterType}
       onRefresh={onApproved ? () => void onApproved() : undefined}
     />
   );

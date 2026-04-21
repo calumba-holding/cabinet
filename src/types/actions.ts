@@ -8,6 +8,8 @@ export interface LaunchTaskAction {
   agent: string;
   title: string;
   prompt: string;
+  model?: string;
+  effort?: string;
 }
 
 export interface ScheduleJobAction {
@@ -16,6 +18,8 @@ export interface ScheduleJobAction {
   name: string;
   schedule: string;
   prompt: string;
+  model?: string;
+  effort?: string;
 }
 
 export interface ScheduleTaskAction {
@@ -24,6 +28,8 @@ export interface ScheduleTaskAction {
   when: string;
   title: string;
   prompt: string;
+  model?: string;
+  effort?: string;
 }
 
 export type AgentAction =

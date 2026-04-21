@@ -85,6 +85,49 @@ function parseJsonBlock(body: string): AgentAction[] {
   return out;
 }
 
+// Recognize trailing `model=...` / `effort=...` segments so agents can append
+// runtime hints to inline LAUNCH_TASK / SCHEDULE_* lines without derailing
+// the existing pipe-separated shape. Unknown key=value segments are ignored
+// and kept inside the prompt body.
+const RUNTIME_KV_RE = /^(model|effort)\s*=\s*(.+)$/i;
+
+interface RuntimeHints {
+  model?: string;
+  effort?: string;
+}
+
+function extractRuntimeHints(rest: string[]): {
+  prompt: string;
+  hints: RuntimeHints;
+} {
+  const hints: RuntimeHints = {};
+  const promptParts: string[] = [];
+  for (const part of rest) {
+    const kv = RUNTIME_KV_RE.exec(part);
+    if (kv) {
+      const key = kv[1].toLowerCase() as "model" | "effort";
+      const value = kv[2].trim();
+      if (value && !hints[key]) {
+        hints[key] = value;
+        continue;
+      }
+    }
+    promptParts.push(part);
+  }
+  return { prompt: promptParts.join(" | ").trim(), hints };
+}
+
+function withRuntime<T extends { prompt: string }>(
+  action: T,
+  hints: RuntimeHints
+): T & RuntimeHints {
+  return {
+    ...action,
+    ...(hints.model ? { model: hints.model } : {}),
+    ...(hints.effort ? { effort: hints.effort } : {}),
+  };
+}
+
 function parseInlineLine(rawLine: string): AgentAction | null {
   const line = rawLine.trim();
   if (!line) return null;
@@ -96,23 +139,23 @@ function parseInlineLine(rawLine: string): AgentAction | null {
   if (type === "LAUNCH_TASK") {
     if (parts.length < 3) return null;
     const [agent, title, ...rest] = parts;
-    const prompt = rest.join(" | ").trim();
+    const { prompt, hints } = extractRuntimeHints(rest);
     if (!agent || !title || !prompt) return null;
-    return { type, agent, title, prompt };
+    return withRuntime({ type, agent, title, prompt }, hints);
   }
   if (type === "SCHEDULE_JOB") {
     if (parts.length < 4) return null;
     const [agent, name, schedule, ...rest] = parts;
-    const prompt = rest.join(" | ").trim();
+    const { prompt, hints } = extractRuntimeHints(rest);
     if (!agent || !name || !schedule || !prompt) return null;
-    return { type, agent, name, schedule, prompt };
+    return withRuntime({ type, agent, name, schedule, prompt }, hints);
   }
   if (type === "SCHEDULE_TASK") {
     if (parts.length < 4) return null;
     const [agent, when, title, ...rest] = parts;
-    const prompt = rest.join(" | ").trim();
+    const { prompt, hints } = extractRuntimeHints(rest);
     if (!agent || !when || !title || !prompt) return null;
-    return { type, agent, when, title, prompt };
+    return withRuntime({ type, agent, when, title, prompt }, hints);
   }
   return null;
 }
@@ -123,25 +166,31 @@ function coerceJsonAction(raw: unknown): AgentAction | null {
   const agent = pickString(raw, ["agent", "agentSlug", "to", "target"]);
   if (!agent) return null;
 
+  const model = pickString(raw, ["model"]);
+  const effort = pickString(raw, ["effort", "reasoning", "reasoningEffort"]);
+  const hints: RuntimeHints = {};
+  if (model) hints.model = model;
+  if (effort) hints.effort = effort;
+
   if (type === "LAUNCH_TASK") {
     const title = pickString(raw, ["title", "name"]);
     const prompt = pickString(raw, ["prompt", "description", "body"]);
     if (!title || !prompt) return null;
-    return { type, agent, title, prompt };
+    return withRuntime({ type, agent, title, prompt }, hints);
   }
   if (type === "SCHEDULE_JOB") {
     const name = pickString(raw, ["name", "title"]);
     const schedule = pickString(raw, ["schedule", "cron"]);
     const prompt = pickString(raw, ["prompt", "description", "body"]);
     if (!name || !schedule || !prompt) return null;
-    return { type, agent, name, schedule, prompt };
+    return withRuntime({ type, agent, name, schedule, prompt }, hints);
   }
   if (type === "SCHEDULE_TASK") {
     const when = pickString(raw, ["when", "at", "runAt", "scheduleAt"]);
     const title = pickString(raw, ["title", "name"]);
     const prompt = pickString(raw, ["prompt", "description", "body"]);
     if (!when || !title || !prompt) return null;
-    return { type, agent, when, title, prompt };
+    return withRuntime({ type, agent, when, title, prompt }, hints);
   }
   return null;
 }
@@ -166,13 +215,14 @@ function splitPipe(value: string): string[] {
 }
 
 export function fingerprint(action: AgentAction): string {
+  const runtime = `${action.model ?? ""}:${action.effort ?? ""}`;
   switch (action.type) {
     case "LAUNCH_TASK":
-      return `LAUNCH_TASK:${action.agent}:${action.title}:${action.prompt}`;
+      return `LAUNCH_TASK:${action.agent}:${action.title}:${action.prompt}:${runtime}`;
     case "SCHEDULE_JOB":
-      return `SCHEDULE_JOB:${action.agent}:${action.name}:${action.schedule}:${action.prompt}`;
+      return `SCHEDULE_JOB:${action.agent}:${action.name}:${action.schedule}:${action.prompt}:${runtime}`;
     case "SCHEDULE_TASK":
-      return `SCHEDULE_TASK:${action.agent}:${action.when}:${action.title}:${action.prompt}`;
+      return `SCHEDULE_TASK:${action.agent}:${action.when}:${action.title}:${action.prompt}:${runtime}`;
   }
 }
 

@@ -120,11 +120,20 @@ async function buildCabinetEpilogueInstructions(options: {
       "  SCHEDULE_JOB: <agent-slug> | <name> | <cron> | <prompt>",
       "  SCHEDULE_TASK: <agent-slug> | <ISO datetime> | <title> | <prompt>",
       "",
+      "Optionally pin the sub-task's reasoning model and effort by appending",
+      "`| model=<m> | effort=<e>` segments to the inline line, e.g.",
+      "  LAUNCH_TASK: editor | Draft launch copy | outline the hero | effort=high",
+      "",
       "For multi-line prompts or large fan-out (more than ~5 actions), emit a",
       "separate ```cabinet-actions code block containing a JSON array:",
       "```cabinet-actions",
-      '[{"type":"LAUNCH_TASK","agent":"<slug>","title":"<title>","prompt":"<prompt>"}]',
+      '[{"type":"LAUNCH_TASK","agent":"<slug>","title":"<title>","prompt":"<prompt>","model":"<optional>","effort":"<optional>"}]',
       "```",
+      "",
+      "Omit `model` / `effort` to use the target agent's defaults. When you set",
+      "them, they override the target persona's defaults if they are compatible",
+      "with that agent's adapter; a cross-provider value (e.g. a Claude model",
+      "passed to a Codex agent) is dropped silently.",
       ""
     );
 

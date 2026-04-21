@@ -23,6 +23,7 @@ import { useTreeStore } from "@/stores/tree-store";
 import { flattenTree } from "@/lib/tree-utils";
 import { createConversation } from "@/lib/agents/conversation-client";
 import type { CabinetAgentSummary } from "@/types/cabinets";
+import { AgentAvatar } from "@/components/agents/agent-avatar";
 import { ChevronDown } from "lucide-react";
 
 const PLACEHOLDERS = [
@@ -146,22 +147,22 @@ export function NewTaskDialog({
                     className="inline-flex h-8 items-center gap-1.5 rounded-md border border-border/70 bg-background px-2 text-[11px] text-muted-foreground hover:bg-accent hover:text-accent-foreground transition-colors"
                     title="Select agent"
                   >
-                    {selectedAgent?.emoji && (
-                      <span className="text-[13px] leading-none">{selectedAgent.emoji}</span>
+                    {selectedAgent && (
+                      <AgentAvatar agent={selectedAgent} shape="circle" size="xs" />
                     )}
                     <span className="max-w-[7rem] truncate font-medium">
                       {selectedAgent?.displayName ?? selectedAgent?.name ?? "Agent"}
                     </span>
                     <ChevronDown className="h-3 w-3 text-muted-foreground/60 shrink-0" />
                   </DropdownMenuTrigger>
-                  <DropdownMenuContent align="start" className="min-w-[160px]">
+                  <DropdownMenuContent align="start" className="min-w-[200px]">
                     {agents.map((agent) => (
                       <DropdownMenuItem
                         key={agent.slug}
-                        onSelect={() => setSelectedAgentSlug(agent.slug)}
+                        onClick={() => setSelectedAgentSlug(agent.slug)}
                         className="gap-2"
                       >
-                        {agent.emoji && <span className="text-[13px]">{agent.emoji}</span>}
+                        <AgentAvatar agent={agent} shape="circle" size="sm" />
                         <span className="truncate">{agent.displayName ?? agent.name}</span>
                         {agent.slug === selectedAgent?.slug && (
                           <span className="ml-auto text-[10px] text-muted-foreground">active</span>
