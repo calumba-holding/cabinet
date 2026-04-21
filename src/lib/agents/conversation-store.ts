@@ -27,7 +27,7 @@ import {
 import { publishConversationEvent } from "./conversation-events";
 import { discoverCabinetPaths } from "../cabinets/discovery";
 import { buildConversationInstanceKey } from "./conversation-identity";
-import { parseAgentActions } from "./action-parser";
+import { fingerprint, parseAgentActions } from "./action-parser";
 import {
   computeWarnings,
   personaCanDispatch,
@@ -949,16 +949,29 @@ export async function finalizeConversation(
     path: artifactPath,
   }));
 
-  if (!meta.actionsProposedAt) {
-    try {
-      const pending = await proposePendingActions(meta, cleanedOutput, prompt);
-      if (pending.length > 0) {
-        meta.pendingActions = [...(meta.pendingActions || []), ...pending];
+  // Re-parse on every finalize so follow-up turns that propose new actions
+  // (e.g. user redirects "send to copywriter" → agent emits cabinet-actions
+  // on resume) are picked up. Dedupe against already-pending and
+  // already-dispatched actions by fingerprint so nothing double-queues.
+  try {
+    // Pass the raw transcript (not cleanedOutput) — the prompt-echo filter
+    // used to build cleanedOutput strips the ```cabinet-actions fence line
+    // because it appears verbatim in the system prompt, which would hide
+    // the entire JSON block from the parser. The parser has its own
+    // action-level echo filter via fingerprintsFromPrompt.
+    const pending = await proposePendingActions(meta, output, prompt);
+    if (pending.length > 0) {
+      const existing = new Set<string>();
+      for (const p of meta.pendingActions || []) existing.add(fingerprint(p.action));
+      for (const d of meta.dispatchedActions || []) existing.add(fingerprint(d.action));
+      const fresh = pending.filter((p) => !existing.has(fingerprint(p.action)));
+      if (fresh.length > 0) {
+        meta.pendingActions = [...(meta.pendingActions || []), ...fresh];
       }
-      meta.actionsProposedAt = new Date().toISOString();
-    } catch {
-      // Never fail a conversation finalize because action parsing threw.
     }
+    meta.actionsProposedAt = new Date().toISOString();
+  } catch {
+    // Never fail a conversation finalize because action parsing threw.
   }
 
   const previousStatus = meta.status;

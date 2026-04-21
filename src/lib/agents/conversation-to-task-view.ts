@@ -53,6 +53,8 @@ export function conversationMetaToTaskMeta(meta: ConversationMeta): TaskMeta {
     archivedAt: meta.archivedAt,
     boardOrder: meta.boardOrder,
     muted: meta.muted,
+    pendingActions: meta.pendingActions,
+    dispatchedActions: meta.dispatchedActions,
   };
 }
 

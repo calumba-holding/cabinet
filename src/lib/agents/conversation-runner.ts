@@ -37,7 +37,7 @@ import {
   writeDaemonSessionInput,
 } from "./daemon-client";
 import { readLibraryPersona } from "./library-manager";
-import { readPersona, type AgentPersona } from "./persona-manager";
+import { listPersonas, readPersona, type AgentPersona } from "./persona-manager";
 import { getDefaultProviderId } from "./provider-runtime";
 import { looksLikeAwaitingInput } from "./task-heuristics";
 
@@ -65,7 +65,11 @@ interface StartConversationInput {
   onComplete?: (completion: ConversationCompletion) => Promise<void> | void;
 }
 
-function buildCabinetEpilogueInstructions(options: { canDispatch?: boolean } = {}): string {
+async function buildCabinetEpilogueInstructions(options: {
+  canDispatch?: boolean;
+  cabinetPath?: string;
+  selfSlug?: string;
+} = {}): Promise<string> {
   const base = [
     "If you need the user to answer a question before you can continue,",
     "wrap that question in `<ask_user>...</ask_user>` tags on its own paragraph.",
@@ -86,6 +90,27 @@ function buildCabinetEpilogueInstructions(options: { canDispatch?: boolean } = {
   ];
 
   if (options.canDispatch) {
+    const teammates = await listPersonas(options.cabinetPath).catch(
+      () => [] as AgentPersona[]
+    );
+    const available = teammates.filter(
+      (p) => p.slug && p.slug !== options.selfSlug && p.active !== false
+    );
+    const roster = available.map(
+      (p) => `  - ${p.slug} — ${p.name}${p.role ? ` (${p.role.split("\n")[0].trim()})` : ""}`
+    );
+    // Pick a generalist fallback for tasks that don't match any specialist.
+    // Preference order: `editor` (canonical generalist), then the first
+    // teammate that looks generalist by slug/role, then any teammate.
+    const fallback =
+      available.find((p) => p.slug === "editor") ||
+      available.find((p) =>
+        /editor|generalist|assistant|copywriter|writer/i.test(
+          `${p.slug} ${p.role || ""}`
+        )
+      ) ||
+      available[0];
+
     base.push(
       "",
       "You can delegate work to other Cabinet agents. These are *proposals* —",
@@ -100,9 +125,38 @@ function buildCabinetEpilogueInstructions(options: { canDispatch?: boolean } = {
       "```cabinet-actions",
       '[{"type":"LAUNCH_TASK","agent":"<slug>","title":"<title>","prompt":"<prompt>"}]',
       "```",
-      "",
+      ""
+    );
+
+    if (roster.length > 0) {
+      base.push(
+        "Teammates available in this cabinet (use the EXACT slug on the left):",
+        ...roster,
+        ""
+      );
+    } else {
+      base.push(
+        "No other agents are currently available in this cabinet — dispatches will",
+        "be flagged as unknown_agent and blocked until a matching persona exists.",
+        ""
+      );
+    }
+
+    base.push(
       "Rules:",
-      "- Only target agents that exist in this cabinet (use their exact slug).",
+      "- Only dispatch to slugs listed above. Do not invent slugs."
+    );
+    if (fallback) {
+      base.push(
+        `- If no teammate is a clear specialist fit, dispatch to the generalist \`${fallback.slug}\` rather than refusing.`,
+        "  Mention in your reply that you routed to the generalist so the human can reassign if they want."
+      );
+    } else {
+      base.push(
+        "- If no teammate fits, tell the user and suggest adding one — don't make up a slug."
+      );
+    }
+    base.push(
       "- Duplicates (same type + agent + title + prompt) are deduped.",
       "- LAUNCH_TASK to yourself is flagged; SCHEDULE_* to yourself is fine.",
       "- You can propose as many actions as the task requires — the human bulk-approves."
@@ -211,7 +265,11 @@ export async function buildManualConversationPrompt(input: {
     ...buildKnowledgeBaseScopeInstructions(baseCwd, input.cabinetPath),
     "Reflect useful outputs in KB files, not only in terminal text.",
     ...buildDiagramOutputInstructions(),
-    buildCabinetEpilogueInstructions({ canDispatch: resolvePersonaCanDispatch(persona) }),
+    await buildCabinetEpilogueInstructions({
+      canDispatch: resolvePersonaCanDispatch(persona),
+      cabinetPath: input.cabinetPath,
+      selfSlug: input.agentSlug,
+    }),
     "",
     `User request:\n${input.userMessage}${mentionContext}`,
   ].join("\n");
@@ -278,7 +336,11 @@ export async function buildEditorConversationPrompt(input: {
     ...buildKnowledgeBaseScopeInstructions(baseCwd, input.cabinetPath),
     "Edit KB files directly and reflect useful outputs in the KB, not only in terminal text.",
     ...buildDiagramOutputInstructions(),
-    buildCabinetEpilogueInstructions({ canDispatch: resolvePersonaCanDispatch(persona) }),
+    await buildCabinetEpilogueInstructions({
+      canDispatch: resolvePersonaCanDispatch(persona),
+      cabinetPath: input.cabinetPath,
+      selfSlug: "editor",
+    }),
     "",
     `User request:\n${input.userMessage}${mentionContext}`,
   ].join("\n");
@@ -573,7 +635,11 @@ export async function startJobConversation(
     ...buildKnowledgeBaseScopeInstructions(baseCwd, job.cabinetPath),
     "Reflect the results in KB files whenever useful.",
     ...buildDiagramOutputInstructions(),
-    buildCabinetEpilogueInstructions({ canDispatch: resolvePersonaCanDispatch(persona) }),
+    await buildCabinetEpilogueInstructions({
+      canDispatch: resolvePersonaCanDispatch(persona),
+      cabinetPath: job.cabinetPath,
+      selfSlug: job.agentSlug,
+    }),
     "",
     `Job instructions:\n${jobPrompt}`,
   ].join("\n");
@@ -926,7 +992,11 @@ async function buildContinuationPrompt(options: {
   if (options.mode === "resume") {
     // Live session: persona + scope already live in the adapter's context.
     return [
-      buildCabinetEpilogueInstructions({ canDispatch }),
+      await buildCabinetEpilogueInstructions({
+        canDispatch,
+        cabinetPath: options.meta.cabinetPath,
+        selfSlug: options.meta.agentSlug,
+      }),
       mentionContext.trim(),
       "",
       `User follow-up:\n${options.userMessage}`,
@@ -942,7 +1012,11 @@ async function buildContinuationPrompt(options: {
     ...buildKnowledgeBaseScopeInstructions(options.baseCwd, options.meta.cabinetPath),
     "Reflect useful outputs in KB files, not only in terminal text.",
     ...buildDiagramOutputInstructions(),
-    buildCabinetEpilogueInstructions({ canDispatch }),
+    await buildCabinetEpilogueInstructions({
+      canDispatch,
+      cabinetPath: options.meta.cabinetPath,
+      selfSlug: options.meta.agentSlug,
+    }),
     "",
     "Prior conversation (for context, do not re-output):",
     serializeTurnHistory(options.priorTurns),

@@ -145,6 +145,10 @@ export interface TaskMeta {
   groupSize?: number;
   /** Mirrors ConversationMeta.muted. Muted tasks bypass Just Finished. */
   muted?: boolean;
+  /** Agent-proposed actions awaiting human approval. Mirrors ConversationMeta. */
+  pendingActions?: import("./actions").PendingAction[];
+  /** Already dispatched or rejected actions. Mirrors ConversationMeta. */
+  dispatchedActions?: import("./actions").DispatchedAction[];
 }
 
 export interface ArtifactsIndex {
