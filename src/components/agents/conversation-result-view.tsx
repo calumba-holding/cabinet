@@ -14,7 +14,7 @@ import {
 } from "@/lib/ui/page-type-icons";
 import { usePageMeta } from "@/hooks/use-page-meta";
 import { cn } from "@/lib/utils";
-import { PendingActionsPanel } from "./pending-actions-panel";
+import { ConversationApprovalPanel } from "./conversation-approval-panel";
 
 function StatusBadge({ status }: { status: string }) {
   const isCompleted = status === "completed";
@@ -156,16 +156,9 @@ export function ConversationResultView({
           ) : null}
         </section>
 
-        {/* Proposed agent actions */}
-        {(detail.meta.pendingActions?.length || detail.meta.dispatchedActions?.length) ? (
-          <PendingActionsPanel
-            conversationId={detail.meta.id}
-            cabinetPath={detail.meta.cabinetPath}
-            pending={detail.meta.pendingActions || []}
-            dispatched={detail.meta.dispatchedActions}
-            onRefresh={onRefresh}
-          />
-        ) : null}
+        {/* Proposed agent actions — sibling view: task-conversation-page.tsx */}
+        <ConversationApprovalPanel meta={detail.meta} onApproved={onRefresh} />
+
 
         {/* Artifacts */}
         <section className="rounded-2xl border border-border bg-background p-5">

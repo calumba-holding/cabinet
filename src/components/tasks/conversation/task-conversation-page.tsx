@@ -48,7 +48,7 @@ import { Button } from "@/components/ui/button";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import { TurnBlock, type TurnBlockAgent } from "./turn-block";
 import { useUserProfile } from "@/hooks/use-user-profile";
-import { PendingActionsPanel } from "@/components/agents/pending-actions-panel";
+import { ConversationApprovalPanel } from "@/components/agents/conversation-approval-panel";
 import { ArtifactsList } from "./artifacts-list";
 import { DiffPanel } from "./diff-panel";
 import { LogsPanel } from "./logs-panel";
@@ -1370,24 +1370,20 @@ export function TaskConversationPage({
                 />
               ))}
             </div>
-            {(task.meta.pendingActions?.length || task.meta.dispatchedActions?.length) ? (
-              <div className="mx-auto max-w-3xl px-1 pt-2">
-                <PendingActionsPanel
-                  conversationId={task.meta.id}
-                  cabinetPath={task.meta.cabinetPath}
-                  pending={task.meta.pendingActions || []}
-                  dispatched={task.meta.dispatchedActions}
-                  onRefresh={async () => {
-                    try {
-                      const fresh = await fetchTask(taskId, task.meta.cabinetPath);
-                      setTask(fresh);
-                    } catch {
-                      // Stale state is fine — SSE will eventually reconcile.
-                    }
-                  }}
-                />
-              </div>
-            ) : null}
+            {/* Proposed agent actions — sibling views: conversation-result-view.tsx, conversation-live-view.tsx */}
+            <div className="mx-auto max-w-3xl px-1 pt-2">
+              <ConversationApprovalPanel
+                meta={task.meta}
+                onApproved={async () => {
+                  try {
+                    const fresh = await fetchTask(taskId, task.meta.cabinetPath);
+                    setTask(fresh);
+                  } catch {
+                    // Stale state is fine — SSE will eventually reconcile.
+                  }
+                }}
+              />
+            </div>
             {showWrapUp && !readOnly ? (
               <WrapUpCard
                 onMarkDone={handleMarkDone}
