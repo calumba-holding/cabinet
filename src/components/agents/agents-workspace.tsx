@@ -3624,6 +3624,16 @@ export function AgentsWorkspace({
           }
           setRoutineDialog(null);
         }}
+        onToggled={(toggled) => {
+          const ownerSlug = routineDialog?.agent.slug;
+          if (!ownerSlug) return;
+          setAgentJobsMap((prev) => ({
+            ...prev,
+            [ownerSlug]: (prev[ownerSlug] || []).map((j) =>
+              j.id === toggled.id ? { ...j, enabled: toggled.enabled } : j
+            ),
+          }));
+        }}
       />
 
 
@@ -3973,6 +3983,15 @@ export function AgentsWorkspace({
         onSaved={() => {
           setHeartbeatDialog(null);
           void refreshAgents();
+        }}
+        onToggledActive={(nextActive) => {
+          const targetSlug = heartbeatDialog?.agent.slug;
+          if (!targetSlug) return;
+          setAgents((prev) =>
+            prev.map((a) =>
+              a.slug === targetSlug ? { ...a, active: nextActive } : a
+            )
+          );
         }}
       />
 

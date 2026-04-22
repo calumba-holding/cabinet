@@ -1,7 +1,7 @@
 "use client";
 
 import { useEffect, useState } from "react";
-import { AlertTriangle, ExternalLink, HeartPulse, Loader2, Save, Zap } from "lucide-react";
+import { AlertTriangle, ExternalLink, HeartPulse, Loader2, Play, Power, Save } from "lucide-react";
 import {
   Dialog,
   DialogContent,
@@ -10,6 +10,7 @@ import {
   DialogTitle,
 } from "@/components/ui/dialog";
 import { Button } from "@/components/ui/button";
+import { cn } from "@/lib/utils";
 import { SchedulePicker } from "@/components/mission-control/schedule-picker";
 import { AgentAvatar } from "@/components/agents/agent-avatar";
 import { useAppStore } from "@/stores/app-store";
@@ -33,6 +34,7 @@ export function HeartbeatDialog({
   missedRun,
   onSaved,
   onRanNow,
+  onToggledActive,
 }: {
   open: boolean;
   onOpenChange: (open: boolean) => void;
@@ -42,11 +44,16 @@ export function HeartbeatDialog({
   missedRun?: { scheduledAt: string };
   onSaved?: () => void;
   onRanNow?: (sessionId: string | null) => void;
+  /** Fired when the user toggles active from inside the dialog without
+   *  saving/closing. Lets the parent update its list without tearing down
+   *  the open dialog. */
+  onToggledActive?: (active: boolean) => void;
 }) {
   const [heartbeat, setHeartbeat] = useState(initialHeartbeat || DEFAULT_HEARTBEAT);
   const [active, setActive] = useState(initialActive ?? true);
   const [saving, setSaving] = useState(false);
   const [running, setRunning] = useState(false);
+  const [toggling, setToggling] = useState(false);
 
   // Reseed when the dialog opens so we always reflect the latest persona.
   useEffect(() => {
@@ -93,6 +100,27 @@ export function HeartbeatDialog({
     }
   }
 
+  async function toggleActive() {
+    setToggling(true);
+    try {
+      const nextActive = !active;
+      const res = await fetch(`/api/agents/personas/${agent.slug}`, {
+        method: "PUT",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({
+          heartbeat,
+          active: nextActive,
+          cabinetPath: agent.cabinetPath,
+        }),
+      });
+      if (!res.ok) return;
+      setActive(nextActive);
+      onToggledActive?.(nextActive);
+    } finally {
+      setToggling(false);
+    }
+  }
+
   function openAgentPage() {
     const cabinetPath = agent.cabinetPath || ".";
     setSection({
@@ -135,21 +163,49 @@ export function HeartbeatDialog({
                 here; to change what it does each time, open the agent page.
               </DialogDescription>
             </div>
-            <Button
-              variant="outline"
-              size="sm"
-              className="h-9 gap-1.5 text-[12px]"
-              onClick={() => void runNow()}
-              disabled={running || !active}
-              title={active ? "Run heartbeat now" : "Enable the heartbeat to run it"}
-            >
-              {running ? (
-                <Loader2 className="h-3.5 w-3.5 animate-spin" />
-              ) : (
-                <Zap className="h-3.5 w-3.5" />
-              )}
-              Run now
-            </Button>
+            <div className="flex shrink-0 gap-1.5">
+              <Button
+                variant="outline"
+                size="sm"
+                className="h-9 gap-1.5 text-[12px]"
+                onClick={() => void runNow()}
+                disabled={running || !active}
+                title={
+                  active
+                    ? "Run heartbeat now (one-off, outside its schedule)"
+                    : "Enable the heartbeat to run it"
+                }
+              >
+                {running ? (
+                  <Loader2 className="h-3.5 w-3.5 animate-spin" />
+                ) : (
+                  <Play className="h-3.5 w-3.5" />
+                )}
+                Run now
+              </Button>
+              <Button
+                variant="outline"
+                size="sm"
+                className={cn(
+                  "h-9 gap-1.5 text-[12px]",
+                  !active && "text-emerald-600 dark:text-emerald-400"
+                )}
+                onClick={() => void toggleActive()}
+                disabled={toggling}
+                title={
+                  active
+                    ? "Disable the heartbeat — it won't fire on its schedule"
+                    : "Enable the heartbeat so it fires on its schedule"
+                }
+              >
+                {toggling ? (
+                  <Loader2 className="h-3.5 w-3.5 animate-spin" />
+                ) : (
+                  <Power className="h-3.5 w-3.5" />
+                )}
+                {active ? "Disable" : "Enable"}
+              </Button>
+            </div>
           </div>
         </DialogHeader>
 
@@ -165,21 +221,6 @@ export function HeartbeatDialog({
               This is how often the heartbeat wakes up.
             </p>
           </div>
-
-          <label className="flex cursor-pointer items-center gap-2 text-[13px] text-muted-foreground">
-            <input
-              type="checkbox"
-              checked={active}
-              onChange={(e) => setActive(e.target.checked)}
-              className="size-4"
-            />
-            <span>
-              Active —{" "}
-              <span className="text-muted-foreground/80">
-                when off, the heartbeat won&apos;t fire automatically.
-              </span>
-            </span>
-          </label>
 
           <div className="flex items-center justify-between border-t border-border pt-4">
             <Button

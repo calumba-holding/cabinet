@@ -1,7 +1,7 @@
 "use client";
 
 import { useEffect, useMemo, useState } from "react";
-import { AlertTriangle, Loader2, Play, Save, Trash2 } from "lucide-react";
+import { AlertTriangle, Loader2, Play, Power, Save, Trash2 } from "lucide-react";
 import {
   Dialog,
   DialogContent,
@@ -10,6 +10,7 @@ import {
   DialogTitle,
 } from "@/components/ui/dialog";
 import { Button } from "@/components/ui/button";
+import { cn } from "@/lib/utils";
 import { SchedulePicker } from "@/components/mission-control/schedule-picker";
 import { TaskRuntimePicker } from "@/components/composer/task-runtime-picker";
 import { AgentAvatar } from "@/components/agents/agent-avatar";
@@ -49,6 +50,7 @@ export function NewRoutineDialog({
   existingJob,
   onSaved,
   onDeleted,
+  onToggled,
   missedRun,
 }: {
   open: boolean;
@@ -60,6 +62,10 @@ export function NewRoutineDialog({
   existingJob?: Partial<JobConfig> | null;
   onSaved?: (job: JobConfig) => void;
   onDeleted?: (id: string) => void;
+  /** Fired when the user toggles enabled/disabled from inside the dialog
+   *  without saving/closing. Lets the parent refresh its list without
+   *  tearing down the open dialog. */
+  onToggled?: (job: JobConfig) => void;
   /** Optional "this run did not execute" banner (from cabinet-view's
    *  scheduled-but-missing-conversation flow). */
   missedRun?: { scheduledAt: string };
@@ -72,6 +78,7 @@ export function NewRoutineDialog({
   const [draft, setDraft] = useState<JobConfig | null>(null);
   const [saving, setSaving] = useState(false);
   const [running, setRunning] = useState(false);
+  const [toggling, setToggling] = useState(false);
   const [deleting, setDeleting] = useState(false);
 
   const isEdit = !!existingJob?.id;
@@ -173,6 +180,31 @@ export function NewRoutineDialog({
     }
   }
 
+  async function toggleEnabled() {
+    if (!draft?.id) return;
+    setToggling(true);
+    try {
+      const res = await fetch(
+        `/api/agents/${agent.slug}/jobs/${draft.id}${cabinetQuery}`,
+        {
+          method: "PUT",
+          headers: { "Content-Type": "application/json" },
+          body: JSON.stringify({
+            action: "toggle",
+            cabinetPath: agent.cabinetPath,
+          }),
+        }
+      );
+      if (!res.ok) return;
+      const nextEnabled = !draft.enabled;
+      const nextDraft: JobConfig = { ...draft, enabled: nextEnabled };
+      setDraft(nextDraft);
+      onToggled?.(nextDraft);
+    } finally {
+      setToggling(false);
+    }
+  }
+
   async function remove() {
     if (!draft?.id) return;
     setDeleting(true);
@@ -234,6 +266,7 @@ export function NewRoutineDialog({
                   className="h-9 gap-1.5 text-[12px]"
                   onClick={() => void runNow()}
                   disabled={running}
+                  title="Run this routine now (one-off, outside its schedule)"
                 >
                   {running ? (
                     <Loader2 className="h-3.5 w-3.5 animate-spin" />
@@ -243,11 +276,34 @@ export function NewRoutineDialog({
                   Run now
                 </Button>
                 <Button
+                  variant="outline"
+                  size="sm"
+                  className={cn(
+                    "h-9 gap-1.5 text-[12px]",
+                    draft?.enabled === false && "text-emerald-600 dark:text-emerald-400"
+                  )}
+                  onClick={() => void toggleEnabled()}
+                  disabled={toggling}
+                  title={
+                    draft?.enabled === false
+                      ? "Enable this routine so it runs on its schedule"
+                      : "Disable this routine — it stays saved but won't fire on its schedule"
+                  }
+                >
+                  {toggling ? (
+                    <Loader2 className="h-3.5 w-3.5 animate-spin" />
+                  ) : (
+                    <Power className="h-3.5 w-3.5" />
+                  )}
+                  {draft?.enabled === false ? "Enable" : "Disable"}
+                </Button>
+                <Button
                   variant="ghost"
                   size="sm"
                   className="h-9 gap-1.5 text-[12px] text-destructive hover:text-destructive"
                   onClick={() => void remove()}
                   disabled={deleting}
+                  title="Delete this routine permanently"
                 >
                   {deleting ? (
                     <Loader2 className="h-3.5 w-3.5 animate-spin" />
