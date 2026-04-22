@@ -2,7 +2,7 @@
 
 import { useEffect, useRef, useCallback, useState } from "react";
 import { useEditor, EditorContent } from "@tiptap/react";
-import { Sparkles, Code2 } from "lucide-react";
+import { Sparkles, Code2, Loader2 } from "lucide-react";
 import { editorExtensions } from "./extensions";
 import { EditorToolbar } from "./editor-toolbar";
 import { SlashCommands } from "./slash-commands";
@@ -73,7 +73,7 @@ function navigateToPage(
   useEditorStore.getState().loadPage(targetPath);
   // Scroll editor container to top
   setTimeout(() => {
-    document.querySelector(".flex-1.overflow-y-auto")?.scrollTo(0, 0);
+    document.querySelector("[data-editor-scroll]")?.scrollTo(0, 0);
   }, 0);
 }
 
@@ -110,7 +110,7 @@ function resolveInternalLink(
 }
 
 export function KBEditor() {
-  const { currentPath, content, saveStatus, frontmatter } = useEditorStore();
+  const { currentPath, content, saveStatus, frontmatter, isLoading } = useEditorStore();
   const isRtl = frontmatter?.dir === "rtl";
   const { open: openAI, clearMessages } = useAIPanelStore();
   const isLoadingRef = useRef(false);
@@ -283,6 +283,7 @@ export function KBEditor() {
 
   // When content updates from store (after loadPage), set it in editor
   const prevPathRef = useRef<string | null>(null);
+  const [renderedPath, setRenderedPath] = useState<string | null>(null);
   useEffect(() => {
     if (!editor || currentPath === null) return;
     // Skip if content hasn't actually changed (same path, dirty edit)
@@ -293,6 +294,7 @@ export function KBEditor() {
       isLoadingRef.current = true;
       const html = await markdownToHtml(content, currentPath);
       editor.commands.setContent(html);
+      setRenderedPath(currentPath);
       setTimeout(() => {
         isLoadingRef.current = false;
       }, 50);
@@ -300,6 +302,9 @@ export function KBEditor() {
 
     setContent();
   }, [editor, content, currentPath]);
+
+  const showLoadingOverlay =
+    currentPath !== null && (isLoading || renderedPath !== currentPath);
 
   const handleOpenAI = () => {
     clearMessages();
@@ -369,21 +374,32 @@ export function KBEditor() {
           />
         </div>
       ) : (
-        <div className="flex-1 overflow-y-auto relative" dir={isRtl ? "rtl" : undefined}>
-          <EditorContent editor={editor} />
-          <EditorBubbleMenu editor={editor} />
-          <SlashCommands editor={editor} />
+        <div className="flex-1 relative" dir={isRtl ? "rtl" : undefined}>
+          <div className="absolute inset-0 overflow-y-auto" data-editor-scroll>
+            <EditorContent editor={editor} />
+            <EditorBubbleMenu editor={editor} />
+            <SlashCommands editor={editor} />
 
-          {/* AI Edit Prompt */}
-          <div className="max-w-3xl mx-auto px-8 pb-8">
-            <button
-              onClick={handleOpenAI}
-              className="group flex items-center gap-2 text-[13px] text-muted-foreground/50 hover:text-muted-foreground transition-colors cursor-pointer"
-            >
-              <Sparkles className="h-3.5 w-3.5 group-hover:text-primary transition-colors" />
-              <span>How would you like to edit this page?</span>
-            </button>
+            {/* AI Edit Prompt */}
+            <div className="max-w-3xl mx-auto px-8 pb-8">
+              <button
+                onClick={handleOpenAI}
+                className="group flex items-center gap-2 text-[13px] text-muted-foreground/50 hover:text-muted-foreground transition-colors cursor-pointer"
+              >
+                <Sparkles className="h-3.5 w-3.5 group-hover:text-primary transition-colors" />
+                <span>How would you like to edit this page?</span>
+              </button>
+            </div>
           </div>
+
+          {showLoadingOverlay && (
+            <div
+              className="absolute inset-0 flex items-center justify-center bg-background/80 backdrop-blur-md z-20 pointer-events-none"
+              aria-hidden="true"
+            >
+              <Loader2 className="h-5 w-5 animate-spin text-muted-foreground/70" />
+            </div>
+          )}
         </div>
       )}
 

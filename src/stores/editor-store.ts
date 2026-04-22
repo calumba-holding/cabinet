@@ -8,6 +8,7 @@ interface EditorState {
   frontmatter: FrontMatter | null;
   saveStatus: SaveStatus;
   isDirty: boolean;
+  isLoading: boolean;
 
   loadPage: (path: string) => Promise<void>;
   updateContent: (content: string) => void;
@@ -55,11 +56,28 @@ export const useEditorStore = create<EditorState>((set, get) => ({
   frontmatter: null,
   saveStatus: "idle",
   isDirty: false,
+  isLoading: false,
 
   loadPage: async (path: string) => {
     // Cancel any pending save for the previous page
     if (saveTimer) clearTimeout(saveTimer);
     if (statusTimer) clearTimeout(statusTimer);
+
+    // Navigating to a new path: synchronously clear the previous file's
+    // content so the editor can't render stale content while the fetch
+    // resolves. Without this, clicking an artifact briefly shows whatever
+    // page was open before.
+    const prevPath = get().currentPath;
+    if (prevPath !== path) {
+      set({
+        currentPath: path,
+        content: "",
+        frontmatter: null,
+        saveStatus: "idle",
+        isDirty: false,
+        isLoading: true,
+      });
+    }
 
     // Paint instantly from cache if available — covers refreshes of the
     // last-opened page so the editor doesn't flash empty while the fetch
@@ -72,17 +90,22 @@ export const useEditorStore = create<EditorState>((set, get) => ({
         frontmatter: cached.frontmatter,
         saveStatus: "idle",
         isDirty: false,
+        isLoading: false,
       });
     }
 
     try {
       const page = await fetchPage(path);
+      // A newer loadPage() may have superseded us — bail instead of
+      // overwriting the currently-visible page with a stale response.
+      if (get().currentPath !== path) return;
       set({
         currentPath: path,
         content: page.content,
         frontmatter: page.frontmatter,
         saveStatus: "idle",
         isDirty: false,
+        isLoading: false,
       });
       saveCachedPage({
         path,
@@ -90,6 +113,7 @@ export const useEditorStore = create<EditorState>((set, get) => ({
         frontmatter: page.frontmatter,
       });
     } catch {
+      if (get().currentPath !== path) return;
       if (!cached) {
         set({
           currentPath: path,
@@ -97,7 +121,10 @@ export const useEditorStore = create<EditorState>((set, get) => ({
           frontmatter: null,
           saveStatus: "error",
           isDirty: false,
+          isLoading: false,
         });
+      } else {
+        set({ isLoading: false });
       }
     }
   },
@@ -154,6 +181,7 @@ export const useEditorStore = create<EditorState>((set, get) => ({
       frontmatter: null,
       saveStatus: "idle",
       isDirty: false,
+      isLoading: false,
     });
   },
 }));
