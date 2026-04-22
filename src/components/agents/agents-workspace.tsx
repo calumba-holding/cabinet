@@ -51,6 +51,7 @@ import {
   DropdownMenuTrigger,
 } from "@/components/ui/dropdown-menu";
 import { AgentAvatar } from "@/components/agents/agent-avatar";
+import { HeartbeatRow, RoutineRow } from "@/components/agents/schedule-row";
 import {
   appendConversationCabinetPath,
   buildConversationInstanceKey,
@@ -654,6 +655,11 @@ export function AgentsWorkspace({
           runningCount: 0,
           cabinetPath: a.cabinetPath as string,
           cabinetName: a.cabinetName as string,
+          displayName: a.displayName as string | undefined,
+          iconKey: a.iconKey as string | undefined,
+          color: a.color as string | undefined,
+          avatar: a.avatar as string | undefined,
+          avatarExt: a.avatarExt as string | undefined,
         })) as AgentListItem[];
         setAgents(cabinetAgents);
         setCabinetJobs((data.jobs || []) as CabinetJobSummary[]);
@@ -1385,6 +1391,76 @@ export function AgentsWorkspace({
     await refreshConversations();
   }
 
+  // List-row handlers for the workspace Routines/Heartbeats sections.
+  // These operate across agents (not just the currently-open settings pane)
+  // and update `agentJobsMap` / `agents` locally so the UI stays snappy.
+  async function listRunRoutine(agent: AgentListItem, job: JobConfig) {
+    const cabinetPath = agent.cabinetPath || effectiveCabinetPath;
+    await fetch(`/api/agents/${agent.slug}/jobs/${job.id}`, {
+      method: "PUT",
+      headers: { "Content-Type": "application/json" },
+      body: JSON.stringify({ action: "run", cabinetPath }),
+    });
+    await refreshConversations();
+  }
+
+  async function listToggleRoutine(agent: AgentListItem, job: JobConfig) {
+    const cabinetPath = agent.cabinetPath || effectiveCabinetPath;
+    const res = await fetch(`/api/agents/${agent.slug}/jobs/${job.id}`, {
+      method: "PUT",
+      headers: { "Content-Type": "application/json" },
+      body: JSON.stringify({ action: "toggle", cabinetPath }),
+    });
+    if (!res.ok) return;
+    setAgentJobsMap((prev) => ({
+      ...prev,
+      [agent.slug]: (prev[agent.slug] || []).map((j) =>
+        j.id === job.id ? { ...j, enabled: !j.enabled } : j
+      ),
+    }));
+  }
+
+  async function listDeleteRoutine(agent: AgentListItem, job: JobConfig) {
+    const cabinetPath = agent.cabinetPath || effectiveCabinetPath;
+    const query = cabinetPath ? `?cabinetPath=${encodeURIComponent(cabinetPath)}` : "";
+    const res = await fetch(`/api/agents/${agent.slug}/jobs/${job.id}${query}`, {
+      method: "DELETE",
+    });
+    if (!res.ok) return;
+    setAgentJobsMap((prev) => ({
+      ...prev,
+      [agent.slug]: (prev[agent.slug] || []).filter((j) => j.id !== job.id),
+    }));
+  }
+
+  async function listRunHeartbeat(agent: AgentListItem) {
+    const cabinetPath = agent.cabinetPath || effectiveCabinetPath;
+    await fetch(`/api/agents/personas/${agent.slug}`, {
+      method: "PUT",
+      headers: { "Content-Type": "application/json" },
+      body: JSON.stringify({ action: "run", cabinetPath }),
+    });
+    await refreshConversations();
+  }
+
+  async function listToggleHeartbeat(agent: AgentListItem) {
+    const cabinetPath = agent.cabinetPath || effectiveCabinetPath;
+    const nextActive = !agent.active;
+    const res = await fetch(`/api/agents/personas/${agent.slug}`, {
+      method: "PUT",
+      headers: { "Content-Type": "application/json" },
+      body: JSON.stringify({
+        heartbeat: agent.heartbeat || "",
+        active: nextActive,
+        cabinetPath,
+      }),
+    });
+    if (!res.ok) return;
+    setAgents((prev) =>
+      prev.map((a) => (a.slug === agent.slug ? { ...a, active: nextActive } : a))
+    );
+  }
+
   async function runJob(jobId: string) {
     if (!settingsAgentSlug) return;
     setRunningJobId(jobId);
@@ -1769,6 +1845,11 @@ export function AgentsWorkspace({
         cabinetName: a.cabinetName || "",
         cabinetDepth: 0,
         inherited: false,
+        displayName: a.displayName,
+        iconKey: a.iconKey,
+        color: a.color,
+        avatar: a.avatar,
+        avatarExt: a.avatarExt,
       })),
     [agents, effectiveCabinetPath]
   );
@@ -3317,33 +3398,14 @@ export function AgentsWorkspace({
                       <ul className="divide-y divide-border/60 overflow-hidden rounded-xl border border-border/70 bg-card">
                         {allJobs.map(({ job, agent: owner }) => (
                           <li key={`${owner.slug}:${job.id}`}>
-                            <button
-                              type="button"
-                              onClick={() => openRoutineDialog(owner, { ...job })}
-                              className="flex w-full items-start gap-3 px-4 py-3 text-left transition-colors hover:bg-muted/40"
-                            >
-                              <Clock3 className="mt-0.5 size-3.5 shrink-0 text-emerald-400" />
-                              <div className="min-w-0 flex-1">
-                                <p className="truncate text-[12.5px] font-medium text-foreground">
-                                  {job.name}
-                                </p>
-                                <p className="mt-0.5 truncate text-[10.5px] text-muted-foreground">
-                                  {owner.name}
-                                  {" · "}
-                                  {cronToHuman(job.schedule)}
-                                </p>
-                              </div>
-                              <span
-                                className={cn(
-                                  "shrink-0 rounded-full px-2 py-0.5 text-[9.5px] font-medium",
-                                  job.enabled
-                                    ? "bg-emerald-500/15 text-emerald-600 dark:text-emerald-400"
-                                    : "bg-muted text-muted-foreground"
-                                )}
-                              >
-                                {job.enabled ? "Enabled" : "Paused"}
-                              </span>
-                            </button>
+                            <RoutineRow
+                              agent={owner}
+                              job={job}
+                              onEdit={() => openRoutineDialog(owner, { ...job })}
+                              onRun={() => listRunRoutine(owner, job)}
+                              onToggle={() => listToggleRoutine(owner, job)}
+                              onDelete={() => listDeleteRoutine(owner, job)}
+                            />
                           </li>
                         ))}
                       </ul>
@@ -3417,9 +3479,9 @@ export function AgentsWorkspace({
                           .filter((a) => !!a.heartbeat)
                           .map((agent) => (
                             <li key={agent.slug}>
-                              <button
-                                type="button"
-                                onClick={() =>
+                              <HeartbeatRow
+                                agent={agent}
+                                onEdit={() =>
                                   setHeartbeatDialog({
                                     agent: {
                                       slug: agent.slug,
@@ -3432,28 +3494,9 @@ export function AgentsWorkspace({
                                     initialActive: agent.active,
                                   })
                                 }
-                                className="flex w-full items-start gap-3 px-4 py-3 text-left transition-colors hover:bg-muted/40"
-                              >
-                                <HeartPulse className="mt-0.5 size-3.5 shrink-0 text-pink-400" />
-                                <div className="min-w-0 flex-1">
-                                  <p className="truncate text-[12.5px] font-medium text-foreground">
-                                    {agent.name}
-                                  </p>
-                                  <p className="mt-0.5 truncate text-[10.5px] text-muted-foreground">
-                                    {cronToHuman(agent.heartbeat!)}
-                                  </p>
-                                </div>
-                                <span
-                                  className={cn(
-                                    "shrink-0 rounded-full px-2 py-0.5 text-[9.5px] font-medium",
-                                    agent.active
-                                      ? "bg-emerald-500/15 text-emerald-600 dark:text-emerald-400"
-                                      : "bg-muted text-muted-foreground"
-                                  )}
-                                >
-                                  {agent.active ? "Active" : "Paused"}
-                                </span>
-                              </button>
+                                onRun={() => listRunHeartbeat(agent)}
+                                onToggle={() => listToggleHeartbeat(agent)}
+                              />
                             </li>
                           ))}
                       </ul>
