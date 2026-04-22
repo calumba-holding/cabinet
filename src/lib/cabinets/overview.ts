@@ -414,14 +414,27 @@ export async function readCabinetOverview(
     ...visibleDescendants.map((entry) => readScopedCabinetData(entry, true)),
   ]);
 
-  const agents = scopedResults
-    .flatMap((result) => result.agents)
-    .sort((left, right) => {
-      if (left.cabinetDepth !== right.cabinetDepth) {
-        return left.cabinetDepth - right.cabinetDepth;
-      }
-      return left.name.localeCompare(right.name);
-    });
+  // Sort by depth first (current cabinet's own agents before descendants'),
+  // then dedupe by slug: when the same slug exists in multiple cabinets in
+  // scope, the nearest one wins. Users should see one row per role, not one
+  // per cabinet-that-defines-it.
+  const agentsBySlug = new Map<string, CabinetAgentSummary>();
+  for (const agent of scopedResults.flatMap((result) => result.agents).sort((left, right) => {
+    if (left.cabinetDepth !== right.cabinetDepth) {
+      return left.cabinetDepth - right.cabinetDepth;
+    }
+    return left.name.localeCompare(right.name);
+  })) {
+    if (!agentsBySlug.has(agent.slug)) {
+      agentsBySlug.set(agent.slug, agent);
+    }
+  }
+  const agents = Array.from(agentsBySlug.values()).sort((left, right) => {
+    if (left.cabinetDepth !== right.cabinetDepth) {
+      return left.cabinetDepth - right.cabinetDepth;
+    }
+    return left.name.localeCompare(right.name);
+  });
   const jobs = scopedResults
     .flatMap((result) => result.jobs)
     .sort((left, right) => {
