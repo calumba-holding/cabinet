@@ -190,6 +190,12 @@ export function AppShell() {
     setShowWizard(false);
     try {
       window.localStorage.setItem(WIZARD_DONE_STORAGE_KEY, "1");
+      // Onboarding defaults for the Tasks board. Ensures a first-time user
+      // lands on Kanban with no filters active, regardless of any stale
+      // state that may have leaked in from a prior dev build.
+      window.localStorage.setItem("cabinet.tasks.v2.view", "kanban");
+      window.localStorage.setItem("cabinet.tasks.v2.trigger", "all");
+      window.localStorage.removeItem("cabinet.tasks.v2.agent");
     } catch {
       // ignore
     }
