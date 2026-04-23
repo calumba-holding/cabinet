@@ -13,16 +13,31 @@ export type SectionType =
   | "agent"
   | "tasks"
   | "task"
-  | "jobs"
   | "settings"
   | "registry";
 
 const CABINET_VISIBILITY_STORAGE_KEY = "cabinet.visibility.modes";
+const SIDEBAR_DRAWER_STORAGE_KEY = "cabinet.sidebar.drawer";
+
+export type SidebarDrawer = "data" | "agents" | "tasks";
+
+function loadSidebarDrawer(): SidebarDrawer {
+  if (typeof window === "undefined") return "data";
+  try {
+    const stored = window.localStorage.getItem(SIDEBAR_DRAWER_STORAGE_KEY);
+    if (stored === "data" || stored === "agents" || stored === "tasks") {
+      return stored;
+    }
+  } catch {
+    // ignore
+  }
+  return "data";
+}
 
 export interface SelectedSection {
   type: SectionType;
   slug?: string; // agent slug when type === "agent"
-  cabinetPath?: string; // scope for cabinet/page/agent/agents/jobs/tasks/task; defaults to ROOT_CABINET_PATH
+  cabinetPath?: string; // scope for cabinet/page/agent/agents/tasks/task; defaults to ROOT_CABINET_PATH
   agentScopedId?: string;
   conversationId?: string; // auto-select this conversation on mount
   taskId?: string; // task id when type === "task"
@@ -41,6 +56,7 @@ interface AppState {
   terminalTabs: TerminalTab[];
   activeTerminalTab: string | null;
   sidebarCollapsed: boolean;
+  sidebarDrawer: SidebarDrawer;
   aiPanelCollapsed: boolean;
   cabinetVisibilityModes: Record<string, CabinetVisibilityMode>;
   taskPanelConversation: ConversationMeta | null;
@@ -62,6 +78,7 @@ interface AppState {
   setActiveTerminalTab: (id: string) => void;
   openAgentTab: (taskTitle: string, prompt: string) => void;
   setSidebarCollapsed: (collapsed: boolean) => void;
+  setSidebarDrawer: (drawer: SidebarDrawer) => void;
   setAiPanelCollapsed: (collapsed: boolean) => void;
   setCabinetVisibilityMode: (
     cabinetPath: string,
@@ -115,6 +132,7 @@ export const useAppStore = create<AppState>((set, get) => ({
   terminalTabs: [],
   activeTerminalTab: null,
   sidebarCollapsed: false,
+  sidebarDrawer: loadSidebarDrawer(),
   aiPanelCollapsed: false,
   cabinetVisibilityModes: loadCabinetVisibilityModes(),
   taskPanelConversation: null,
@@ -212,6 +230,14 @@ export const useAppStore = create<AppState>((set, get) => ({
   setActiveTerminalTab: (id) => set({ activeTerminalTab: id }),
 
   setSidebarCollapsed: (collapsed) => set({ sidebarCollapsed: collapsed }),
+  setSidebarDrawer: (drawer) => {
+    try {
+      window.localStorage.setItem(SIDEBAR_DRAWER_STORAGE_KEY, drawer);
+    } catch {
+      // ignore storage failures
+    }
+    set({ sidebarDrawer: drawer });
+  },
   setAiPanelCollapsed: (collapsed) => set({ aiPanelCollapsed: collapsed }),
   setCabinetVisibilityMode: (cabinetPath, mode) => {
     const normalizedCabinetPath = normalizeVisibilityCabinetPath(cabinetPath);

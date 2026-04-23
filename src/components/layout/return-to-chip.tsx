@@ -5,7 +5,7 @@ import { useAppStore } from "@/stores/app-store";
 
 /**
  * Small "Back to task" / "Back to agent" chip rendered inside the viewer toolbar
- * when the user navigated here from a task/agent/cabinet/jobs context. Pops the
+ * when the user navigated here from a task/agent/cabinet context. Pops the
  * previous section from the app-store returnTo stack. Renders nothing when
  * there's no return context.
  */
@@ -26,8 +26,6 @@ export function ReturnToChip() {
         return "Back to agents";
       case "cabinet":
         return "Back to cabinet";
-      case "jobs":
-        return "Back to jobs";
       case "home":
         return "Back to home";
       case "settings":

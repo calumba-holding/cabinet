@@ -16,7 +16,6 @@ import { useEditorStore } from "@/stores/editor-store";
  *   #/cabinet/{cabinetPath}/tasks
  *   #/cabinet/{cabinetPath}/agents/{slug}
  *   #/cabinet/{cabinetPath}/tasks/{taskId}
- *   #/cabinet/{cabinetPath}/jobs
  *   #/cabinet/{cabinetPath}/data/{pagePath}
  *   #/page/{pagePath}
  *   #/settings
@@ -72,9 +71,6 @@ function buildHash(section: SectionState, pagePath: string | null): string {
   }
   if (section.type === "tasks") {
     return `#/cabinet/${encodePathSegment(cabinetPath)}/tasks`;
-  }
-  if (section.type === "jobs") {
-    return `#/cabinet/${encodePathSegment(cabinetPath)}/jobs`;
   }
   if (section.type === "settings") {
     return section.slug
@@ -149,13 +145,6 @@ function parseHash(hash: string): RouteState {
       };
     }
 
-    if (leaf === "jobs") {
-      return {
-        section: { type: "jobs", cabinetPath },
-        pagePath: null,
-      };
-    }
-
     if (leaf === "data" && parts[3]) {
       const pagePath = decodePathSegment(parts.slice(3).join("/"));
       return {
@@ -176,9 +165,8 @@ function parseHash(hash: string): RouteState {
   }
 
   // Bare-route aliases scoped to the root cabinet. Lets every shared link of
-  // the form `/#/tasks`, `/#/agents`, `/#/jobs` land on the correct view
-  // without having to know about the internal `/#/cabinet/./tasks` shape.
-  // Audit #11, #12.
+  // the form `/#/tasks`, `/#/agents` land on the correct view without having
+  // to know about the internal `/#/cabinet/./tasks` shape. Audit #11, #12.
   if (parts[0] === "agents") {
     if (parts[1]) {
       const slug = decodePathSegment(parts[1]);
@@ -211,13 +199,6 @@ function parseHash(hash: string): RouteState {
     }
     return {
       section: { type: "tasks", cabinetPath: ROOT_CABINET_PATH },
-      pagePath: null,
-    };
-  }
-
-  if (parts[0] === "jobs") {
-    return {
-      section: { type: "jobs", cabinetPath: ROOT_CABINET_PATH },
       pagePath: null,
     };
   }

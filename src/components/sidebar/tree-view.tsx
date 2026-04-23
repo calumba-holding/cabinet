@@ -107,22 +107,18 @@ export function TreeView() {
   const setSection = useAppStore((s) => s.setSection);
   const cabinetVisibilityModes = useAppStore((s) => s.cabinetVisibilityModes);
   const setCabinetVisibilityMode = useAppStore((s) => s.setCabinetVisibilityMode);
+  const activeDrawer = useAppStore((s) => s.sidebarDrawer);
+  const setActiveDrawer = useAppStore((s) => s.setSidebarDrawer);
 
   const [cabinetExpanded, setCabinetExpanded] = useState(true);
 
   // Cabinet-drawer UI: the sidebar exposes three "drawers" — Agents, Tasks, and
   // Data — as a horizontal tab row. Only one is open at a time. The previous
   // vertical-accordion `agentsExpanded` / `tasksExpanded` / `kbExpanded` flags
-  // are now derived from `activeDrawer` for minimal downstream churn.
-  const DRAWER_LS_KEY = "cabinet.sidebar.drawer";
+  // are now derived from `activeDrawer` for minimal downstream churn. The
+  // active drawer lives in the app-store so the sidebar footer (which renders
+  // tab-specific quick actions) can stay in sync.
   type DrawerId = "agents" | "tasks" | "data";
-  const [activeDrawer, setActiveDrawer] = useState<DrawerId>(() => {
-    if (typeof window === "undefined") return "data";
-    const stored = window.localStorage.getItem(DRAWER_LS_KEY);
-    return stored === "agents" || stored === "tasks" || stored === "data"
-      ? stored
-      : "data";
-  });
 
   // When the route changes under us (hash nav, shortcut, etc.), auto-open the
   // matching drawer so the sidebar and main are always in sync.
@@ -133,16 +129,7 @@ export function TreeView() {
       setActiveDrawer("tasks");
     }
     // Other section types keep the user's last manual choice.
-  }, [section.type]);
-
-  // Persist the user's manual drawer choice so returning to the app restores it.
-  useEffect(() => {
-    try {
-      window.localStorage.setItem(DRAWER_LS_KEY, activeDrawer);
-    } catch {
-      // ignore quota / privacy-mode errors
-    }
-  }, [activeDrawer]);
+  }, [section.type, setActiveDrawer]);
 
   const agentsExpanded = activeDrawer === "agents";
   const tasksExpanded = activeDrawer === "tasks";

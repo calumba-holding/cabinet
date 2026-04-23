@@ -10,9 +10,9 @@ import {
 import {
   PanelLeftClose,
   PanelLeft,
+  Plus,
   Settings,
-  Home,
-  Timer,
+  UserPlus,
 } from "lucide-react";
 import { cn } from "@/lib/utils";
 import { Button } from "@/components/ui/button";
@@ -20,6 +20,7 @@ import { TreeView } from "./tree-view";
 import { NewPageDialog } from "./new-page-dialog";
 import { NewCabinetDialog } from "./new-cabinet-dialog";
 import { useAppStore } from "@/stores/app-store";
+import { ROOT_CABINET_PATH } from "@/lib/cabinets/paths";
 
 function useIsMobile() {
   const isMobile = useSyncExternalStore(
@@ -48,6 +49,7 @@ export function Sidebar() {
   const setCollapsed = useAppStore((s) => s.setSidebarCollapsed);
   const section = useAppStore((s) => s.section);
   const setSection = useAppStore((s) => s.setSection);
+  const sidebarDrawer = useAppStore((s) => s.sidebarDrawer);
   const [sidebarWidth, setSidebarWidth] = useState(() => {
     if (typeof window === "undefined") return SIDEBAR_DEFAULT_WIDTH;
     const storedWidth = window.localStorage.getItem("cabinet-sidebar-width");
@@ -140,43 +142,54 @@ export function Sidebar() {
         <TreeView />
 
         <div className="p-2 flex items-center gap-1">
-          <div className="flex-1">
-            <NewPageDialog />
-          </div>
-          <div className="flex-1">
-            <NewCabinetDialog />
-          </div>
-          <Button
-            variant="ghost"
-            size="icon"
-            aria-label="Home"
-            title="Home"
-            className={cn(
-              "h-7 w-7 shrink-0",
-              section.type === "home" && "bg-accent text-foreground"
-            )}
-            onClick={() => setSection({ type: "home" })}
-          >
-            <Home className="h-3.5 w-3.5" />
-          </Button>
-          <Button
-            variant="ghost"
-            size="icon"
-            aria-label="Jobs"
-            title="Jobs"
-            className={cn(
-              "h-7 w-7 shrink-0",
-              section.type === "jobs" && "bg-accent text-foreground"
-            )}
-            onClick={() =>
-              setSection({
-                type: "jobs",
-                cabinetPath: section.cabinetPath || undefined,
-              })
-            }
-          >
-            <Timer className="h-3.5 w-3.5" />
-          </Button>
+          {sidebarDrawer === "data" && (
+            <>
+              <div className="min-w-0 flex-1">
+                <NewPageDialog />
+              </div>
+              <div className="min-w-0 flex-1">
+                <NewCabinetDialog />
+              </div>
+            </>
+          )}
+          {sidebarDrawer === "agents" && (
+            <button
+              type="button"
+              title="Add Agent"
+              onClick={() => {
+                setSection({
+                  type: "agents",
+                  cabinetPath: section.cabinetPath || ROOT_CABINET_PATH,
+                });
+                setTimeout(() => {
+                  window.dispatchEvent(new CustomEvent("cabinet:open-add-agent"));
+                }, 100);
+              }}
+              className="flex min-w-0 flex-1 items-center gap-1.5 text-xs px-2.5 py-1.5 rounded-md text-muted-foreground hover:text-foreground hover:bg-accent transition-colors cursor-pointer"
+            >
+              <UserPlus className="h-4 w-4 shrink-0" />
+              <span className="min-w-0 truncate">Add Agent</span>
+            </button>
+          )}
+          {sidebarDrawer === "tasks" && (
+            <button
+              type="button"
+              title="New Task"
+              onClick={() => {
+                setSection({
+                  type: "tasks",
+                  cabinetPath: section.cabinetPath || ROOT_CABINET_PATH,
+                });
+                setTimeout(() => {
+                  window.dispatchEvent(new CustomEvent("cabinet:open-create-task"));
+                }, 100);
+              }}
+              className="flex min-w-0 flex-1 items-center gap-1.5 text-xs px-2.5 py-1.5 rounded-md text-muted-foreground hover:text-foreground hover:bg-accent transition-colors cursor-pointer"
+            >
+              <Plus className="h-4 w-4 shrink-0" />
+              <span className="min-w-0 truncate">New Task</span>
+            </button>
+          )}
           <Button
             variant="ghost"
             size="icon"
