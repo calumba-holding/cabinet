@@ -502,6 +502,170 @@ export const THEMES: ThemeDefinition[] = [
       "--sidebar-ring": "oklch(0.58 0.14 295)",
     },
   },
+
+  // ─── NOVELTY / ERA THEMES ───
+  // Windows 95 — silver chassis as the page canvas, iconic teal as the
+  // sidebar (think desktop wallpaper framing an Explorer window), navy
+  // chrome for selection. Arimo is a metric-compatible Arial / MS Sans
+  // Serif stand-in — reads cleanly at any size, unlike pixel fonts which
+  // turn body copy into a puzzle.
+  {
+    name: "win95",
+    label: "Windows 95",
+    type: "light",
+    font: "'Arimo', var(--font-sans)",
+    headingFont: "'Arimo', var(--font-sans)",
+    accent: "#008080",
+    vars: {
+      "--background":           "oklch(0.82 0 0)",         // #C0C0C0 silver — the page
+      "--foreground":           "oklch(0.15 0 0)",         // near-black label text
+      "--card":                 "oklch(0.98 0 0)",         // near-white content panels
+      "--card-foreground":      "oklch(0.15 0 0)",
+      "--popover":              "oklch(0.88 0 0)",         // lighter silver menus
+      "--popover-foreground":   "oklch(0.15 0 0)",
+      "--primary":              "oklch(0.30 0.14 265)",   // #000080 navy action
+      "--primary-foreground":   "oklch(0.98 0 0)",
+      "--secondary":            "oklch(0.88 0 0)",         // light silver inset
+      "--secondary-foreground": "oklch(0.15 0 0)",
+      "--muted":                "oklch(0.88 0 0)",
+      "--muted-foreground":     "oklch(0.35 0 0)",
+      "--accent":               "oklch(0.30 0.14 265)",   // navy selection
+      "--accent-foreground":    "oklch(0.98 0 0)",
+      "--destructive":          "oklch(0.55 0.22 25)",
+      "--border":               "oklch(0.50 0 0)",         // mid-gray 3D edge
+      "--input":                "oklch(1 0 0)",            // white input field
+      "--ring":                 "oklch(0.30 0.14 265)",
+      "--sidebar":              "oklch(0.55 0.11 196)",   // #008080 desktop teal — punchy
+      "--sidebar-foreground":   "oklch(0.98 0 0)",         // white on teal
+      "--sidebar-primary":      "oklch(0.30 0.14 265)",   // navy action in sidebar
+      "--sidebar-primary-foreground": "oklch(0.98 0 0)",
+      "--sidebar-accent":       "oklch(0.47 0.10 196)",   // deeper teal hover
+      "--sidebar-accent-foreground": "oklch(0.98 0 0)",
+      "--sidebar-border":       "oklch(0.40 0.09 196)",   // darkest teal divider
+      "--sidebar-ring":         "oklch(0.98 0 0)",
+    },
+  },
+
+  // Windows XP — Luna Blue theme. White canvas like Explorer, Luna-blue
+  // sidebar with a touch more lift than hex #245EDC (echoes the gradient
+  // top of the real Luna chrome), pale-blue secondary surfaces, and a
+  // green primary that nods to the Start button. Open Sans stands in
+  // for Tahoma.
+  {
+    name: "winxp",
+    label: "Windows XP",
+    type: "light",
+    font: "'Open Sans', var(--font-sans)",
+    headingFont: "'Open Sans', var(--font-sans)",
+    accent: "#2F6FE5",
+    vars: {
+      "--background":           "oklch(1 0 0)",               // pure white canvas
+      "--foreground":           "oklch(0.20 0.01 250)",       // cool near-black
+      "--card":                 "oklch(0.99 0.006 240)",      // faint blue-white
+      "--card-foreground":      "oklch(0.20 0.01 250)",
+      "--popover":              "oklch(0.99 0.006 240)",
+      "--popover-foreground":   "oklch(0.20 0.01 250)",
+      "--primary":              "oklch(0.48 0.22 264)",       // brighter Luna blue
+      "--primary-foreground":   "oklch(0.99 0 0)",
+      "--secondary":            "oklch(0.93 0.028 245)",      // pale blue inset
+      "--secondary-foreground": "oklch(0.20 0.01 250)",
+      "--muted":                "oklch(0.95 0.018 245)",
+      "--muted-foreground":     "oklch(0.45 0.04 250)",
+      "--accent":               "oklch(0.93 0.028 245)",
+      "--accent-foreground":    "oklch(0.20 0.01 250)",
+      "--destructive":          "oklch(0.55 0.22 25)",
+      "--border":               "oklch(0.88 0.02 245)",
+      "--input":                "oklch(0.91 0.02 245)",
+      "--ring":                 "oklch(0.48 0.22 264)",
+      "--sidebar":              "oklch(0.48 0.22 264)",       // brighter Luna sidebar
+      "--sidebar-foreground":   "oklch(0.99 0 0)",
+      "--sidebar-primary":      "oklch(0.72 0.17 140)",       // Start-button green
+      "--sidebar-primary-foreground": "oklch(0.15 0 0)",
+      "--sidebar-accent":       "oklch(0.38 0.20 264)",       // deeper Luna hover
+      "--sidebar-accent-foreground": "oklch(0.99 0 0)",
+      "--sidebar-border":       "oklch(0.32 0.18 264)",
+      "--sidebar-ring":         "oklch(0.99 0 0)",
+    },
+  },
+
+  // Matrix — phosphor-green terminal. Near-black substrate with
+  // luminous #00FF41 text, chosen to match the 1999 film's screen palette.
+  {
+    name: "matrix",
+    label: "Matrix",
+    type: "dark",
+    font: "'Share Tech Mono', var(--font-mono)",
+    headingFont: "'Major Mono Display', var(--font-mono)",
+    accent: "#00ff41",
+    vars: {
+      "--background":           "oklch(0.06 0 0)",           // near-black
+      "--foreground":           "oklch(0.86 0.24 142)",      // #00FF41 phosphor
+      "--card":                 "oklch(0.10 0.02 142)",      // green-tinted black
+      "--card-foreground":      "oklch(0.86 0.24 142)",
+      "--popover":              "oklch(0.10 0.02 142)",
+      "--popover-foreground":   "oklch(0.86 0.24 142)",
+      "--primary":              "oklch(0.86 0.24 142)",      // bright green CTA
+      "--primary-foreground":   "oklch(0.06 0 0)",
+      "--secondary":            "oklch(0.18 0.06 142)",      // dim green panel
+      "--secondary-foreground": "oklch(0.72 0.18 142)",
+      "--muted":                "oklch(0.14 0.04 142)",
+      "--muted-foreground":     "oklch(0.52 0.14 142)",      // fading phosphor
+      "--accent":               "oklch(0.22 0.08 142)",
+      "--accent-foreground":    "oklch(0.86 0.24 142)",
+      "--destructive":          "oklch(0.65 0.22 25)",
+      "--border":               "oklch(0.86 0.24 142 / 22%)",
+      "--input":                "oklch(0.86 0.24 142 / 14%)",
+      "--ring":                 "oklch(0.86 0.24 142)",
+      "--sidebar":              "oklch(0.08 0.01 142)",
+      "--sidebar-foreground":   "oklch(0.72 0.18 142)",
+      "--sidebar-primary":      "oklch(0.86 0.24 142)",
+      "--sidebar-primary-foreground": "oklch(0.06 0 0)",
+      "--sidebar-accent":       "oklch(0.14 0.04 142)",
+      "--sidebar-accent-foreground": "oklch(0.72 0.18 142)",
+      "--sidebar-border":       "oklch(0.86 0.24 142 / 18%)",
+      "--sidebar-ring":         "oklch(0.60 0.18 142)",
+    },
+  },
+
+  // Apple — macOS-inspired minimal. Pure-white canvas, #F5F5F7 gray
+  // for secondary surfaces, #1D1D1F text, Apple's current system blue
+  // (#0071E3) as the primary action. Inter stands in for SF Pro.
+  {
+    name: "apple",
+    label: "Apple",
+    type: "light",
+    font: "'Inter', var(--font-sans)",
+    headingFont: "'Inter', var(--font-sans)",
+    accent: "#0071e3",
+    vars: {
+      "--background":           "oklch(1 0 0)",               // #FFFFFF
+      "--foreground":           "oklch(0.22 0.003 270)",      // #1D1D1F
+      "--card":                 "oklch(1 0 0)",
+      "--card-foreground":      "oklch(0.22 0.003 270)",
+      "--popover":              "oklch(1 0 0)",
+      "--popover-foreground":   "oklch(0.22 0.003 270)",
+      "--primary":              "oklch(0.56 0.20 253)",       // #0071E3 system blue
+      "--primary-foreground":   "oklch(0.99 0 0)",
+      "--secondary":            "oklch(0.965 0.003 270)",     // #F5F5F7
+      "--secondary-foreground": "oklch(0.22 0.003 270)",
+      "--muted":                "oklch(0.965 0.003 270)",
+      "--muted-foreground":     "oklch(0.52 0.008 270)",      // #6E6E73
+      "--accent":               "oklch(0.965 0.003 270)",
+      "--accent-foreground":    "oklch(0.22 0.003 270)",
+      "--destructive":          "oklch(0.60 0.23 25)",        // system red ~#FF3B30
+      "--border":               "oklch(0.90 0.003 270)",      // hairline
+      "--input":                "oklch(0.92 0.003 270)",
+      "--ring":                 "oklch(0.56 0.20 253)",
+      "--sidebar":              "oklch(0.965 0.003 270)",     // #F5F5F7
+      "--sidebar-foreground":   "oklch(0.22 0.003 270)",
+      "--sidebar-primary":      "oklch(0.56 0.20 253)",
+      "--sidebar-primary-foreground": "oklch(0.99 0 0)",
+      "--sidebar-accent":       "oklch(0.93 0.003 270)",
+      "--sidebar-accent-foreground": "oklch(0.22 0.003 270)",
+      "--sidebar-border":       "oklch(0.90 0.003 270)",
+      "--sidebar-ring":         "oklch(0.56 0.20 253)",
+    },
+  },
 ];
 
 // Apply a custom theme by setting CSS variables on the root element
