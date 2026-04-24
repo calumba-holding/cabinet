@@ -65,7 +65,26 @@ export function BreakingChangesWarning() {
             Cabinet is provided &ldquo;as is&rdquo;, without warranty of any
             kind. The maintainers and contributors accept no liability for
             data loss, corruption, leakage, or any other harm arising from
-            your use of Cabinet or the AI providers it integrates with.
+            your use of Cabinet or the AI providers it integrates with. By
+            continuing you agree to our{" "}
+            <a
+              href="https://runcabinet.com/terms"
+              target="_blank"
+              rel="noopener noreferrer"
+              className="underline underline-offset-2 hover:text-foreground"
+            >
+              Terms of Service
+            </a>{" "}
+            and{" "}
+            <a
+              href="https://runcabinet.com/privacy"
+              target="_blank"
+              rel="noopener noreferrer"
+              className="underline underline-offset-2 hover:text-foreground"
+            >
+              Privacy Policy
+            </a>
+            .
           </p>
           <p className="flex items-center gap-1.5">
             Thanks for being here. Community patience keeps this project
