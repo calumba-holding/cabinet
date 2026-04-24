@@ -1,6 +1,7 @@
 import TurndownService from "turndown";
 // @ts-expect-error — no types available for this package
 import { gfm } from "turndown-plugin-gfm";
+import { detectEmbed } from "@/lib/embeds/detect";
 
 const turndown = new TurndownService({
   headingStyle: "atx",
@@ -94,10 +95,31 @@ for (const tag of ["u", "sub", "sup"] as const) {
 }
 
 // Preserve <video> tags with all attrs (file-uploaded videos).
+// If the src points at a known embed provider (YouTube, Vimeo, Loom, …),
+// upgrade it to a proper embed block instead of preserving a tag that
+// browsers can't render.
 turndown.addRule("video", {
   filter: "video" as never,
   replacement: (_content, node) => {
     const el = node as HTMLElement;
+    const src = el.getAttribute("src") ?? "";
+    const detected = src ? detectEmbed(src) : null;
+    if (detected && detected.provider !== "video") {
+      const aspect = detected.aspectRatio
+        ? ` data-aspect-ratio="${detected.aspectRatio}"`
+        : "";
+      return (
+        `\n<div data-embed="true" data-provider="${detected.provider}"` +
+        ` data-src="${detected.embedUrl}"` +
+        ` data-original-url="${detected.originalUrl}"${aspect}>` +
+        `<iframe src="${detected.embedUrl}"` +
+        ` data-embed-provider="${detected.provider}"` +
+        ` allow="accelerometer; autoplay; clipboard-write; encrypted-media; gyroscope; picture-in-picture; web-share; fullscreen"` +
+        ` allowfullscreen loading="lazy" frameborder="0"></iframe>` +
+        `</div>\n`
+      );
+    }
+
     const attrs: string[] = [];
     for (const attr of Array.from(el.attributes)) {
       attrs.push(`${attr.name}="${attr.value.replace(/"/g, "&quot;")}"`);

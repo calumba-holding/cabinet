@@ -3,6 +3,7 @@ import remarkParse from "remark-parse";
 import remarkGfm from "remark-gfm";
 import remarkRehype from "remark-rehype";
 import rehypeStringify from "rehype-stringify";
+import { detectEmbed } from "@/lib/embeds/detect";
 
 /**
  * Pre-process markdown to convert [[Wiki Links]] to HTML anchors
@@ -42,6 +43,37 @@ function fixTaskListHtml(html: string): string {
   );
 
   return html;
+}
+
+/**
+ * Upgrade broken `<video src="https://youtu.be/...">` (or any non-file video URL
+ * that points at a known embed provider) into a real iframe embed block.
+ *
+ * This heals content written before we had proper embed support, and also any
+ * time the TipTap schema round-trip collapsed an iframe into a video tag.
+ */
+function upgradeProviderVideos(html: string): string {
+  return html.replace(
+    /<video\b([^>]*)\bsrc="([^"]+)"([^>]*)><\/video>/gi,
+    (match, before: string, src: string, after: string) => {
+      const detected = detectEmbed(src);
+      if (!detected || detected.provider === "video") return match;
+
+      const aspect = detected.aspectRatio
+        ? ` data-aspect-ratio="${detected.aspectRatio}"`
+        : "";
+      return (
+        `<div data-embed="true" data-provider="${detected.provider}"` +
+        ` data-src="${detected.embedUrl}"` +
+        ` data-original-url="${detected.originalUrl}"${aspect}>` +
+        `<iframe src="${detected.embedUrl}"` +
+        ` data-embed-provider="${detected.provider}"` +
+        ` allow="accelerometer; autoplay; clipboard-write; encrypted-media; gyroscope; picture-in-picture; web-share; fullscreen"` +
+        ` allowfullscreen loading="lazy" frameborder="0"></iframe>` +
+        `</div>`
+      );
+    }
+  );
 }
 
 /**
@@ -98,6 +130,9 @@ export async function markdownToHtml(markdown: string, pagePath?: string): Promi
 
   // Post-process task lists for Tiptap compatibility
   html = fixTaskListHtml(html);
+
+  // Heal <video src="youtube-url"> into real iframe embeds
+  html = upgradeProviderVideos(html);
 
   // Resolve relative URLs if page path is provided
   if (pagePath) {

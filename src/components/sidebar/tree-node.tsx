@@ -26,6 +26,7 @@ import {
   Workflow,
   File,
   FileSpreadsheet,
+  NotebookText,
   Presentation,
   TriangleAlert,
   ArrowRightLeft,
@@ -451,6 +452,8 @@ export function TreeNode({
               <FileSpreadsheet className="h-3.5 w-3.5 shrink-0 text-green-500" />
             ) : node.type === "pptx" ? (
               <Presentation className="h-3.5 w-3.5 shrink-0 text-orange-400" />
+            ) : node.type === "notebook" ? (
+              <NotebookText className="h-3.5 w-3.5 shrink-0 text-[#F37626]" />
             ) : node.type === "unknown" ? (
               <File className="h-3.5 w-3.5 shrink-0 text-muted-foreground/50" />
             ) : node.type === "cabinet" ? (

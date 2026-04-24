@@ -38,6 +38,7 @@ const MIME_TYPES: Record<string, string> = {
   ".xlsx": "application/vnd.openxmlformats-officedocument.spreadsheetml.sheet",
   ".xlsm": "application/vnd.ms-excel.sheet.macroEnabled.12",
   ".pptx": "application/vnd.openxmlformats-officedocument.presentationml.presentation",
+  ".ipynb": "application/json",
 };
 
 type RouteParams = { params: Promise<{ path: string[] }> };

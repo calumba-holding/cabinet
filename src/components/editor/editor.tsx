@@ -224,18 +224,17 @@ export function KBEditor() {
           return true;
         }
 
-        // 2. URL paste — if it's a known embed provider AND the user is pasting
-        //    onto an empty line, auto-embed. Otherwise let the link mark handle it.
+        // 2. URL paste — auto-embed known providers (YouTube, Vimeo, Loom, etc.)
+        //    anywhere. Generic iframe/video fallbacks only auto-embed on an empty
+        //    line so ordinary URLs in prose still become plain links.
         if (text && /^https?:\/\/\S+$/.test(text) && editor) {
           const detected = detectEmbed(text);
-          if (
-            detected &&
-            detected.provider !== "iframe" &&
-            detected.provider !== "video"
-          ) {
+          if (detected) {
+            const isGenericFallback =
+              detected.provider === "iframe" || detected.provider === "video";
             const { $from } = editor.state.selection;
             const onEmptyLine = $from.parent.textContent.length === 0;
-            if (onEmptyLine) {
+            if (!isGenericFallback || onEmptyLine) {
               editor.commands.setEmbed({ url: text });
               return true;
             }

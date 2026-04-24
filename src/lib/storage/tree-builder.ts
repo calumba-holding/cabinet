@@ -44,6 +44,9 @@ const DOCX_EXTENSIONS = new Set([".docx"]);
 const XLSX_EXTENSIONS = new Set([".xlsx", ".xlsm"]);
 const PPTX_EXTENSIONS = new Set([".pptx"]);
 
+// Jupyter notebooks. Rendered as a custom viewer that shows cells + outputs.
+const NOTEBOOK_EXTENSIONS = new Set([".ipynb"]);
+
 // Files that should appear in the sidebar as "unknown" with an Open in Finder fallback.
 // Only common document/archive types that a user would intentionally put in a KB.
 // Everything not in a known set is silently skipped.
@@ -62,6 +65,7 @@ const UNKNOWN_EXTENSIONS = new Set([
 ]);
 
 function classifyFile(ext: string): TreeNode["type"] | null {
+  if (NOTEBOOK_EXTENSIONS.has(ext)) return "notebook";
   if (CODE_EXTENSIONS.has(ext)) return "code";
   if (IMAGE_EXTENSIONS.has(ext)) return "image";
   if (VIDEO_EXTENSIONS.has(ext)) return "video";

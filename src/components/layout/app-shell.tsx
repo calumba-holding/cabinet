@@ -8,6 +8,7 @@ import { WebsiteViewer } from "@/components/editor/website-viewer";
 import { PdfViewer } from "@/components/editor/pdf-viewer";
 import { CsvViewer } from "@/components/editor/csv-viewer";
 import { SourceViewer } from "@/components/editor/source-viewer";
+import { NotebookViewer } from "@/components/editor/notebook-viewer";
 import { ImageViewer } from "@/components/editor/image-viewer";
 import { MediaViewer } from "@/components/editor/media-viewer";
 import { MermaidViewer } from "@/components/editor/mermaid-viewer";
@@ -313,6 +314,7 @@ export function AppShell() {
         if (lower.endsWith(".docx")) return "docx";
         if (lower.endsWith(".xlsx") || lower.endsWith(".xlsm")) return "xlsx";
         if (lower.endsWith(".pptx")) return "pptx";
+        if (lower.endsWith(".ipynb")) return "notebook";
         if (lower.endsWith(".mmd") || lower.endsWith(".mermaid")) return "mermaid";
         if (/\.(png|jpe?g|gif|webp|svg|bmp)$/.test(lower)) return "image";
         if (/\.(mp4|mov|webm|avi|mkv)$/.test(lower)) return "video";
@@ -329,6 +331,7 @@ export function AppShell() {
   const isPdf = nodeType === "pdf";
   const isCsv = nodeType === "csv";
   const isCode = nodeType === "code";
+  const isNotebook = nodeType === "notebook";
   const isImage = nodeType === "image";
   const isVideo = nodeType === "video";
   const isAudio = nodeType === "audio";
@@ -480,6 +483,11 @@ export function AppShell() {
           title={selectedNode.frontmatter?.title || selectedNode.name}
         />
       );
+    }
+    if (isNotebook && (selectedNode || selectedPath)) {
+      const nbPath = selectedNode?.path || selectedPath!;
+      const nbTitle = selectedNode?.frontmatter?.title || selectedNode?.name || nbPath.split("/").pop() || "Notebook";
+      return <NotebookViewer path={nbPath} title={nbTitle} />;
     }
     if (isCode && (selectedNode || selectedPath)) {
       const codePath = selectedNode?.path || selectedPath!;
