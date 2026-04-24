@@ -4060,14 +4060,12 @@ export function AgentsWorkspace({
         onStarted={(conversationId, conversationCabinetPath) => {
           composer.reset();
           setQuickSendAgent(null);
-          const slug = handoffAgentSlug;
-          if (slug) {
-            setActiveAgentSlug(slug);
-            setSection(buildAgentSection(slug, conversationCabinetPath || effectiveCabinetPath));
-            setSelectedConversationId(conversationId);
-            setSelectedConversationCabinetPath(conversationCabinetPath || effectiveCabinetPath);
-          }
           setHandoffAgentSlug(null);
+          setSection({
+            type: "task",
+            taskId: conversationId,
+            cabinetPath: conversationCabinetPath || effectiveCabinetPath,
+          });
         }}
       />
     </div>

@@ -163,24 +163,12 @@ export function NotificationToasts() {
           key={toast._key}
           type="button"
           onClick={() => {
-            {
-              const scopedPath = toast.cabinetPath || ROOT_CABINET_PATH;
-              setSection({
-                type: "agent",
-                slug: toast.agentSlug,
-                cabinetPath: scopedPath,
-                agentScopedId: `${scopedPath}::agent::${toast.agentSlug}`,
-              });
-            }
-            window.dispatchEvent(
-              new CustomEvent("cabinet:open-conversation", {
-                detail: {
-                  conversationId: toast.id,
-                  agentSlug: toast.agentSlug,
-                  cabinetPath: toast.cabinetPath,
-                },
-              })
-            );
+            const scopedPath = toast.cabinetPath || ROOT_CABINET_PATH;
+            setSection({
+              type: "task",
+              taskId: toast.id,
+              cabinetPath: scopedPath,
+            });
             dismiss(toast._key);
           }}
           className={cn(

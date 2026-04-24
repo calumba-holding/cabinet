@@ -380,10 +380,9 @@ export function HomeScreen() {
         ...taskRuntime,
       });
       setSection({
-        type: "agent",
-        slug: targetAgent,
+        type: "task",
+        taskId: data.conversation?.id,
         cabinetPath: ROOT_CABINET_PATH,
-        conversationId: data.conversation?.id,
       });
     },
   });
@@ -488,10 +487,9 @@ export function HomeScreen() {
         onStarted={(conversationId) => {
           composer.reset();
           setSection({
-            type: "agent",
-            slug: "editor",
+            type: "task",
+            taskId: conversationId,
             cabinetPath: ROOT_CABINET_PATH,
-            conversationId,
           });
         }}
       />
