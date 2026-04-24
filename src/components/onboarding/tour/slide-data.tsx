@@ -469,8 +469,8 @@ export function SlideData({ sceneIdx }: SlideDataProps) {
                 className="flex items-center gap-2 rounded-md px-1.5 py-1.5 text-[12px] opacity-0"
                 style={{
                   color: P.text,
-                  animation: "cabinet-tour-fade-up 0.35s ease-out forwards",
-                  animationDelay: "1500ms",
+                  animation: "cabinet-tour-fade-up 0.25s ease-out forwards",
+                  animationDelay: "600ms",
                 }}
               >
                 {(() => {
@@ -501,8 +501,8 @@ export function SlideData({ sceneIdx }: SlideDataProps) {
                       boxShadow: featured
                         ? `inset 0 0 0 1px ${P.borderDark}`
                         : "none",
-                      animation: "cabinet-tour-fade-up 0.35s ease-out forwards",
-                      animationDelay: `${1600 + i * 70}ms`,
+                      animation: "cabinet-tour-fade-up 0.25s ease-out forwards",
+                      animationDelay: `${650 + i * 40}ms`,
                     }}
                   >
                     <Icon
@@ -535,8 +535,8 @@ export function SlideData({ sceneIdx }: SlideDataProps) {
                   width: "44px",
                   height: "44px",
                   background: P.accent,
-                  animation: "cabinet-tour-click-ripple 0.7s ease-out forwards",
-                  animationDelay: "2500ms",
+                  animation: "cabinet-tour-click-ripple 0.6s ease-out forwards",
+                  animationDelay: "1100ms",
                 }}
               />
             </div>
@@ -550,8 +550,8 @@ export function SlideData({ sceneIdx }: SlideDataProps) {
             className="font-body-serif text-[13px] leading-snug text-center opacity-0"
             style={{
               color: P.textSecondary,
-              animation: "cabinet-tour-fade-up 0.4s ease-out forwards",
-              animationDelay: "1550ms",
+              animation: "cabinet-tour-fade-up 0.25s ease-out forwards",
+              animationDelay: "620ms",
               minHeight: "2.4em",
             }}
           >
@@ -566,8 +566,8 @@ export function SlideData({ sceneIdx }: SlideDataProps) {
           key={scene.id + "-viewer"}
           className="h-full w-full opacity-0"
           style={{
-            animation: "cabinet-tour-fade-up 0.5s ease-out forwards",
-            animationDelay: "2700ms",
+            animation: "cabinet-tour-fade-up 0.35s ease-out forwards",
+            animationDelay: "1200ms",
           }}
         >
           {scene.viewer}
@@ -582,8 +582,8 @@ export function SlideData({ sceneIdx }: SlideDataProps) {
             color: P.accent,
             background: P.accentBg,
             border: `1px solid ${P.borderDark}`,
-            animation: "cabinet-tour-fade-up 0.4s ease-out forwards",
-            animationDelay: "50ms",
+            animation: "cabinet-tour-fade-up 0.3s ease-out forwards",
+            animationDelay: "0ms",
           }}
         >
           01 &middot; DATA
@@ -592,8 +592,8 @@ export function SlideData({ sceneIdx }: SlideDataProps) {
           className="font-logo text-4xl italic tracking-tight opacity-0 lg:text-5xl"
           style={{
             color: P.text,
-            animation: "cabinet-tour-fade-up 0.5s ease-out forwards",
-            animationDelay: "250ms",
+            animation: "cabinet-tour-fade-up 0.35s ease-out forwards",
+            animationDelay: "100ms",
           }}
         >
           Your <span style={{ color: P.accent }}>single source</span> of truth.
@@ -602,8 +602,8 @@ export function SlideData({ sceneIdx }: SlideDataProps) {
           className="font-body-serif text-base leading-relaxed opacity-0 lg:text-lg"
           style={{
             color: P.textSecondary,
-            animation: "cabinet-tour-fade-up 0.5s ease-out forwards",
-            animationDelay: "600ms",
+            animation: "cabinet-tour-fade-up 0.35s ease-out forwards",
+            animationDelay: "250ms",
           }}
         >
           Markdown, PDFs, spreadsheets, slides, images, video, audio, linked
@@ -614,8 +614,8 @@ export function SlideData({ sceneIdx }: SlideDataProps) {
           className="font-body-serif text-sm leading-relaxed opacity-0 lg:text-base"
           style={{
             color: P.textSecondary,
-            animation: "cabinet-tour-fade-up 0.5s ease-out forwards",
-            animationDelay: "950ms",
+            animation: "cabinet-tour-fade-up 0.35s ease-out forwards",
+            animationDelay: "400ms",
           }}
         >
           One place for everything — so you and your AI team read, edit, and
