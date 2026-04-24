@@ -38,7 +38,7 @@ export function HeaderActions() {
       <Button
         variant="ghost"
         size="icon"
-        className={cn("h-8 w-8", terminalOpen && "text-primary")}
+        className={cn("h-7 w-7", terminalOpen && "text-primary")}
         onClick={toggleTerminal}
       >
         <Terminal className="h-4 w-4" />
@@ -48,7 +48,7 @@ export function HeaderActions() {
       <Button
         variant="ghost"
         size="icon"
-        className={cn("h-8 w-8", isOpen && "text-primary")}
+        className={cn("h-7 w-7", isOpen && "text-primary")}
         onClick={toggle}
       >
         <Sparkles className="h-4 w-4" />

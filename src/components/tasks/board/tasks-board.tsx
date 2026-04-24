@@ -619,7 +619,7 @@ function NewWorkButton({
   onCreate: (mode: StartWorkMode) => void;
 }) {
   return (
-    <div className="inline-flex items-stretch overflow-hidden rounded-md shadow-sm ring-1 ring-primary/20">
+    <div className="inline-flex h-7 items-stretch overflow-hidden rounded-md shadow-sm ring-1 ring-primary/20">
       <button
         type="button"
         onClick={() => onCreate("now")}

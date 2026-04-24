@@ -76,7 +76,7 @@ export function VersionHistory() {
       <Button
         variant="ghost"
         size="icon"
-        className="h-8 w-8"
+        className="h-7 w-7"
         onClick={() => setOpen(!open)}
         title="Version History"
       >

@@ -218,7 +218,7 @@ export function ThemePicker() {
         ref={buttonRef}
         variant="ghost"
         size="icon"
-        className="h-8 w-8"
+        className="h-7 w-7"
         onClick={handleClick}
       >
         {activeCustomTheme ? (

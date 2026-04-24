@@ -19,7 +19,7 @@ export function ViewToggle({
   onChange: (v: BoardViewMode) => void;
 }) {
   return (
-    <div className="flex items-center rounded-lg border border-border/60 p-0.5">
+    <div className="flex h-7 items-center rounded-lg border border-border/60 p-0.5">
       {OPTIONS.map((opt) => {
         const Icon = opt.icon;
         const active = value === opt.key;
