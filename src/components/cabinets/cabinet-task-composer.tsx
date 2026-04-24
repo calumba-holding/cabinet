@@ -160,8 +160,8 @@ export function CabinetTaskComposer({
         maxHeight="220px"
         className="w-full"
         mentionDropdownPlacement="below"
-        actionsStart={
-          <>
+        header={
+          <div className="flex items-center justify-end px-3 pt-3">
             <WhenChip
               mode="now"
               onChange={(next) => {
@@ -170,6 +170,10 @@ export function CabinetTaskComposer({
                 setHandoffOpen(true);
               }}
             />
+          </div>
+        }
+        actionsStart={
+          <>
             <AgentPickerCompact
               agents={assignableAgents}
               selected={selectedAgent}

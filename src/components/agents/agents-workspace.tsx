@@ -43,7 +43,7 @@ import {
   type NewRoutineDialogAgent,
 } from "@/components/agents/new-routine-dialog";
 import { HeartbeatDialog } from "@/components/agents/heartbeat-dialog";
-import { ScheduleView } from "@/components/tasks/board-v2/schedule-view";
+import { ScheduleView } from "@/components/tasks/board/schedule-view";
 import {
   DropdownMenu,
   DropdownMenuContent,
@@ -81,6 +81,11 @@ import {
   TaskRuntimePicker,
   type TaskRuntimeSelection,
 } from "@/components/composer/task-runtime-picker";
+import {
+  StartWorkDialog,
+  WhenChip,
+  type StartWorkMode,
+} from "@/components/composer/start-work-dialog";
 import { useComposer, type MentionableItem } from "@/hooks/use-composer";
 import {
   formatAdapterOptionLabel,
@@ -456,6 +461,9 @@ export function AgentsWorkspace({
   const [hoveredConvKey, setHoveredConvKey] = useState<string | null>(null);
   const [quickSendAgent, setQuickSendAgent] = useState<string | null>(null);
   const [taskRuntime, setTaskRuntime] = useState<TaskRuntimeSelection>({});
+  const [handoffOpen, setHandoffOpen] = useState(false);
+  const [handoffMode, setHandoffMode] = useState<StartWorkMode>("recurring");
+  const [handoffAgentSlug, setHandoffAgentSlug] = useState<string | null>(null);
   const hoverTimerRef = useRef<ReturnType<typeof setTimeout> | null>(null);
   const [runningJobId, setRunningJobId] = useState<string | null>(null);
   const [agentJobsMap, setAgentJobsMap] = useState<Record<string, JobConfig[]>>({});
@@ -2164,6 +2172,19 @@ export function AgentsWorkspace({
         variant="card"
         items={mentionItems}
         autoFocus
+        header={
+          <div className="flex items-center justify-end px-3 pt-3">
+            <WhenChip
+              mode="now"
+              onChange={(next) => {
+                if (next === "now") return;
+                setHandoffAgentSlug(agentSlug);
+                setHandoffMode(next);
+                setHandoffOpen(true);
+              }}
+            />
+          </div>
+        }
         actionsStart={
           <TaskRuntimePicker
             value={taskRuntime}
@@ -3985,6 +4006,15 @@ export function AgentsWorkspace({
                         {targetAgent?.role || "Agent"}
                       </p>
                     </div>
+                    <WhenChip
+                      mode="now"
+                      onChange={(next) => {
+                        if (next === "now") return;
+                        setHandoffAgentSlug(quickSendAgent);
+                        setHandoffMode(next);
+                        setHandoffOpen(true);
+                      }}
+                    />
                     <button
                       type="button"
                       onClick={closeQuickSend}
@@ -3999,6 +4029,28 @@ export function AgentsWorkspace({
           </div>
         );
       })() : null}
+
+      <StartWorkDialog
+        open={handoffOpen}
+        onOpenChange={setHandoffOpen}
+        cabinetPath={effectiveCabinetPath}
+        agents={cabinetAgentsView}
+        initialMode={handoffMode}
+        initialPrompt={composer.input}
+        initialAgentSlug={handoffAgentSlug ?? undefined}
+        onStarted={(conversationId, conversationCabinetPath) => {
+          composer.reset();
+          setQuickSendAgent(null);
+          const slug = handoffAgentSlug;
+          if (slug) {
+            setActiveAgentSlug(slug);
+            setSection(buildAgentSection(slug, conversationCabinetPath || effectiveCabinetPath));
+            setSelectedConversationId(conversationId);
+            setSelectedConversationCabinetPath(conversationCabinetPath || effectiveCabinetPath);
+          }
+          setHandoffAgentSlug(null);
+        }}
+      />
     </div>
   );
 }

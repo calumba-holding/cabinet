@@ -382,8 +382,8 @@ export function HomeScreen() {
           className="w-full"
           minHeight="44px"
           maxHeight="160px"
-          actionsStart={
-            <>
+          header={
+            <div className="flex items-center justify-end px-3 pt-3">
               <WhenChip
                 mode="now"
                 onChange={(next) => {
@@ -392,11 +392,13 @@ export function HomeScreen() {
                   setHandoffOpen(true);
                 }}
               />
-              <TaskRuntimePicker
-                value={taskRuntime}
-                onChange={setTaskRuntime}
-              />
-            </>
+            </div>
+          }
+          actionsStart={
+            <TaskRuntimePicker
+              value={taskRuntime}
+              onChange={setTaskRuntime}
+            />
           }
         />
 

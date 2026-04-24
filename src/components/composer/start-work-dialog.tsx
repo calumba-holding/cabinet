@@ -353,7 +353,10 @@ export function StartWorkDialog({
         )}
       >
         <DialogHeader className="px-5 pb-3 pt-5">
-          <DialogTitle className="text-xl font-semibold">{title}</DialogTitle>
+          <div className="flex items-start justify-between gap-3">
+            <DialogTitle className="text-xl font-semibold">{title}</DialogTitle>
+            <WhenChip mode={mode} onChange={handleModeChange} />
+          </div>
         </DialogHeader>
 
         {mode !== "heartbeat" ? (
@@ -370,7 +373,6 @@ export function StartWorkDialog({
             disabled={mode === "recurring" && !canSubmitRecurring}
             actionsStart={
               <>
-                <WhenChip mode={mode} onChange={handleModeChange} />
                 <TaskRuntimePicker value={taskRuntime} onChange={setTaskRuntime} />
                 {agents.length > 0 ? (
                   <AgentDropdown
@@ -414,7 +416,6 @@ export function StartWorkDialog({
             agent={selectedAgent}
             agents={agents}
             onSelectAgent={setSelectedAgentSlug}
-            whenChip={<WhenChip mode={mode} onChange={handleModeChange} />}
             draft={heartbeatDraft}
             onChange={setHeartbeatDraft}
             submitting={submitting}
@@ -574,7 +575,6 @@ function HeartbeatModePanel({
   agent,
   agents,
   onSelectAgent,
-  whenChip,
   draft,
   onChange,
   submitting,
@@ -586,7 +586,6 @@ function HeartbeatModePanel({
   agent: CabinetAgentSummary | null;
   agents: CabinetAgentSummary[];
   onSelectAgent: (slug: string) => void;
-  whenChip: React.ReactNode;
   draft: HeartbeatDraft;
   onChange: (next: HeartbeatDraft) => void;
   submitting: boolean;
@@ -597,16 +596,15 @@ function HeartbeatModePanel({
 }) {
   return (
     <div className="px-5 pb-5">
-      <div className="mb-4 flex flex-wrap items-center gap-2">
-        {whenChip}
-        {agents.length > 0 ? (
+      {agents.length > 0 ? (
+        <div className="mb-4 flex flex-wrap items-center gap-2">
           <AgentDropdown
             agents={agents}
             selectedAgent={agent}
             onSelect={onSelectAgent}
           />
-        ) : null}
-      </div>
+        </div>
+      ) : null}
       <HeartbeatFields
         draft={draft}
         onChange={onChange}
