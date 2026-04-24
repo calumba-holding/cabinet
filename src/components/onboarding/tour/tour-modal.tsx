@@ -1,10 +1,10 @@
 "use client";
 
-import { useCallback, useEffect, useState } from "react";
+import { useCallback, useEffect, useState, type ReactNode } from "react";
 import { flushSync } from "react-dom";
 import { ArrowLeft, ArrowRight, X, Sparkles } from "lucide-react";
 import { SlideIntro } from "./slide-intro";
-import { SlideData } from "./slide-data";
+import { SlideData, DATA_SCENE_COUNT } from "./slide-data";
 import { SlideAgents } from "./slide-agents";
 import { SlideTasks } from "./slide-tasks";
 import { TOUR_PALETTE as P } from "./palette";
@@ -18,12 +18,23 @@ interface TourModalProps {
 const STARTER_TASK =
   "Run 10 tasks, each writing a new song, save to @Songs/";
 
-const SLIDES = [
-  { id: "intro", render: () => <SlideIntro /> },
-  { id: "data", render: () => <SlideData /> },
-  { id: "agents", render: () => <SlideAgents /> },
-  { id: "tasks", render: () => <SlideTasks /> },
-] as const;
+// Each data scene is its own back/next step. `stageKey` is stable across
+// all data slides so `SlideData` stays mounted while stepping through
+// them — that keeps the copy column from re-animating on every click.
+// Non-data slides use their id as the stageKey so they remount and
+// replay their intro animations when re-visited.
+type Slide = { id: string; stageKey: string; render: () => ReactNode };
+
+const SLIDES: Slide[] = [
+  { id: "intro", stageKey: "intro", render: () => <SlideIntro /> },
+  ...Array.from({ length: DATA_SCENE_COUNT }, (_, i) => ({
+    id: `data-${i}`,
+    stageKey: "data",
+    render: () => <SlideData sceneIdx={i} />,
+  })),
+  { id: "agents", stageKey: "agents", render: () => <SlideAgents /> },
+  { id: "tasks", stageKey: "tasks", render: () => <SlideTasks /> },
+];
 
 type DocWithViewTransitions = Document & {
   startViewTransition?: (cb: () => void) => { finished: Promise<void> };
@@ -139,7 +150,7 @@ function TourBody({
       {/* Slide stage */}
       <div className="relative flex h-full w-full max-w-6xl flex-col px-10 py-16 lg:px-14">
         <div
-          key={current.id}
+          key={current.stageKey}
           className="cabinet-tour-animated flex-1"
         >
           {current.render()}

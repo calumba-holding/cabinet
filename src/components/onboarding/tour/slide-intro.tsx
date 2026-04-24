@@ -1,26 +1,44 @@
 "use client";
 
 import { useEffect, useState } from "react";
+import { Archive } from "lucide-react";
 import { MockupSidebar } from "./mockup-sidebar";
 import { TOUR_PALETTE as P } from "./palette";
 
-// Orchestrated timing for the intro sequence. Copy lands first, then the
-// Cabinet shell pops in narrow, expands horizontally, reveals its title,
-// and finally the three drawer tabs populate one by one.
+// Orchestrated timing for the intro sequence:
+//   1. Copy lands (H1 + subhead).
+//   2. The yellow Archive glyph pops oversized, then shrinks.
+//   3. The Cabinet shell (Container 1 header + Container 2 drawer rail)
+//      materializes at a narrow, near-square width.
+//   4. Shell rests for ~0.5s.
+//   5. Shell widens horizontally; title and tab buttons populate.
 const COPY_H1_DELAY = 80;
 const COPY_SUB_DELAY = 240;
-const SHELL_APPEAR_DELAY = 520; // when the cabinet shell fades in narrow
-const EXPAND_TRIGGER_DELAY = 820; // when width starts animating out
-const EXPAND_DURATION = 680; // width morph duration
-const TITLE_REVEAL_DELAY = EXPAND_TRIGGER_DELAY + EXPAND_DURATION; // ~1500ms
-const TABS_START_DELAY = TITLE_REVEAL_DELAY + 120; // tabs follow title
 
-const NARROW_WIDTH = 92;
+// Standalone big Archive icon — pops bigger, then shrinks before the shell
+// fades in. Duration covers the full pop→hold→shrink→fade arc.
+const ICON_INTRO_DELAY = 520;
+const ICON_INTRO_DURATION = 1100;
+
+// Cabinet shell (2 containers) fades in at narrow/square size after the
+// icon settles, with a slight overlap so the hand-off reads as one motion.
+const SHELL_APPEAR_DELAY = 1520;
+const SHELL_FADE_DURATION = 400;
+
+// Mandatory rest at narrow size before the shell starts widening.
+const REST_DURATION = 500;
+
+// Width morph + title reveal + tab buttons.
+const EXPAND_TRIGGER_DELAY =
+  SHELL_APPEAR_DELAY + SHELL_FADE_DURATION + REST_DURATION; // 2420
+const EXPAND_DURATION = 680;
+const TITLE_REVEAL_DELAY = EXPAND_TRIGGER_DELAY + EXPAND_DURATION; // 3100
+const TABS_START_DELAY = TITLE_REVEAL_DELAY + 120; // 3220
+
+const NARROW_WIDTH = 160;
 const FULL_WIDTH = 300;
 
 export function SlideIntro() {
-  // Flip from narrow → full width after the shell has popped in, so the
-  // CSS transition has both values to animate between.
   const [expanded, setExpanded] = useState(false);
   useEffect(() => {
     const t = window.setTimeout(() => setExpanded(true), EXPAND_TRIGGER_DELAY);
@@ -52,27 +70,51 @@ export function SlideIntro() {
         </p>
       </div>
 
-      {/* Width-morph wrapper. Starts narrow so the bottom drawer rail
-          reads as a near-square, then eases out to the tour width. */}
+      {/* Staging area — fixed to the eventual full width so the shell can
+          expand from centered-narrow to centered-wide without shifting
+          the overlaid icon. */}
       <div
-        className="opacity-0"
-        style={{
-          width: expanded ? FULL_WIDTH : NARROW_WIDTH,
-          transition: `width ${EXPAND_DURATION}ms cubic-bezier(0.22, 1, 0.36, 1)`,
-          animation: "cabinet-tour-pop-in 0.5s ease-out forwards",
-          animationDelay: `${SHELL_APPEAR_DELAY}ms`,
-        }}
+        className="relative flex items-center justify-center"
+        style={{ width: FULL_WIDTH, minHeight: NARROW_WIDTH }}
       >
-        <MockupSidebar
-          activeTab={null}
-          title="Cabinet"
-          titleDelay={TITLE_REVEAL_DELAY}
-          headerBadge=""
-          hideBody
-          tabsPopIn
-          tabsPopInDelay={TABS_START_DELAY}
-          viewTransitionName="cabinet-card"
-        />
+        {/* Big Archive glyph: pops larger, then shrinks + fades as the
+            shell takes over. */}
+        <div
+          aria-hidden="true"
+          className="pointer-events-none absolute inset-0 z-10 flex items-center justify-center opacity-0"
+          style={{
+            animation: `cabinet-tour-icon-intro ${ICON_INTRO_DURATION}ms cubic-bezier(0.22, 1, 0.36, 1) forwards`,
+            animationDelay: `${ICON_INTRO_DELAY}ms`,
+          }}
+        >
+          <Archive
+            className="h-14 w-14"
+            style={{ color: P.iconAmber }}
+            strokeWidth={1.8}
+          />
+        </div>
+
+        {/* Cabinet shell — fades in narrow, rests, then widens. */}
+        <div
+          className="opacity-0"
+          style={{
+            width: expanded ? FULL_WIDTH : NARROW_WIDTH,
+            transition: `width ${EXPAND_DURATION}ms cubic-bezier(0.22, 1, 0.36, 1)`,
+            animation: `cabinet-tour-fade-in ${SHELL_FADE_DURATION}ms ease-out forwards`,
+            animationDelay: `${SHELL_APPEAR_DELAY}ms`,
+          }}
+        >
+          <MockupSidebar
+            activeTab={null}
+            title="Cabinet"
+            titleDelay={TITLE_REVEAL_DELAY}
+            headerBadge=""
+            hideBody
+            tabsPopIn
+            tabsPopInDelay={TABS_START_DELAY}
+            viewTransitionName="cabinet-card"
+          />
+        </div>
       </div>
     </div>
   );

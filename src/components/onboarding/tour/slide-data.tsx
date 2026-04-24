@@ -1,6 +1,6 @@
 "use client";
 
-import { useEffect, useState } from "react";
+import { type CSSProperties, type ReactNode } from "react";
 import {
   FileText,
   FileType,
@@ -15,15 +15,16 @@ import {
   GitBranch,
   Folder,
   ChevronDown,
+  Check,
+  Maximize2,
+  Play,
+  TrendingUp,
 } from "lucide-react";
 import { MockupSidebar } from "./mockup-sidebar";
 import { TOUR_PALETTE as P } from "./palette";
 
 type IconComponent = typeof FileText;
 
-// Vivid icon palette — mirrors the colors called out in the Getting
-// Started page's "Supported File Types" table so the tour reads as a
-// preview of the real sidebar's file-type chrome.
 const ICON = {
   gray: "#6B7280",
   green: "#22C55E",
@@ -49,14 +50,298 @@ interface Scene {
   rootColor: string;
   rootLabel: string;
   rows: TreeRow[];
+  featuredIdx: number;
   caption: string;
+  viewer: ReactNode;
 }
 
-// Auto-rotating showcase: five distinct knowledge-base scenes that
-// demonstrate the breadth of file types Cabinet can render inline.
+// ── Scene viewers ──────────────────────────────────────────────
+
+function ViewerFrame({
+  title,
+  icon: Icon,
+  iconColor,
+  badge,
+  children,
+}: {
+  title: string;
+  icon: IconComponent;
+  iconColor: string;
+  badge?: string;
+  children: ReactNode;
+}) {
+  return (
+    <div
+      className="flex h-full w-full flex-col overflow-hidden rounded-xl"
+      style={{
+        background: P.bgCard,
+        boxShadow: `inset 0 0 0 1px ${P.border}, 0 30px 60px -25px rgba(59,47,47,0.28)`,
+      }}
+    >
+      <div
+        className="flex items-center gap-2 px-3 py-2"
+        style={{ borderBottom: `1px solid ${P.borderLight}` }}
+      >
+        <Icon className="h-3.5 w-3.5 shrink-0" style={{ color: iconColor }} />
+        <span className="flex-1 truncate text-[11px] font-medium" style={{ color: P.text }}>
+          {title}
+        </span>
+        {badge && (
+          <span
+            className="rounded-full px-1.5 py-0.5 text-[8px] font-semibold uppercase tracking-[0.08em]"
+            style={{ background: P.accentBg, color: P.accent }}
+          >
+            {badge}
+          </span>
+        )}
+        <Maximize2 className="h-3 w-3 shrink-0" style={{ color: P.textTertiary }} />
+      </div>
+      <div className="relative flex-1 overflow-hidden">{children}</div>
+    </div>
+  );
+}
+
+function VideoViewer() {
+  return (
+    <ViewerFrame title="Night market.mp4" icon={Video} iconColor={ICON.cyan}>
+      <div
+        className="relative flex h-full w-full items-center justify-center"
+        style={{
+          background:
+            "linear-gradient(135deg, #2a1a3d 0%, #4a2850 35%, #e64c2a 70%, #f8b04c 100%)",
+        }}
+      >
+        <svg
+          className="absolute inset-x-0 bottom-0"
+          viewBox="0 0 340 120"
+          preserveAspectRatio="none"
+          style={{ height: "60%" }}
+        >
+          <g fill="rgba(0,0,0,0.55)">
+            <rect x="20" y="40" width="60" height="80" />
+            <rect x="90" y="30" width="50" height="90" />
+            <rect x="150" y="50" width="70" height="70" />
+            <rect x="230" y="35" width="55" height="85" />
+            <rect x="295" y="45" width="45" height="75" />
+          </g>
+          <g fill="#FFD166">
+            <circle cx="50" cy="30" r="4" />
+            <circle cx="115" cy="20" r="4" />
+            <circle cx="185" cy="40" r="4" />
+            <circle cx="260" cy="25" r="4" />
+          </g>
+        </svg>
+        <div
+          className="relative z-10 flex h-12 w-12 items-center justify-center rounded-full backdrop-blur"
+          style={{ background: "rgba(255,255,255,0.92)", boxShadow: "0 10px 30px rgba(0,0,0,0.4)" }}
+        >
+          <Play
+            className="h-5 w-5 translate-x-0.5"
+            style={{ color: P.text }}
+            strokeWidth={2.5}
+            fill="currentColor"
+          />
+        </div>
+        <div
+          className="absolute bottom-2 left-3 right-3 flex items-center gap-2"
+          style={{ color: "rgba(255,255,255,0.85)" }}
+        >
+          <span className="text-[9px] font-mono">0:18</span>
+          <div
+            className="relative flex-1 rounded-full"
+            style={{ height: "2px", background: "rgba(255,255,255,0.25)" }}
+          >
+            <div
+              className="absolute left-0 top-0 h-full rounded-full"
+              style={{ width: "28%", background: ICON.cyan }}
+            />
+          </div>
+          <span className="text-[9px] font-mono">1:04</span>
+        </div>
+      </div>
+    </ViewerFrame>
+  );
+}
+
+function CalculatorAppViewer() {
+  return (
+    <ViewerFrame title="Calculator" icon={AppWindow} iconColor={ICON.green} badge="Live app">
+      <div className="flex h-full flex-col gap-2.5 p-3.5">
+        <div className="flex flex-col gap-1.5">
+          <span className="text-[8px] font-semibold uppercase tracking-[0.1em]" style={{ color: P.textTertiary }}>
+            2026 tax estimate
+          </span>
+        </div>
+        {[
+          { label: "Income", value: "$85,000" },
+          { label: "Deductions", value: "$12,000" },
+          { label: "Tax bracket", value: "22%" },
+        ].map((row) => (
+          <div
+            key={row.label}
+            className="flex items-center justify-between rounded-md px-2.5 py-1.5 text-[11px]"
+            style={{ background: P.paperWarm, border: `1px solid ${P.borderLight}`, color: P.text }}
+          >
+            <span style={{ color: P.textSecondary }}>{row.label}</span>
+            <span className="font-mono font-semibold">{row.value}</span>
+          </div>
+        ))}
+        <div
+          className="mt-1 flex items-center justify-between rounded-md px-2.5 py-2 text-[11px]"
+          style={{
+            background: `linear-gradient(135deg, ${P.accent}, ${P.accentWarm})`,
+            color: P.paper,
+          }}
+        >
+          <span className="font-medium">Estimated tax</span>
+          <span className="font-mono text-[13px] font-bold">$15,970</span>
+        </div>
+        <div className="mt-auto flex items-end gap-1.5 pt-3" style={{ borderTop: `1px solid ${P.borderLight}` }}>
+          {[60, 42, 78, 55, 90, 68, 82].map((h, i) => (
+            <div
+              key={i}
+              className="flex-1 rounded-t"
+              style={{ height: `${h * 0.5}px`, background: i === 4 ? P.accent : P.accentBg }}
+            />
+          ))}
+        </div>
+      </div>
+    </ViewerFrame>
+  );
+}
+
+function CsvTableViewer() {
+  const vitamins = [
+    { name: "Vitamin D", dose: "2000 IU", time: "8 am", done: true },
+    { name: "Iron", dose: "25 mg", time: "12 pm", done: true },
+    { name: "Magnesium", dose: "400 mg", time: "8 pm", done: false },
+    { name: "Vitamin C", dose: "1 g", time: "10 am", done: true },
+    { name: "Omega-3", dose: "1 g", time: "8 pm", done: true },
+    { name: "B-Complex", dose: "1 cap", time: "8 am", done: true },
+  ];
+  return (
+    <ViewerFrame title="Daily vitamins.csv" icon={Table} iconColor={ICON.green}>
+      <div className="flex h-full flex-col">
+        <div
+          className="grid grid-cols-[1.3fr_0.9fr_0.8fr_0.3fr] gap-2 px-3 py-1.5 text-[9px] font-semibold uppercase tracking-[0.08em]"
+          style={{ color: P.textTertiary, borderBottom: `1px solid ${P.borderLight}`, background: P.paperWarm }}
+        >
+          <span>Vitamin</span>
+          <span>Dose</span>
+          <span>Time</span>
+          <span className="text-right">Done</span>
+        </div>
+        <div className="flex-1 overflow-hidden">
+          {vitamins.map((v, i) => (
+            <div
+              key={v.name}
+              className="grid grid-cols-[1.3fr_0.9fr_0.8fr_0.3fr] gap-2 px-3 py-1.5 text-[11px] items-center"
+              style={{
+                color: P.text,
+                borderBottom: `1px solid ${P.borderLight}`,
+                background: i % 2 === 0 ? P.bgCard : "rgba(243,237,228,0.4)",
+              }}
+            >
+              <span className="truncate font-medium">{v.name}</span>
+              <span className="font-mono" style={{ color: P.textSecondary }}>{v.dose}</span>
+              <span className="font-mono" style={{ color: P.textSecondary }}>{v.time}</span>
+              <span className="flex justify-end">
+                {v.done ? (
+                  <span className="flex h-3.5 w-3.5 items-center justify-center rounded-full" style={{ background: ICON.green }}>
+                    <Check className="h-2.5 w-2.5 text-white" strokeWidth={3} />
+                  </span>
+                ) : (
+                  <span className="h-3.5 w-3.5 rounded-full" style={{ border: `1px solid ${P.borderDark}` }} />
+                )}
+              </span>
+            </div>
+          ))}
+        </div>
+      </div>
+    </ViewerFrame>
+  );
+}
+
+function PresentationViewer() {
+  return (
+    <ViewerFrame title="Board deck.pptx" icon={Presentation} iconColor={ICON.orange} badge="Slide 3 / 12">
+      <div className="flex h-full flex-col p-3">
+        <div
+          className="relative flex flex-1 flex-col gap-2 rounded-md p-3.5"
+          style={{ background: P.bgCard, boxShadow: `inset 0 0 0 1px ${P.borderLight}` }}
+        >
+          <span className="text-[8px] font-semibold uppercase tracking-[0.12em]" style={{ color: ICON.orange }}>
+            Q2 2026
+          </span>
+          <h3 className="font-logo text-xl italic tracking-tight" style={{ color: P.text, lineHeight: 1.15 }}>
+            Results &amp; outlook
+          </h3>
+          <ul className="mt-1 flex flex-col gap-1.5 text-[11px]">
+            {[
+              { label: "Revenue", value: "+34%", color: ICON.green },
+              { label: "ARR", value: "$2.4 M", color: ICON.blue },
+              { label: "NRR", value: "124%", color: ICON.green },
+              { label: "Burn", value: "-18%", color: ICON.red },
+            ].map((m) => (
+              <li key={m.label} className="flex items-center justify-between rounded px-2 py-1" style={{ background: P.paperWarm }}>
+                <span style={{ color: P.textSecondary }}>{m.label}</span>
+                <span className="font-mono font-semibold" style={{ color: m.color }}>{m.value}</span>
+              </li>
+            ))}
+          </ul>
+        </div>
+        <div className="flex items-center justify-center gap-1 pt-2">
+          {Array.from({ length: 12 }).map((_, i) => (
+            <span
+              key={i}
+              className="h-1 rounded-full"
+              style={{ width: i === 2 ? 14 : 4, background: i === 2 ? ICON.orange : P.borderDark }}
+            />
+          ))}
+        </div>
+      </div>
+    </ViewerFrame>
+  );
+}
+
+function CodeViewer() {
+  const lines = [
+    { n: 1, html: <><span style={{ color: "#B47ED8" }}>export type</span> <span style={{ color: "#D9A55E" }}>Page</span> = {"{"}</> },
+    { n: 2, html: <>  path: <span style={{ color: "#7BAEDB" }}>string</span>;</> },
+    { n: 3, html: <>  title: <span style={{ color: "#7BAEDB" }}>string</span>;</> },
+    { n: 4, html: <>  tags: <span style={{ color: "#7BAEDB" }}>string</span>[];</> },
+    { n: 5, html: <>  modified: <span style={{ color: "#7BAEDB" }}>Date</span>;</> },
+    { n: 6, html: <>{"}"};</> },
+    { n: 7, html: <>&nbsp;</> },
+    { n: 8, html: <><span style={{ color: "#B47ED8" }}>export type</span> <span style={{ color: "#D9A55E" }}>Agent</span> = {"{"}</> },
+    { n: 9, html: <>  slug: <span style={{ color: "#7BAEDB" }}>string</span>;</> },
+    { n: 10, html: <>  persona: <span style={{ color: "#7BAEDB" }}>string</span>;</> },
+    { n: 11, html: <>  heartbeatMs?: <span style={{ color: "#7BAEDB" }}>number</span>;</> },
+    { n: 12, html: <>{"}"};</> },
+  ];
+  return (
+    <ViewerFrame title="schema.ts" icon={Code} iconColor={ICON.violet} badge="TS">
+      <div
+        className="h-full overflow-hidden py-2 font-mono text-[11px] leading-relaxed"
+        style={{ color: P.text, background: "#FBF7F0" }}
+      >
+        {lines.map((ln) => (
+          <div key={ln.n} className="flex gap-3 px-3">
+            <span className="shrink-0 text-right tabular-nums" style={{ color: P.textTertiary, width: "1.5em" }}>
+              {ln.n}
+            </span>
+            <span className="whitespace-pre">{ln.html}</span>
+          </div>
+        ))}
+      </div>
+    </ViewerFrame>
+  );
+}
+
+// ── Scenes ────────────────────────────────────────────────────
 const SCENES: Scene[] = [
   {
-    id: "thailand",
+    id: "thailand-video",
     rootIcon: ChevronDown as IconComponent,
     rootColor: P.textTertiary,
     rootLabel: "Thailand Trip",
@@ -69,7 +354,9 @@ const SCENES: Scene[] = [
       { label: "Street food notes.mp3", icon: Music, color: ICON.amber, indent: 1 },
       { label: "Flights.pdf", icon: FileType, color: ICON.red, indent: 1 },
     ],
-    caption: "Photos, video, sheets, audio, notes — one folder, one source of truth.",
+    featuredIdx: 3,
+    caption: "Videos too — shot in the market, stored right next to the plans.",
+    viewer: <VideoViewer />,
   },
   {
     id: "tax-webapp",
@@ -84,7 +371,9 @@ const SCENES: Scene[] = [
       { label: "W-2 2026.pdf", icon: FileType, color: ICON.red, indent: 1 },
       { label: "CPA notes.docx", icon: FileText, color: ICON.blue, indent: 1 },
     ],
+    featuredIdx: 0,
     caption: "Tax 2026 — a live calculator web app, embedded right in your cabinet.",
+    viewer: <CalculatorAppViewer />,
   },
   {
     id: "health",
@@ -98,7 +387,9 @@ const SCENES: Scene[] = [
       { label: "Lab results.pdf", icon: FileType, color: ICON.red, indent: 1 },
       { label: "Progress chart.png", icon: ImageIcon, color: ICON.pink, indent: 1 },
     ],
+    featuredIdx: 0,
     caption: "Vitamins & labs — a spreadsheet that feels like a page.",
+    viewer: <CsvTableViewer />,
   },
   {
     id: "work",
@@ -113,7 +404,9 @@ const SCENES: Scene[] = [
       { label: "Policy.docx", icon: FileText, color: ICON.blue, indent: 1 },
       { label: "All-hands notes.md", icon: FileText, color: ICON.gray, indent: 1 },
     ],
+    featuredIdx: 2,
     caption: "Work docs — PDFs, slides, sheets, all rendered inline.",
+    viewer: <PresentationViewer />,
   },
   {
     id: "repo",
@@ -127,53 +420,57 @@ const SCENES: Scene[] = [
       { label: "schema.ts", icon: Code, color: ICON.violet, indent: 1 },
       { label: ".repo.yaml", icon: GitBranch, color: ICON.orange, indent: 1 },
     ],
+    featuredIdx: 3,
     caption: "Codebases — link any Git repo, searchable by your agents.",
+    viewer: <CodeViewer />,
   },
 ];
 
-const SCENE_DURATION_MS = 3800;
+export const DATA_SCENE_COUNT = SCENES.length;
 
-export function SlideData() {
-  const [sceneIdx, setSceneIdx] = useState(0);
-  const scene = SCENES[sceneIdx];
+const SIDEBAR_ROW_HEIGHT = 28;
+const SIDEBAR_ROW_TOP_OFFSET = 50;
+const CURSOR_TARGET_X = 48;
 
-  // Let the first scene finish its staggered populate (~2s) before the
-  // auto-rotation kicks in. The mod-5 loop never stops — five clean
-  // scenes reads as a tour of Cabinet's range.
-  useEffect(() => {
-    let intervalId: number | undefined;
-    const startId = window.setTimeout(() => {
-      intervalId = window.setInterval(() => {
-        setSceneIdx((i) => (i + 1) % SCENES.length);
-      }, SCENE_DURATION_MS);
-    }, SCENE_DURATION_MS);
-    return () => {
-      window.clearTimeout(startId);
-      if (intervalId !== undefined) window.clearInterval(intervalId);
-    };
-  }, []);
+interface SlideDataProps {
+  sceneIdx: number;
+}
+
+export function SlideData({ sceneIdx }: SlideDataProps) {
+  const clampedIdx = Math.min(Math.max(sceneIdx, 0), SCENES.length - 1);
+  const scene = SCENES[clampedIdx];
+
+  const cursorTargetY =
+    SIDEBAR_ROW_TOP_OFFSET + scene.featuredIdx * SIDEBAR_ROW_HEIGHT;
 
   return (
-    <div className="grid h-full grid-cols-[minmax(280px,340px)_1fr] gap-10 lg:gap-14 items-center">
-      {/* Left column: rotating scene display */}
+    <div
+      className="grid h-full items-center gap-8 lg:gap-10"
+      style={{ gridTemplateColumns: "280px 340px 1fr" }}
+    >
+      {/* ── Column 1: Sidebar + caption ─── */}
+      {/* Rows start after the copy text has fully appeared (~1500ms) */}
       <div className="flex h-[500px] w-full flex-col gap-3">
         <div className="h-[440px] w-full">
           <MockupSidebar activeTab="data" viewTransitionName="cabinet-card">
-            {/* Tree re-keyed on scene so rows re-animate per scene */}
             <div
               key={scene.id}
               className="relative h-full px-2.5 py-2"
-              style={{
-                animation: "cabinet-tour-fade-in 0.35s ease-out",
-              }}
+              style={
+                {
+                  animation: "cabinet-tour-fade-in 0.35s ease-out",
+                  "--cursor-target-x": `${CURSOR_TARGET_X}px`,
+                  "--cursor-target-y": `${cursorTargetY}px`,
+                } as CSSProperties
+              }
             >
-              {/* Scene root row */}
+              {/* Root row */}
               <div
                 className="flex items-center gap-2 rounded-md px-1.5 py-1.5 text-[12px] opacity-0"
                 style={{
                   color: P.text,
                   animation: "cabinet-tour-fade-up 0.35s ease-out forwards",
-                  animationDelay: "80ms",
+                  animationDelay: "1500ms",
                 }}
               >
                 {(() => {
@@ -188,33 +485,65 @@ export function SlideData() {
                 <span className="truncate font-medium">{scene.rootLabel}</span>
               </div>
 
-              {/* Scene child rows */}
+              {/* Child rows */}
               {scene.rows.map((row, i) => {
                 const Icon = row.icon;
+                const featured = i === scene.featuredIdx;
                 return (
                   <div
                     key={row.label}
-                    className="flex items-center gap-2 rounded-md px-1.5 py-1.5 text-[12px] opacity-0"
+                    className="flex items-center gap-2 rounded-md py-1.5 text-[12px] opacity-0"
                     style={{
                       color: P.text,
                       paddingLeft: `${row.indent * 12 + 6}px`,
+                      paddingRight: "6px",
+                      background: featured ? P.accentBg : "transparent",
+                      boxShadow: featured
+                        ? `inset 0 0 0 1px ${P.borderDark}`
+                        : "none",
                       animation: "cabinet-tour-fade-up 0.35s ease-out forwards",
-                      animationDelay: `${180 + i * 80}ms`,
+                      animationDelay: `${1600 + i * 70}ms`,
                     }}
                   >
                     <Icon
                       className="h-3.5 w-3.5 shrink-0"
                       style={{ color: row.color }}
                     />
-                    <span className="truncate">{row.label}</span>
+                    <span
+                      className="truncate"
+                      style={featured ? { fontWeight: 600 } : undefined}
+                    >
+                      {row.label}
+                    </span>
+                    {featured && (
+                      <TrendingUp
+                        className="ml-auto h-3 w-3 shrink-0"
+                        style={{ color: P.accent }}
+                      />
+                    )}
                   </div>
                 );
               })}
+
+              {/* Click ripple — fires after all rows have appeared */}
+              <span
+                aria-hidden
+                className="pointer-events-none absolute rounded-full opacity-0"
+                style={{
+                  top: `${cursorTargetY}px`,
+                  left: `${CURSOR_TARGET_X}px`,
+                  width: "44px",
+                  height: "44px",
+                  background: P.accent,
+                  animation: "cabinet-tour-click-ripple 0.7s ease-out forwards",
+                  animationDelay: "2500ms",
+                }}
+              />
             </div>
           </MockupSidebar>
         </div>
 
-        {/* Caption + scene dots */}
+        {/* Per-scene caption */}
         <div className="flex flex-col items-center gap-2 px-2">
           <p
             key={scene.id + "-caption"}
@@ -222,31 +551,31 @@ export function SlideData() {
             style={{
               color: P.textSecondary,
               animation: "cabinet-tour-fade-up 0.4s ease-out forwards",
-              animationDelay: "240ms",
+              animationDelay: "1550ms",
               minHeight: "2.4em",
             }}
           >
             {scene.caption}
           </p>
-          <div className="flex items-center gap-1.5">
-            {SCENES.map((s, i) => (
-              <span
-                key={s.id}
-                aria-hidden
-                className="h-1 rounded-full transition-all duration-300"
-                style={{
-                  width: i === sceneIdx ? 14 : 4,
-                  background: i === sceneIdx ? P.accent : P.textTertiary,
-                  opacity: i === sceneIdx ? 1 : 0.35,
-                }}
-              />
-            ))}
-          </div>
         </div>
       </div>
 
-      {/* Right column: copy */}
-      <div className="flex flex-col gap-5 max-w-lg">
+      {/* ── Column 2: File viewer panel — appears last ─── */}
+      <div className="h-[440px] w-full">
+        <div
+          key={scene.id + "-viewer"}
+          className="h-full w-full opacity-0"
+          style={{
+            animation: "cabinet-tour-fade-up 0.5s ease-out forwards",
+            animationDelay: "2700ms",
+          }}
+        >
+          {scene.viewer}
+        </div>
+      </div>
+
+      {/* ── Column 3: Copy — appears first ─── */}
+      <div className="flex flex-col gap-5 max-w-md">
         <span
           className="inline-block w-fit rounded-full px-3 py-1 text-[10px] font-semibold tracking-[0.18em] opacity-0"
           style={{
@@ -254,7 +583,7 @@ export function SlideData() {
             background: P.accentBg,
             border: `1px solid ${P.borderDark}`,
             animation: "cabinet-tour-fade-up 0.4s ease-out forwards",
-            animationDelay: "60ms",
+            animationDelay: "50ms",
           }}
         >
           01 &middot; DATA
@@ -264,7 +593,7 @@ export function SlideData() {
           style={{
             color: P.text,
             animation: "cabinet-tour-fade-up 0.5s ease-out forwards",
-            animationDelay: "180ms",
+            animationDelay: "250ms",
           }}
         >
           Your <span style={{ color: P.accent }}>single source</span> of truth.
@@ -274,12 +603,25 @@ export function SlideData() {
           style={{
             color: P.textSecondary,
             animation: "cabinet-tour-fade-up 0.5s ease-out forwards",
-            animationDelay: "320ms",
+            animationDelay: "600ms",
           }}
         >
           Markdown, PDFs, spreadsheets, slides, images, video, audio, linked
           repos, embedded web apps, Google Docs. Mention any of it with{" "}
           <span className="font-mono" style={{ color: P.accent }}>@</span>.
+        </p>
+        <p
+          className="font-body-serif text-sm leading-relaxed opacity-0 lg:text-base"
+          style={{
+            color: P.textSecondary,
+            animation: "cabinet-tour-fade-up 0.5s ease-out forwards",
+            animationDelay: "950ms",
+          }}
+        >
+          One place for everything — so you and your AI team read, edit, and
+          ship from the{" "}
+          <span style={{ color: P.text, fontWeight: 600 }}>same files</span>,
+          not copies of copies.
         </p>
       </div>
     </div>

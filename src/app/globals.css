@@ -726,6 +726,28 @@ em-emoji-picker {
   0%   { width: 10%; opacity: 0.4; }
   100% { width: 100%; opacity: 0.9; }
 }
+@keyframes cabinet-tour-cursor-pointer {
+  0%   { opacity: 0; transform: translate(180px, 270px) scale(0.85); }
+  15%  { opacity: 1; transform: translate(180px, 270px) scale(1); }
+  60%  { opacity: 1; transform: translate(var(--cursor-target-x, 40px), var(--cursor-target-y, 60px)) scale(1); }
+  70%  { transform: translate(var(--cursor-target-x, 40px), var(--cursor-target-y, 60px)) scale(0.8); }
+  80%  { transform: translate(var(--cursor-target-x, 40px), var(--cursor-target-y, 60px)) scale(1.05); }
+  100% { opacity: 1; transform: translate(var(--cursor-target-x, 40px), var(--cursor-target-y, 60px)) scale(1); }
+}
+@keyframes cabinet-tour-click-ripple {
+  0%   { opacity: 0; transform: translate(-50%, -50%) scale(0.1); }
+  25%  { opacity: 0.7; }
+  100% { opacity: 0; transform: translate(-50%, -50%) scale(1.8); }
+}
+/* Intro slide: amber Archive glyph pops oversized, holds, then shrinks
+   + fades so the Cabinet shell can materialize behind it. */
+@keyframes cabinet-tour-icon-intro {
+  0%   { opacity: 0; transform: scale(0.45); }
+  22%  { opacity: 1; transform: scale(2.8); }
+  50%  { opacity: 1; transform: scale(2.8); }
+  80%  { opacity: 0.95; transform: scale(0.95); }
+  100% { opacity: 0; transform: scale(0.6); }
+}
 .cabinet-tour-no-scrollbar::-webkit-scrollbar { display: none; }
 .cabinet-tour-no-scrollbar { -ms-overflow-style: none; scrollbar-width: none; }
 
