@@ -153,6 +153,16 @@ function parseHash(hash: string): RouteState {
         pagePath,
       };
     }
+
+    // Audit #021: legacy / shorter form `#/cabinet/{cabinetPath}/{pagePath}`
+    // (no /data/ segment) used to fall through to the home route, which
+    // broke deep-links. Interpret the remaining segments as a page path
+    // under the cabinet so reload keeps the user on the page they were on.
+    const pagePath = decodePathSegment(parts.slice(2).join("/"));
+    return {
+      section: { type: "page", cabinetPath },
+      pagePath,
+    };
   }
 
   if (parts[0] === "settings") {
@@ -257,6 +267,10 @@ async function applyRoute(route: RouteState) {
   selectPage(null);
   clear();
 }
+
+// Re-exported for unit tests; the parser is otherwise an internal of the
+// hook implementation and shouldn't be used by app code.
+export { parseHash as parseHashForTest };
 
 export function useHashRoute() {
   const suppressHashUpdate = useRef(false);
