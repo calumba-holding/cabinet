@@ -33,6 +33,9 @@ import {
   CircleUser,
   Upload,
   Trash2,
+  Cloud,
+  ArrowRight,
+  CheckCircle2,
 } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
@@ -67,6 +70,11 @@ import { AGENT_PALETTE } from "@/lib/themes";
 import { AVATAR_PRESETS } from "@/lib/agents/avatar-catalog";
 import Image from "next/image";
 import { sendTelemetry } from "@/lib/telemetry/browser";
+import {
+  recordWaitlistView,
+  recordWaitlistStart,
+  submitWaitlistEmail,
+} from "@/lib/telemetry/waitlist-client";
 
 interface McpServer {
   name: string;
@@ -316,6 +324,43 @@ export function SettingsPage() {
       cancelled = true;
     };
   }, []);
+
+  // Cabinet Cloud waitlist (About tab) — same client as the onboarding form,
+  // posts to reports.runcabinet.com with source: "cabinet-settings".
+  const [cloudEmail, setCloudEmail] = useState("");
+  const [cloudStatus, setCloudStatus] = useState<
+    "idle" | "submitting" | "success" | "already" | "error"
+  >("idle");
+  const cloudViewedRef = useRef(false);
+  const cloudStartedRef = useRef(false);
+  useEffect(() => {
+    if (tab === "about" && !cloudViewedRef.current) {
+      cloudViewedRef.current = true;
+      recordWaitlistView("cabinet-settings");
+    }
+  }, [tab]);
+  const handleCloudInput = useCallback((value: string) => {
+    setCloudEmail(value);
+    if (cloudStatus === "error" || cloudStatus === "already") setCloudStatus("idle");
+    if (!cloudStartedRef.current && value.length > 0) {
+      cloudStartedRef.current = true;
+      recordWaitlistStart("cabinet-settings");
+    }
+  }, [cloudStatus]);
+  const handleCloudSubmit = useCallback(async () => {
+    const trimmed = cloudEmail.trim();
+    if (!trimmed || !/^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(trimmed)) {
+      setCloudStatus("error");
+      return;
+    }
+    setCloudStatus("submitting");
+    const result = await submitWaitlistEmail(trimmed, "cabinet-settings");
+    if (!result.ok) {
+      setCloudStatus("error");
+      return;
+    }
+    setCloudStatus(result.alreadyOnList ? "already" : "success");
+  }, [cloudEmail]);
 
   const toggleTelemetry = useCallback(async (next: boolean) => {
     setTelemetrySaving(true);
@@ -1469,6 +1514,72 @@ export function SettingsPage() {
                     </div>
                   </div>
                 </label>
+              </div>
+
+              <div className="border-t border-border pt-6">
+                <h3 className="text-[14px] font-semibold mb-1 flex items-center gap-2">
+                  <Cloud className="h-3.5 w-3.5" />
+                  Cabinet Cloud
+                </h3>
+                <p className="text-[12px] text-muted-foreground mb-3">
+                  A hosted version of Cabinet is in the works — same product, none of the
+                  self-hosting plumbing. Drop your email below and we&apos;ll be in touch
+                  when it&apos;s ready.
+                </p>
+                {cloudStatus === "success" || cloudStatus === "already" ? (
+                  <div className="flex items-center gap-2 rounded-lg border border-border bg-muted/30 px-4 py-3 text-[13px]">
+                    <CheckCircle2 className="h-4 w-4 shrink-0 text-primary" />
+                    <span>
+                      {cloudStatus === "already"
+                        ? "You&apos;re already on the list — we&apos;ll be in touch."
+                        : "You&apos;re on the list. We&apos;ll email you when Cabinet Cloud opens up."}
+                    </span>
+                  </div>
+                ) : (
+                  <form
+                    onSubmit={(e) => {
+                      e.preventDefault();
+                      void handleCloudSubmit();
+                    }}
+                    className="flex flex-col gap-2 sm:flex-row"
+                  >
+                    <Input
+                      type="email"
+                      inputMode="email"
+                      autoComplete="email"
+                      placeholder="you@company.com"
+                      value={cloudEmail}
+                      onChange={(e) => handleCloudInput(e.target.value)}
+                      disabled={cloudStatus === "submitting"}
+                      className={cn(
+                        "flex-1 h-10 text-[13px]",
+                        cloudStatus === "error" && "border-destructive focus-visible:ring-destructive/30"
+                      )}
+                    />
+                    <Button
+                      type="submit"
+                      disabled={cloudStatus === "submitting" || cloudEmail.trim().length === 0}
+                      className="h-10 gap-2 px-4 text-[13px]"
+                    >
+                      {cloudStatus === "submitting" ? (
+                        <>
+                          <Loader2 className="h-3.5 w-3.5 animate-spin" />
+                          Sending…
+                        </>
+                      ) : (
+                        <>
+                          Join waitlist
+                          <ArrowRight className="h-3 w-3" />
+                        </>
+                      )}
+                    </Button>
+                  </form>
+                )}
+                {cloudStatus === "error" && (
+                  <p className="mt-2 text-[11px] text-destructive">
+                    Something went wrong. Check the email and try again.
+                  </p>
+                )}
               </div>
 
               <div className="border-t border-border pt-6">
