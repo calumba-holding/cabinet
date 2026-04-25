@@ -85,6 +85,7 @@ import {
   type StartWorkMode,
 } from "@/components/composer/start-work-dialog";
 import { ComposerInput } from "@/components/composer/composer-input";
+import { AgentPicker } from "@/components/composer/agent-picker";
 import { useComposer } from "@/hooks/use-composer";
 import { useComposerAttachments } from "@/components/composer/use-composer-attachments";
 import { useEditor, EditorContent } from "@tiptap/react";
@@ -1014,7 +1015,27 @@ function Composer({
           ) : undefined
         }
         actionsStart={
-          <TaskRuntimePicker value={runtime} onChange={setRuntime} />
+          <>
+            <AgentPicker
+              agents={[
+                {
+                  slug: persona.slug,
+                  name: persona.name,
+                  displayName: persona.displayName,
+                  role: persona.role,
+                  cabinetPath: persona.cabinetPath,
+                  iconKey: persona.iconKey,
+                  color: persona.color,
+                  avatar: persona.avatar,
+                  avatarExt: persona.avatarExt,
+                },
+              ]}
+              selectedSlug={persona.slug}
+              disabled
+              disabledReason={`Locked to ${name} — this is their workspace`}
+            />
+            <TaskRuntimePicker value={runtime} onChange={setRuntime} />
+          </>
         }
       />
 

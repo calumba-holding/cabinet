@@ -1554,6 +1554,13 @@ export function TaskConversationPage({
                         conversationId={task.meta.id}
                         onSend={handleSend}
                         onScheduleHandoff={openScheduleHandoff}
+                        agent={
+                          turnAgent
+                            ? { ...turnAgent, name: turnAgent.name ?? turnAgent.slug }
+                            : task.meta.agentSlug
+                              ? { slug: task.meta.agentSlug, name: task.meta.agentSlug }
+                              : null
+                        }
                         initialRuntime={{
                           providerId: task.meta.providerId,
                           adapterType: task.meta.adapterType,
@@ -1645,6 +1652,13 @@ export function TaskConversationPage({
                   conversationId={task.meta.id}
                   onSend={handleSend}
                   onScheduleHandoff={openScheduleHandoff}
+                  agent={
+                    turnAgent
+                      ? { ...turnAgent, name: turnAgent.name ?? turnAgent.slug }
+                      : task.meta.agentSlug
+                        ? { slug: task.meta.agentSlug, name: task.meta.agentSlug }
+                        : null
+                  }
                   initialRuntime={{
                     providerId: task.meta.providerId,
                     adapterType: task.meta.adapterType,

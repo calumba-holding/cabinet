@@ -1196,3 +1196,5 @@
 [2026-04-25] Copywriter wrote 10 new songs (23–32) to data/Songs/, expanding the americana/folk catalog with character vignettes and slow-burn ballads.
 
 [2026-04-25] Added 10 haiku songs (33–42) to Songs/ as a multi-task creative writing run.
+
+[2026-04-25] Added a shared `AgentPicker` chip (`src/components/composer/agent-picker.tsx`) and wired it into the composers that lacked one: AI Panel (functional — explicit alternative to `@`-mention routing), Agent Detail (locked with tooltip "Locked to {agent} — this is their workspace"), and Task continuation composer (locked with tooltip "Continuing with {agent} — agent can't change mid-conversation"). Cabinet task composer and StartWorkDialog already had functional pickers.

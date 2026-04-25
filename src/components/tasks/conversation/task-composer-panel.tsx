@@ -8,6 +8,10 @@ import {
   type TaskRuntimeSelection,
 } from "@/components/composer/task-runtime-picker";
 import {
+  AgentPicker,
+  type AgentPickerOption,
+} from "@/components/composer/agent-picker";
+import {
   WhenChip,
   type StartWorkMode,
 } from "@/components/composer/start-work-dialog";
@@ -85,6 +89,12 @@ export interface TaskComposerPanelProps {
     mode: Exclude<StartWorkMode, "now">,
     message: string
   ) => void;
+  /**
+   * The agent this conversation is bound to. Surfaces a locked AgentPicker
+   * chip so the composer matches other launch surfaces; the picker is
+   * non-interactive because continuation turns can't change the agent.
+   */
+  agent?: AgentPickerOption | null;
 }
 
 export function TaskComposerPanel({
@@ -98,6 +108,7 @@ export function TaskComposerPanel({
   className,
   disabled,
   onScheduleHandoff,
+  agent,
 }: TaskComposerPanelProps) {
   // We don't seed with initialRuntime directly — that way, when the parent
   // re-renders with fresh meta (SSE → fetchTask), the displayed runtime
@@ -248,11 +259,21 @@ export function TaskComposerPanel({
           ) : undefined
         }
         actionsStart={
-          <TaskRuntimePicker
-            value={effectiveRuntime}
-            onChange={handleRuntimeChange}
-            align="start"
-          />
+          <>
+            {agent ? (
+              <AgentPicker
+                agents={[agent]}
+                selectedSlug={agent.slug}
+                disabled
+                disabledReason={`Continuing with ${agent.displayName ?? agent.name} — agent can't change mid-conversation`}
+              />
+            ) : null}
+            <TaskRuntimePicker
+              value={effectiveRuntime}
+              onChange={handleRuntimeChange}
+              align="start"
+            />
+          </>
         }
       />
 

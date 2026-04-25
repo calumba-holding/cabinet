@@ -28,6 +28,10 @@ import {
   TaskRuntimePicker,
   type TaskRuntimeSelection,
 } from "@/components/composer/task-runtime-picker";
+import {
+  AgentPicker,
+  type AgentPickerOption,
+} from "@/components/composer/agent-picker";
 import { useComposer, type MentionableItem } from "@/hooks/use-composer";
 
 interface PastSession {
@@ -290,6 +294,30 @@ export function AIPanel() {
   }, [currentPath, liveSessions]);
 
   const [taskRuntime, setTaskRuntime] = useState<TaskRuntimeSelection>({});
+  const [pickedAgentSlug, setPickedAgentSlug] = useState<string>("editor");
+
+  const agentPickerOptions = useMemo<AgentPickerOption[]>(
+    () => [
+      {
+        slug: "editor",
+        name: "Editor",
+        role: "Edits the current page",
+      },
+      ...agents
+        .filter((a) => a.slug !== "editor")
+        .map((a) => ({
+          slug: a.slug,
+          name: a.name,
+          role: a.role,
+          cabinetPath: a.cabinetPath,
+          iconKey: (a as { iconKey?: string | null }).iconKey,
+          color: (a as { color?: string | null }).color,
+          avatar: (a as { avatar?: string | null }).avatar,
+          avatarExt: (a as { avatarExt?: string | null }).avatarExt,
+        })),
+    ],
+    [agents]
+  );
 
   const composer = useComposer({
     items: mentionItems,
@@ -297,8 +325,12 @@ export function AIPanel() {
     onSubmit: async ({ message, mentionedPaths, mentionedAgents }) => {
       if (!currentPath) return;
 
-      // If user @-mentioned an agent, route to that agent instead of editor
-      const targetAgent = mentionedAgents.length > 0 ? mentionedAgents[0] : null;
+      // @-mention takes precedence over the picker (it's the explicit hint
+      // for that turn). Otherwise fall back to whatever the picker has.
+      const mentionTarget = mentionedAgents.length > 0 ? mentionedAgents[0] : null;
+      const targetAgent =
+        mentionTarget ??
+        (pickedAgentSlug && pickedAgentSlug !== "editor" ? pickedAgentSlug : null);
       const nextAgentSlug = targetAgent || "editor";
       const pendingId = `pending-${Date.now()}-${crypto.randomUUID()}`;
 
@@ -787,7 +819,14 @@ export function AIPanel() {
           items={mentionItems}
           autoFocus={isOpen}
           actionsStart={
-            <TaskRuntimePicker value={taskRuntime} onChange={setTaskRuntime} />
+            <>
+              <AgentPicker
+                agents={agentPickerOptions}
+                selectedSlug={pickedAgentSlug}
+                onSelect={setPickedAgentSlug}
+              />
+              <TaskRuntimePicker value={taskRuntime} onChange={setTaskRuntime} />
+            </>
           }
         />
       </div>
