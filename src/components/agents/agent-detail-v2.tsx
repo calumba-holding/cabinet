@@ -1676,7 +1676,7 @@ function SkillsMultiSelect({
       <p className="mt-1.5 text-[10.5px] text-muted-foreground/70">
         Skills are symlinked into every run (<code className="rounded bg-muted px-1 py-0.5">--add-dir</code>{" "}
         on Claude; adapter-specific on others). Catalog:{" "}
-        <a href="#settings/skills" className="text-foreground underline-offset-2 hover:underline">
+        <a href="#/settings/skills" className="text-foreground underline-offset-2 hover:underline">
           Settings → Skills
         </a>
         .
@@ -2450,8 +2450,12 @@ export function AgentDetailV2({
   };
 
   const handleOpenPath = (path: string) => {
-    // Demo route — open the KB page in the main app shell.
-    const hash = `#/page/${path.replace(/^\/+/, "")}`;
+    // Open the KB page in the main app shell using the canonical URL form
+    // (audit #121). Pages with no explicit cabinet context resolve under
+    // the root cabinet (`.`).
+    const cabinet = persona.cabinetPath || ".";
+    const cleanPath = path.replace(/^\/+/, "");
+    const hash = `#/cabinet/${encodeURIComponent(cabinet)}/data/${encodeURIComponent(cleanPath)}`;
     window.location.assign(`/${hash}`);
   };
 
