@@ -4,39 +4,38 @@ import { type ReactNode } from "react";
 import { ArrowUpRight, HelpCircle, MessageCircle } from "lucide-react";
 import { ScrollArea } from "@/components/ui/scroll-area";
 import { requestShowTour } from "@/components/onboarding/tour/use-tour";
-import { MockupSidebar } from "@/components/onboarding/tour/mockup-sidebar";
 import { TOUR_PALETTE as P } from "@/components/onboarding/tour/palette";
+import { useAppStore, type SelectedSection } from "@/stores/app-store";
+import { ROOT_CABINET_PATH } from "@/lib/cabinets/paths";
 import { cn } from "@/lib/utils";
+import {
+  AgentsVisual,
+  CabinetVisual,
+  CabinetsVisual,
+  ConversationsVisual,
+  IntegrationsVisual,
+  KnowledgeVisual,
+  ProvidersVisual,
+  RoutinesVisual,
+  SkillsVisual,
+  TasksVisual,
+  ThemesVisual,
+} from "./help-visuals";
 
 const DISCORD_SUPPORT_URL = "https://discord.gg/hJa5TRTbTH";
 
-type HelpItemType = "demo" | "video" | "text";
+type HelpAction =
+  | { kind: "tour" }
+  | { kind: "navigate"; section: SelectedSection }
+  | { kind: "soon" };
 
 interface HelpItem {
   id: string;
   title: ReactNode;
   description: string;
-  type: HelpItemType;
+  cta: string;
   visual: ReactNode;
-  onActivate: () => void;
-}
-
-function TourVisual() {
-  return (
-    <div
-      className="flex h-full w-full items-center justify-center"
-      style={{ background: P.paperWarm }}
-    >
-      <div style={{ width: 280 }}>
-        <MockupSidebar
-          activeTab={null}
-          title="Cabinet"
-          headerBadge=""
-          hideBody
-        />
-      </div>
-    </div>
-  );
+  action: HelpAction;
 }
 
 const HELP_ITEMS: HelpItem[] = [
@@ -48,27 +47,176 @@ const HELP_ITEMS: HelpItem[] = [
       </>
     ),
     description: "Your AI team. Your knowledge base. One place.",
-    type: "demo",
-    visual: <TourVisual />,
-    onActivate: () => requestShowTour(),
+    cta: "Watch the tour",
+    visual: <CabinetVisual />,
+    action: { kind: "tour" },
+  },
+  {
+    id: "agents",
+    title: (
+      <>
+        Your <span style={{ color: P.accent }}>AI team</span>.
+      </>
+    ),
+    description:
+      "Hire leads and specialists. Group them into departments. Let them dispatch work to each other.",
+    cta: "Meet the agents",
+    visual: <AgentsVisual />,
+    action: { kind: "navigate", section: { type: "agents", cabinetPath: ROOT_CABINET_PATH } },
+  },
+  {
+    id: "tasks",
+    title: (
+      <>
+        The <span style={{ color: P.accent }}>task board</span>.
+      </>
+    ),
+    description:
+      "Kanban, list, and schedule views. Filter by agent or status. Pick a runtime per task.",
+    cta: "Open the board",
+    visual: <TasksVisual />,
+    action: { kind: "navigate", section: { type: "tasks", cabinetPath: ROOT_CABINET_PATH } },
+  },
+  {
+    id: "knowledge",
+    title: (
+      <>
+        Your <span style={{ color: P.accent }}>knowledge base</span>.
+      </>
+    ),
+    description:
+      "Markdown, CSV, PDF, code, notebooks, mermaid, images, audio — everything renders inline. Your data stays on your machine; it's yours, not ours.",
+    cta: "Browse your data",
+    visual: <KnowledgeVisual />,
+    action: { kind: "navigate", section: { type: "cabinet", cabinetPath: ROOT_CABINET_PATH } },
+  },
+  {
+    id: "cabinets",
+    title: (
+      <>
+        A team of <span style={{ color: P.accent }}>AI teams</span>.
+      </>
+    ),
+    description:
+      "Cabinets nest inside cabinets. Each one is its own AI team with its own data, agents, and visibility scope — and they can collaborate up and down the tree.",
+    cta: "See the hierarchy",
+    visual: <CabinetsVisual />,
+    action: { kind: "navigate", section: { type: "cabinet", cabinetPath: ROOT_CABINET_PATH } },
+  },
+  {
+    id: "routines",
+    title: (
+      <>
+        <span style={{ color: P.accent }}>Routines</span> & schedules.
+      </>
+    ),
+    description:
+      "Run a task daily at 9am, weekly on Friday, or once next Monday. Cron, calendar, or natural language.",
+    cta: "Schedule something",
+    visual: <RoutinesVisual />,
+    action: { kind: "navigate", section: { type: "cabinet", cabinetPath: ROOT_CABINET_PATH } },
+  },
+  {
+    id: "conversations",
+    title: (
+      <>
+        Conversations & <span style={{ color: P.accent }}>approvals</span>.
+      </>
+    ),
+    description:
+      "Agents propose actions — launch a task, schedule a job — and you approve before anything runs.",
+    cta: "See it in action",
+    visual: <ConversationsVisual />,
+    action: { kind: "navigate", section: { type: "agents", cabinetPath: ROOT_CABINET_PATH } },
+  },
+  {
+    id: "themes",
+    title: (
+      <>
+        Make it <span style={{ color: P.accent }}>yours</span>.
+      </>
+    ),
+    description:
+      "Pick from a curated set of light and dark themes — Paper, Slate, Claude, Ink, and more.",
+    cta: "Try a theme",
+    visual: <ThemesVisual />,
+    action: { kind: "navigate", section: { type: "settings", slug: "appearance" } },
+  },
+  {
+    id: "providers",
+    title: (
+      <>
+        <span style={{ color: P.accent }}>BYOAI</span> — bring your own AI.
+      </>
+    ),
+    description:
+      "Claude, GPT, Gemini, Grok, Codex, Cursor — bring whichever providers you already pay for. Pick a default, or override per task.",
+    cta: "Configure providers",
+    visual: <ProvidersVisual />,
+    action: { kind: "navigate", section: { type: "settings", slug: "providers" } },
+  },
+  {
+    id: "skills",
+    title: (
+      <>
+        <span style={{ color: P.accent }}>Skills</span> for your agents.
+      </>
+    ),
+    description:
+      "Installable Agent Skills — drop-in capabilities like SEO research, design system, or DevOps. Coming soon.",
+    cta: "Coming soon",
+    visual: <SkillsVisual />,
+    action: { kind: "soon" },
+  },
+  {
+    id: "integrations",
+    title: (
+      <>
+        <span style={{ color: P.accent }}>Integrations</span> & apps.
+      </>
+    ),
+    description:
+      "MCP servers, Slack, Telegram, Gmail, Calendar, and external apps. Coming soon.",
+    cta: "Coming soon",
+    visual: <IntegrationsVisual />,
+    action: { kind: "soon" },
   },
 ];
 
 function HelpCard({ item }: { item: HelpItem }) {
+  const setSection = useAppStore((s) => s.setSection);
+  const isSoon = item.action.kind === "soon";
+
+  const handleClick = () => {
+    if (item.action.kind === "tour") {
+      requestShowTour();
+      return;
+    }
+    if (item.action.kind === "navigate") {
+      setSection(item.action.section);
+      return;
+    }
+  };
+
   return (
     <button
       type="button"
-      onClick={item.onActivate}
+      onClick={handleClick}
+      disabled={isSoon}
+      aria-disabled={isSoon || undefined}
       className={cn(
         "group relative grid w-full grid-cols-1 overflow-hidden rounded-2xl text-left",
         "transition-all duration-200",
-        "hover:-translate-y-0.5 hover:shadow-[0_18px_40px_-22px_rgba(59,47,47,0.45)]",
+        !isSoon &&
+          "hover:-translate-y-0.5 hover:shadow-[0_18px_40px_-22px_rgba(59,47,47,0.45)] cursor-pointer",
+        isSoon && "cursor-default",
         "focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring/60 focus-visible:ring-offset-2",
         "md:grid-cols-[1.15fr_1fr]",
       )}
       style={{
         background: P.paper,
         border: `1px solid ${P.border}`,
+        opacity: isSoon ? 0.85 : 1,
       }}
     >
       <div className="flex flex-col justify-center gap-4 p-8 md:p-10 lg:p-12">
@@ -87,11 +235,14 @@ function HelpCard({ item }: { item: HelpItem }) {
         </p>
 
         <span
-          className="mt-2 inline-flex items-center gap-1.5 text-[12px] font-semibold uppercase tracking-[0.18em] transition-transform duration-200 group-hover:translate-x-0.5"
-          style={{ color: P.accent }}
+          className={cn(
+            "mt-2 inline-flex items-center gap-1.5 text-[12px] font-semibold uppercase tracking-[0.18em] transition-transform duration-200",
+            !isSoon && "group-hover:translate-x-0.5",
+          )}
+          style={{ color: isSoon ? P.textTertiary : P.accent }}
         >
-          Watch it
-          <ArrowUpRight className="h-3.5 w-3.5" />
+          {item.cta}
+          {!isSoon && <ArrowUpRight className="h-3.5 w-3.5" />}
         </span>
       </div>
 
@@ -128,7 +279,7 @@ export function HelpPage() {
               Learn how Cabinet works
             </h1>
             <p className="mt-2 text-[13.5px] leading-relaxed text-muted-foreground">
-              Short demos, videos, and write-ups for getting the most out of Cabinet.
+              Short demos, walkthroughs, and previews for getting the most out of Cabinet.
             </p>
           </div>
 
