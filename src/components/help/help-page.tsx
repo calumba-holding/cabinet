@@ -23,9 +23,10 @@ import {
 } from "./help-visuals";
 import { DemoModal, type DemoConfig } from "./demo-modal";
 import { buildAiTeamDemo } from "./demos/ai-team-demo";
+import { buildKnowledgeDemo } from "./demos/knowledge-demo";
 import { buildTaskBoardDemo } from "./demos/task-board-demo";
 
-type DemoId = "ai-team" | "task-board";
+type DemoId = "ai-team" | "task-board" | "knowledge";
 
 const DISCORD_SUPPORT_URL = "https://discord.gg/hJa5TRTbTH";
 
@@ -92,9 +93,9 @@ const HELP_ITEMS: HelpItem[] = [
     ),
     description:
       "Markdown, CSV, PDF, code, notebooks, mermaid, images, audio — everything renders inline. Your data stays on your machine; it's yours, not ours.",
-    cta: "Browse your data",
+    cta: "Watch the demo",
     visual: <KnowledgeVisual />,
-    action: { kind: "navigate", section: { type: "cabinet", cabinetPath: ROOT_CABINET_PATH } },
+    action: { kind: "demo", demoId: "knowledge" },
   },
   {
     id: "cabinets",
@@ -294,6 +295,10 @@ export function HelpPage() {
     }
     if (demoId === "task-board") {
       setActiveDemo(buildTaskBoardDemo());
+      return;
+    }
+    if (demoId === "knowledge") {
+      setActiveDemo(buildKnowledgeDemo());
       return;
     }
   };
