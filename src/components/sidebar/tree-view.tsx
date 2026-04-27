@@ -35,6 +35,8 @@ import {
   SquareKanban,
   Pencil,
   FilePlus,
+  UserPlus,
+  ListPlus,
   FolderOpen,
   GitBranch,
   ClipboardCopy,
@@ -479,6 +481,7 @@ export function TreeView() {
                     id: "data" as DrawerId,
                     label: "Data",
                     icon: BookOpen,
+                    addIcon: FilePlus,
                     onOpen: () => {
                       if (activeCabinet) {
                         openCabinetDataPage(activeCabinet.path);
@@ -507,6 +510,7 @@ export function TreeView() {
                     id: "agents" as DrawerId,
                     label: "Agents",
                     icon: Users,
+                    addIcon: UserPlus,
                     onOpen: () =>
                       setSection({
                         type: "agents",
@@ -528,6 +532,7 @@ export function TreeView() {
                     id: "tasks" as DrawerId,
                     label: "Tasks",
                     icon: SquareKanban,
+                    addIcon: ListPlus,
                     onOpen: () =>
                       setSection({
                         type: "tasks",
@@ -547,6 +552,7 @@ export function TreeView() {
                   },
                 ] as const).map((drawer) => {
                   const Icon = drawer.icon;
+                  const AddIcon = drawer.addIcon;
                   const active = activeDrawer === drawer.id;
                   return (
                     <div key={drawer.id} className="relative group">
@@ -590,7 +596,7 @@ export function TreeView() {
                           aria-label={`Add to ${drawer.label}`}
                           className="absolute right-1 top-1 inline-flex size-4 items-center justify-center rounded text-muted-foreground/70 opacity-0 transition-opacity duration-150 hover:bg-muted hover:text-foreground group-hover:opacity-100"
                         >
-                          <Plus className="h-3 w-3" />
+                          <AddIcon className="h-3 w-3" />
                         </button>
                       )}
                     </div>
