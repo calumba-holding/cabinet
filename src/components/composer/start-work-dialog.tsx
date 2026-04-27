@@ -1,9 +1,10 @@
 "use client";
 
 import { useCallback, useEffect, useMemo, useRef, useState } from "react";
-import { ChevronDown, HeartPulse, Repeat, Zap } from "lucide-react";
+import { ChevronDown, HeartPulse, Repeat, X, Zap } from "lucide-react";
 import {
   Dialog,
+  DialogClose,
   DialogContent,
   DialogHeader,
   DialogTitle,
@@ -347,15 +348,20 @@ export function StartWorkDialog({
   return (
     <Dialog open={open} onOpenChange={onOpenChange}>
       <DialogContent
+        showCloseButton={false}
         className={cn(
           "gap-0 overflow-visible p-0 transition-[max-width] duration-300",
           widthClass
         )}
       >
         <DialogHeader className="px-5 pb-3 pt-5">
-          <div className="flex items-start justify-between gap-3">
-            <DialogTitle className="text-xl font-semibold">{title}</DialogTitle>
+          <div className="flex items-start gap-3">
+            <DialogTitle className="flex-1 text-xl font-semibold">{title}</DialogTitle>
             <WhenChip mode={mode} onChange={handleModeChange} />
+            <DialogClose className="flex h-7 w-7 shrink-0 items-center justify-center rounded-md text-muted-foreground/60 transition-colors hover:bg-muted hover:text-foreground">
+              <X className="h-4 w-4" />
+              <span className="sr-only">Close</span>
+            </DialogClose>
           </div>
         </DialogHeader>
 
