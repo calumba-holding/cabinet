@@ -235,13 +235,9 @@ export function SearchPalette() {
       } else if (e.key === "Enter") {
         e.preventDefault();
         if (selected) openEntry(selected);
-      } else if (e.key === "Tab" && selected?.kind === "page" && selected.hit.matches.length > 1) {
-        e.preventDefault();
-        const next = (selectedMatchIndex + (e.shiftKey ? -1 : 1) + selected.hit.matches.length) % selected.hit.matches.length;
-        setSelectedMatchIndex(next);
       }
     },
-    [flat, selected, selectedMatchIndex, setSelectedResultId, setSelectedMatchIndex, closePalette, openEntry]
+    [flat, selected, setSelectedResultId, closePalette, openEntry]
   );
 
   const askAi = useCallback(async () => {
@@ -481,9 +477,6 @@ export function SearchPalette() {
               </span>
               <span>
                 <kbd className="rounded border border-border px-1 py-[1px]">↵</kbd> open
-              </span>
-              <span>
-                <kbd className="rounded border border-border px-1 py-[1px]">tab</kbd> next match
               </span>
               <span>
                 <kbd className="rounded border border-border px-1 py-[1px]">esc</kbd> close

@@ -211,8 +211,10 @@ export function Sidebar() {
           <div
             role="separator"
             aria-orientation="vertical"
-            aria-label="Resize sidebar"
+            aria-label="Resize sidebar — double-click to reset"
+            title="Double-click to reset width"
             onPointerDown={startResize}
+            onDoubleClick={() => setSidebarWidth(SIDEBAR_DEFAULT_WIDTH)}
             className="absolute inset-y-0 left-1/2 w-3 -translate-x-1/2 cursor-col-resize bg-transparent"
           />
         </div>
