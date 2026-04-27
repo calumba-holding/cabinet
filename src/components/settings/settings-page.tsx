@@ -67,6 +67,7 @@ import {
 } from "@/hooks/use-user-profile";
 import { ICON_PICKER_KEYS, getIconByKey } from "@/lib/agents/icon-catalog";
 import { AGENT_PALETTE } from "@/lib/themes";
+import { version as pkgVersion } from "../../../package.json";
 import {
   AVATAR_PRESETS,
   AVATAR_CATEGORY_LABEL,
@@ -1464,7 +1465,7 @@ export function SettingsPage() {
               <div className="space-y-3 text-[13px]">
                 <div className="flex items-center justify-between py-2 border-b border-border">
                   <span className="text-muted-foreground">Version</span>
-                  <span className="font-mono">0.2.6</span>
+                  <span className="font-mono">{pkgVersion}</span>
                 </div>
                 <div className="flex items-center justify-between py-2 border-b border-border">
                   <span className="text-muted-foreground">Framework</span>
