@@ -156,7 +156,7 @@ export function Sidebar() {
           {sidebarDrawer === "agents" && (
             <button
               type="button"
-              title="Add Agent"
+              title="New Agent"
               onClick={() => {
                 setSection({
                   type: "agents",
@@ -169,7 +169,7 @@ export function Sidebar() {
               className="flex min-w-0 flex-1 items-center gap-1.5 text-xs px-2.5 py-1.5 rounded-md text-muted-foreground hover:text-foreground hover:bg-accent transition-colors cursor-pointer"
             >
               <UserPlus className="h-4 w-4 shrink-0" />
-              <span className="min-w-0 truncate">Add Agent</span>
+              <span className="min-w-0 truncate">New Agent</span>
             </button>
           )}
           {sidebarDrawer === "tasks" && (
