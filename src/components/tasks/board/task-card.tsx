@@ -90,6 +90,7 @@ export function TaskCard({
           <StatusIcon state={state} />
         </span>
         <p
+          title={task.title}
           className={cn(
             "flex-1 line-clamp-2 text-[13px] leading-snug text-foreground",
             compact ? "pr-14" : "pr-[88px]"

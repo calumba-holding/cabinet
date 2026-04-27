@@ -243,7 +243,7 @@ export function KanbanView({
   // manual toggle in between transitions still sticks.
   const [collapsedCsv, setCollapsedCsv] = usePersistentState<string>(
     "cabinet.tasks.v2.collapsedLanes",
-    "archive,running",
+    "archive",
     (raw) => raw
   );
   const collapsedLanes: Set<LaneKey> = new Set(
