@@ -584,7 +584,7 @@ export function HomeScreen() {
           </h2>
           <button
             onClick={() => setSection({ type: "registry" })}
-            className="text-xs font-medium text-primary hover:text-primary/80 transition-colors"
+            className="text-xs font-medium text-primary hover:text-primary/80 underline underline-offset-2 cursor-pointer transition-colors"
           >
             Browse all &rarr;
           </button>
