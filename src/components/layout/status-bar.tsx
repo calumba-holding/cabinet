@@ -93,6 +93,7 @@ function GitHubIcon({ className }: { className?: string }) {
 }
 
 function formatGithubStars(stars: number) {
+  if (stars >= 10_000) return `${(stars / 1000).toFixed(1)}k`;
   return new Intl.NumberFormat("en-US").format(stars);
 }
 
