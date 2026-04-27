@@ -3022,61 +3022,26 @@ export function AgentsWorkspace({
 
                   {/* Jobs */}
                   <div className="space-y-2">
-                    <div className="flex flex-wrap items-start justify-between gap-3">
-                      <div className="space-y-1">
-                        <h3 className="inline-flex items-center gap-2 text-[16px] font-semibold tracking-tight text-foreground">
-                          <Clock3 className="size-4 text-emerald-400" />
-                          Routines
-                          <span className="text-[12px] font-normal text-muted-foreground">
-                            ({allJobs.length})
-                          </span>
-                        </h3>
-                        <p className="text-[12px] text-muted-foreground">
-                          Every routine this team runs on a schedule. Click any
-                          row to edit its prompt, schedule, or pause it.
-                        </p>
-                      </div>
-                      <DropdownMenu>
-                        <DropdownMenuTrigger
-                          className={cn(
-                            "inline-flex h-9 items-center gap-2 rounded-lg border border-border/70 bg-background px-3 text-[12px] font-medium text-foreground transition-colors hover:bg-muted/50 disabled:pointer-events-none disabled:opacity-50"
-                          )}
-                          disabled={agents.length === 0}
-                        >
-                          <Plus className="size-3.5" />
-                          Add scheduled job
-                        </DropdownMenuTrigger>
-                        <DropdownMenuContent align="end" className="max-h-[320px] overflow-y-auto scrollbar-thin p-1">
-                          <div className="px-2 py-1 text-[10px] font-semibold uppercase tracking-wider text-muted-foreground">
-                            Assign to
-                          </div>
-                          {agents.map((agent) => (
-                            <DropdownMenuItem
-                              key={agent.scopedId ?? (agent.cabinetPath ? `${agent.cabinetPath}::${agent.slug}` : agent.slug)}
-                              onClick={() => openNewRoutineFor(agent)}
-                              className="flex items-center gap-2 rounded-md px-2 py-1.5 text-[12px]"
-                            >
-                              <AgentAvatar agent={agent} shape="circle" size="md" />
-                              <span className="flex min-w-0 flex-col leading-tight">
-                                <span className="truncate text-[12px] font-medium text-foreground">
-                                  {agent.name}
-                                </span>
-                                <span className="truncate text-[10px] text-muted-foreground">
-                                  {agent.role || agent.slug}
-                                </span>
-                              </span>
-                            </DropdownMenuItem>
-                          ))}
-                        </DropdownMenuContent>
-                      </DropdownMenu>
+                    <div className="space-y-1">
+                      <h3 className="inline-flex items-center gap-2 text-[16px] font-semibold tracking-tight text-foreground">
+                        <Clock3 className="size-4 text-emerald-400" />
+                        Routines
+                        <span className="text-[12px] font-normal text-muted-foreground">
+                          ({allJobs.length})
+                        </span>
+                      </h3>
+                      <p className="text-[12px] text-muted-foreground">
+                        Every routine this team runs on a schedule. Click any
+                        row to edit its prompt, schedule, or pause it.
+                      </p>
                     </div>
                     {allJobs.length === 0 ? (
                       <p className="rounded-lg border border-dashed border-border/60 px-4 py-6 text-center text-[13px] text-muted-foreground">
                         No routines yet. Use{" "}
                         <span className="font-semibold text-foreground">
-                          Add scheduled job
+                          Add routine
                         </span>{" "}
-                        to create your first one.
+                        above to create your first one.
                       </p>
                     ) : (
                       <ul className="divide-y divide-border/60 overflow-hidden rounded-xl border border-border/70 bg-card">
