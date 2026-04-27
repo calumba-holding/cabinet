@@ -2241,6 +2241,47 @@ function ProfileTab() {
         </div>
       </div>
 
+      {/* Audit #085: Workspace used to live below ~110 avatars + ~120 icons,
+          which buried the more-frequently-edited fields under a wall of
+          decoration. Moved to right after Name/Role so the workspace
+          fields are above the fold and visible before the avatar grid. */}
+      <div className="border-t border-border pt-5">
+        <h3 className="mb-1 text-[13px] font-semibold">Workspace</h3>
+        <p className="mb-4 text-[12px] text-muted-foreground">
+          Captured during onboarding. Agents read these when planning work.
+        </p>
+        <div className="space-y-3">
+          <Field label="Workspace name">
+            <Input
+              value={workspace.workspaceName || ""}
+              onChange={(e) =>
+                update({ workspace: { workspaceName: e.target.value } })
+              }
+              placeholder="My Cabinet"
+            />
+          </Field>
+          <Field label="Description">
+            <textarea
+              value={workspace.description || ""}
+              onChange={(e) =>
+                update({ workspace: { description: e.target.value } })
+              }
+              className="min-h-[72px] w-full rounded-md border border-border bg-background px-3 py-2 text-sm outline-none focus-visible:ring-1 focus-visible:ring-ring"
+              placeholder="What do you do?"
+            />
+          </Field>
+          <Field label="Team size">
+            <Input
+              value={workspace.teamSize || ""}
+              onChange={(e) =>
+                update({ workspace: { teamSize: e.target.value } })
+              }
+              placeholder="Solo / 2–5 / 6–20 / 20+"
+            />
+          </Field>
+        </div>
+      </div>
+
       <div>
         <h4 className="mb-2 text-[12px] font-semibold">Avatar</h4>
         <AvatarPicker
@@ -2332,43 +2373,6 @@ function ProfileTab() {
         <p className="mt-1 text-[11px] text-muted-foreground">
           Used when no avatar image is set. Click again to clear.
         </p>
-      </div>
-
-      <div className="border-t border-border pt-5">
-        <h3 className="mb-1 text-[13px] font-semibold">Workspace</h3>
-        <p className="mb-4 text-[12px] text-muted-foreground">
-          Captured during onboarding. Agents read these when planning work.
-        </p>
-        <div className="space-y-3">
-          <Field label="Workspace name">
-            <Input
-              value={workspace.workspaceName || ""}
-              onChange={(e) =>
-                update({ workspace: { workspaceName: e.target.value } })
-              }
-              placeholder="My Cabinet"
-            />
-          </Field>
-          <Field label="Description">
-            <textarea
-              value={workspace.description || ""}
-              onChange={(e) =>
-                update({ workspace: { description: e.target.value } })
-              }
-              className="min-h-[72px] w-full rounded-md border border-border bg-background px-3 py-2 text-sm outline-none focus-visible:ring-1 focus-visible:ring-ring"
-              placeholder="What do you do?"
-            />
-          </Field>
-          <Field label="Team size">
-            <Input
-              value={workspace.teamSize || ""}
-              onChange={(e) =>
-                update({ workspace: { teamSize: e.target.value } })
-              }
-              placeholder="Solo / 2–5 / 6–20 / 20+"
-            />
-          </Field>
-        </div>
       </div>
 
       <div className="flex items-center gap-2 border-t border-border pt-4">
