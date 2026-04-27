@@ -2102,6 +2102,28 @@ function IconPicker({
   );
 }
 
+function hexToRgb(hex: string): [number, number, number] | null {
+  const clean = hex.replace(/^#/, "");
+  if (clean.length !== 6) return null;
+  const r = parseInt(clean.slice(0, 2), 16);
+  const g = parseInt(clean.slice(2, 4), 16);
+  const b = parseInt(clean.slice(4, 6), 16);
+  if (isNaN(r) || isNaN(g) || isNaN(b)) return null;
+  return [r, g, b];
+}
+
+function wcagContrastVsWhite(hex: string): number | null {
+  const rgb = hexToRgb(hex);
+  if (!rgb) return null;
+  const [rs, gs, bs] = rgb.map((c) => {
+    const v = c / 255;
+    return v <= 0.03928 ? v / 12.92 : Math.pow((v + 0.055) / 1.055, 2.4);
+  });
+  const l = 0.2126 * rs + 0.7152 * gs + 0.0722 * bs;
+  // Avatar fallback uses white icon — only warn when white-on-color contrast is low.
+  return (1.05) / (l + 0.05);
+}
+
 function hexFromPalette(i: number): string {
   const text = AGENT_PALETTE[i].text;
   const m = text.match(/rgb\((\d+),\s*(\d+),\s*(\d+)\)/);
@@ -2364,6 +2386,17 @@ function ProfileTab() {
         <p className="mt-1 text-[11px] text-muted-foreground">
           Tints the fallback avatar when no image is set.
         </p>
+        {(() => {
+          const hex = (profile.color || "").trim();
+          if (!hex) return null;
+          const contrast = wcagContrastVsWhite(hex.startsWith("#") ? hex : `#${hex}`);
+          if (contrast === null || contrast >= 3) return null;
+          return (
+            <p className="mt-1 text-[11px] text-amber-600 dark:text-amber-400">
+              Low contrast ({contrast.toFixed(1)}:1) — initials may be hard to read on this background.
+            </p>
+          );
+        })()}
       </div>
 
       <div>
