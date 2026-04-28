@@ -409,14 +409,18 @@ export function KanbanView({
                   >
                     {items.length === 0 ? (
                       isInbox ? (
-                        <div className="rounded-md border border-dashed border-border/50 px-3 py-5 text-center space-y-2">
-                          <p className="text-[11px] text-muted-foreground">{lane.hint}</p>
+                        <button
+                          type="button"
+                          onClick={onAddTask}
+                          className="group w-full rounded-md border border-dashed border-border/50 px-3 py-8 text-center space-y-2 transition-colors hover:border-border hover:bg-muted/30 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring"
+                        >
+                          <p className="text-[11px] text-muted-foreground group-hover:text-foreground/70 transition-colors">{lane.hint}</p>
                           <p className="text-[10.5px] text-muted-foreground/50">
-                            Press{" "}
+                            Click or press{" "}
                             <kbd className="rounded px-1 py-0.5 text-[9.5px] ring-1 ring-foreground/10">⌘⌥T</kbd>
                             {" "}to add a task
                           </p>
-                        </div>
+                        </button>
                       ) : (
                         <div className="rounded-md border border-dashed border-border/50 px-3 py-4 text-center text-[11px] text-muted-foreground">
                           {lane.hint}

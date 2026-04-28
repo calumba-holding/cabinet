@@ -444,15 +444,19 @@ export function KBEditor() {
             <TableMenu editor={editor} />
             <SlashCommands editor={editor} />
 
-            {/* AI Edit Prompt */}
-            <div className="max-w-3xl mx-auto px-8 pb-8">
+            {/* AI Edit Prompt + slash hint */}
+            <div className="max-w-3xl mx-auto px-8 pb-8 flex items-center gap-4">
               <button
                 onClick={handleOpenAI}
                 className="group flex items-center gap-2 text-[13px] text-muted-foreground/50 hover:text-muted-foreground transition-colors cursor-pointer"
               >
                 <Sparkles className="h-3.5 w-3.5 group-hover:text-primary transition-colors" />
-                <span>How would you like to edit this page?</span>
+                <span>Edit with AI</span>
               </button>
+              <span className="text-[11px] text-muted-foreground/30 select-none">
+                <kbd className="rounded px-1 py-0.5 font-mono text-[10px] ring-1 ring-foreground/10">/</kbd>
+                {" "}for commands
+              </span>
             </div>
           </div>
 
@@ -468,10 +472,22 @@ export function KBEditor() {
       )}
 
       {/* Status bar */}
-      <div className="flex items-center justify-end px-4 py-1 border-t border-border text-xs text-muted-foreground/60">
-        {saveStatus === "saving" && "Saving..."}
-        {saveStatus === "saved" && "Saved"}
-        {saveStatus === "error" && "Save failed"}
+      <div className="flex items-center justify-between px-4 py-1 border-t border-border text-xs text-muted-foreground/60">
+        <span className="text-[10.5px] text-muted-foreground/30 select-none hidden sm:block">
+          <kbd className="rounded px-1 font-mono text-[9.5px] ring-1 ring-foreground/10">⌘S</kbd>
+          {" "}save
+          <span className="mx-1.5 opacity-40">·</span>
+          <kbd className="rounded px-1 font-mono text-[9.5px] ring-1 ring-foreground/10">/</kbd>
+          {" "}commands
+          <span className="mx-1.5 opacity-40">·</span>
+          <kbd className="rounded px-1 font-mono text-[9.5px] ring-1 ring-foreground/10">@</kbd>
+          {" "}mention
+        </span>
+        <span>
+          {saveStatus === "saving" && "Saving..."}
+          {saveStatus === "saved" && "Saved"}
+          {saveStatus === "error" && "Save failed"}
+        </span>
       </div>
 
     </div>

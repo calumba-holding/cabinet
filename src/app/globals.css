@@ -149,6 +149,11 @@
   html {
     @apply font-sans;
   }
+  /* Audit #101: focus rings were barely visible in light theme at ring/50.
+     Use full-opacity ring on :focus-visible for consistent keyboard nav. */
+  :focus-visible {
+    outline-color: var(--ring);
+  }
 }
 
 /* Custom theme font overrides — outside @layer so they beat Tailwind utilities */

@@ -68,6 +68,7 @@ import {
 import { ICON_PICKER_KEYS, getIconByKey } from "@/lib/agents/icon-catalog";
 import { AGENT_PALETTE } from "@/lib/themes";
 import { version as pkgVersion } from "../../../package.json";
+import releaseJson from "../../../cabinet-release.json";
 import {
   AVATAR_PRESETS,
   AVATAR_CATEGORY_LABEL,
@@ -1466,6 +1467,15 @@ export function SettingsPage() {
                 <div className="flex items-center justify-between py-2 border-b border-border">
                   <span className="text-muted-foreground">Version</span>
                   <span className="font-mono">{pkgVersion}</span>
+                </div>
+                <div className="flex items-center justify-between py-2 border-b border-border">
+                  <span className="text-muted-foreground">Release</span>
+                  <span className="font-mono text-[12px] text-muted-foreground">
+                    {releaseJson.version}
+                    {releaseJson.channel !== "stable" && (
+                      <span className="ml-1 rounded bg-muted px-1 py-0.5 text-[10px]">{releaseJson.channel}</span>
+                    )}
+                  </span>
                 </div>
                 <div className="flex items-center justify-between py-2 border-b border-border">
                   <span className="text-muted-foreground">Framework</span>

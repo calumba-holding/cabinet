@@ -71,7 +71,7 @@ function SlideGlobal() {
     { keys: [`${MOD}⌥R`], label: "Run task now" },
     { keys: [`${MOD}K`], label: "Open search palette" },
     { keys: ["/"], label: "Open search (when idle)" },
-    { keys: [`${MOD}S`], label: "Save current page" },
+    { keys: [`${MOD}S`], label: "Force-save page" },
     { keys: [`${MOD}⌥G`], label: "Toggle Agents view" },
     { keys: [`${MOD}⌥A`], label: "Toggle AI panel" },
     { keys: ["Ctrl`"], label: "Toggle terminal" },
