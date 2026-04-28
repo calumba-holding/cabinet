@@ -451,6 +451,15 @@ export function KanbanView({
                       ))
                     )}
                   </SortableContext>
+                  {isInbox && items.length > 0 && onAddTask && (
+                    <button
+                      type="button"
+                      onClick={onAddTask}
+                      className="mt-1 w-full rounded-md px-3 py-1.5 text-[11px] text-muted-foreground/50 hover:text-muted-foreground hover:bg-muted/30 transition-colors text-left"
+                    >
+                      + Add task
+                    </button>
+                  )}
                 </div>
               </>
             )}

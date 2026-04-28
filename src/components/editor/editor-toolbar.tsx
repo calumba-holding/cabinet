@@ -35,7 +35,6 @@ import {
   Sparkles,
   ChevronLeft,
   ChevronRight,
-  MoreHorizontal,
 } from "lucide-react";
 import { useEditorStore } from "@/stores/editor-store";
 import { useCallback, useEffect, useRef, useState } from "react";
@@ -103,8 +102,6 @@ export function EditorToolbar({ editor }: EditorToolbarProps) {
   const isRtl = frontmatter?.dir === "rtl";
 
   const [popover, setPopover] = useState<PopoverKind>(null);
-  const [moreOpen, setMoreOpen] = useState(false);
-  const moreButtonRef = useRef<HTMLButtonElement | null>(null);
   const scrollRef = useRef<HTMLDivElement | null>(null);
   const [canScrollLeft, setCanScrollLeft] = useState(false);
   const [canScrollRight, setCanScrollRight] = useState(false);
@@ -302,8 +299,8 @@ export function EditorToolbar({ editor }: EditorToolbarProps) {
     { icon: Minus, action: () => editor.chain().focus().setHorizontalRule().run(), isActive: false, label: "Divider" },
   ];
 
-  // Overflow items — tucked behind the "More" button
-  const overflowItems: ButtonSpec[] = [
+  // Secondary items — appended to the scrollable row after the primary set
+  const secondaryItems: ButtonSpec[] = [
     { icon: AlignLeft, action: () => editor.chain().focus().setTextAlign("left").run(), isActive: editor.isActive({ textAlign: "left" }), label: "Align left" },
     { icon: AlignCenter, action: () => editor.chain().focus().setTextAlign("center").run(), isActive: editor.isActive({ textAlign: "center" }), label: "Align center" },
     { icon: AlignRight, action: () => editor.chain().focus().setTextAlign("right").run(), isActive: editor.isActive({ textAlign: "right" }), label: "Align right" },
@@ -314,19 +311,19 @@ export function EditorToolbar({ editor }: EditorToolbarProps) {
     { separator: true },
     {
       icon: ImageIcon,
-      action: (e) => { setMoreOpen(false); openPopoverFromButton(e, (anchor) => ({ type: "media", kind: "image", anchor })); },
+      action: (e) => openPopoverFromButton(e, (anchor) => ({ type: "media", kind: "image", anchor })),
       isActive: false,
       label: "Insert image",
     },
     {
       icon: VideoIcon,
-      action: (e) => { setMoreOpen(false); openPopoverFromButton(e, (anchor) => ({ type: "media", kind: "video", anchor })); },
+      action: (e) => openPopoverFromButton(e, (anchor) => ({ type: "media", kind: "video", anchor })),
       isActive: false,
       label: "Insert video",
     },
     {
       icon: Sparkles,
-      action: (e) => { setMoreOpen(false); openPopoverFromButton(e, (anchor) => ({ type: "embed", anchor })); },
+      action: (e) => openPopoverFromButton(e, (anchor) => ({ type: "embed", anchor })),
       isActive: false,
       label: "Embed",
     },
@@ -373,7 +370,7 @@ export function EditorToolbar({ editor }: EditorToolbarProps) {
           onWheel={onWheel}
           className="flex items-center gap-0.5 px-2 py-1 overflow-x-auto overflow-y-hidden scrollbar-none"
         >
-          {primaryItems.map((item, i) => {
+          {[...primaryItems, { separator: true } as ButtonSpec, ...secondaryItems].map((item, i) => {
             if ("separator" in item) {
               return (
                 <Separator key={i} orientation="vertical" className="mx-1 h-6 shrink-0" />
@@ -390,56 +387,8 @@ export function EditorToolbar({ editor }: EditorToolbarProps) {
               />
             );
           })}
-          <Separator orientation="vertical" className="mx-1 h-6 shrink-0" />
-          <button
-            ref={moreButtonRef}
-            type="button"
-            aria-label="More formatting options"
-            title="More formatting options"
-            onMouseDown={(e) => e.preventDefault()}
-            onClick={() => setMoreOpen((v) => !v)}
-            className={cn(
-              "h-8 w-8 shrink-0 inline-flex items-center justify-center rounded-md text-foreground/80 hover:bg-accent transition-colors",
-              moreOpen && "bg-accent text-foreground ring-1 ring-inset ring-foreground/15"
-            )}
-          >
-            <MoreHorizontal className="h-4 w-4" />
-          </button>
         </div>
       </div>
-
-      {moreOpen && (
-        <div
-          data-editor-popover="true"
-          className="z-50 rounded-md border border-border bg-popover shadow-lg"
-          style={{
-            position: "fixed",
-            top: moreButtonRef.current
-              ? moreButtonRef.current.getBoundingClientRect().bottom + 4
-              : 40,
-            right: 8,
-          }}
-        >
-          <ClickOutsideClose onClose={() => setMoreOpen(false)} />
-          <div className="flex flex-wrap gap-0.5 p-1.5 max-w-[240px]">
-            {overflowItems.map((item, i) => {
-              if ("separator" in item) {
-                return <div key={i} className="w-full h-px bg-border/60 my-0.5" />;
-              }
-              return (
-                <ToolButton
-                  key={i}
-                  label={item.label}
-                  icon={item.icon}
-                  active={item.isActive}
-                  style={item.style}
-                  onAction={(e) => { setMoreOpen(false); item.action(e); }}
-                />
-              );
-            })}
-          </div>
-        </div>
-      )}
 
       {popover && (popover.type === "color" || popover.type === "highlight") && (
         <div

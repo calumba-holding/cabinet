@@ -180,6 +180,48 @@ export function AppShell() {
     void loadProviders();
   }, [loadProviders]);
 
+  // Dynamic document.title — reflects the current section and page.
+  useEffect(() => {
+    const base = "Cabinet";
+    let title: string;
+    switch (section.type) {
+      case "home":
+        title = base;
+        break;
+      case "cabinet":
+        title = selectedPath
+          ? `${selectedPath.split("/").pop() ?? selectedPath} — ${base}`
+          : base;
+        break;
+      case "agents":
+        title = `Agents — ${base}`;
+        break;
+      case "agent":
+        title = section.slug
+          ? `${section.slug.replace(/-/g, " ")} — ${base}`
+          : `Agents — ${base}`;
+        break;
+      case "tasks":
+        title = `Tasks — ${base}`;
+        break;
+      case "task":
+        title = `Task — ${base}`;
+        break;
+      case "settings":
+        title = `Settings — ${base}`;
+        break;
+      case "help":
+        title = `Help — ${base}`;
+        break;
+      case "registry":
+        title = `Registry — ${base}`;
+        break;
+      default:
+        title = base;
+    }
+    document.title = title;
+  }, [section, selectedPath]);
+
   // Track the last known file context so new terminal tabs open in the right CWD.
   useEffect(() => {
     const cabinetPath = section.cabinetPath ?? ".";

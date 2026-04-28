@@ -479,9 +479,6 @@ export function KBEditor() {
           <span className="mx-1.5 opacity-40">·</span>
           <kbd className="rounded px-1 font-mono text-[9.5px] ring-1 ring-foreground/10">/</kbd>
           {" "}commands
-          <span className="mx-1.5 opacity-40">·</span>
-          <kbd className="rounded px-1 font-mono text-[9.5px] ring-1 ring-foreground/10">@</kbd>
-          {" "}mention
         </span>
         <span>
           {saveStatus === "saving" && "Saving..."}
