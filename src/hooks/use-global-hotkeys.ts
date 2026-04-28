@@ -41,12 +41,21 @@ export function useGlobalHotkeys(): void {
         return;
       }
 
+      // Ctrl+` — toggle terminal (VS Code / iTerm2 convention; avoids Cmd+`
+      // which is "Cycle windows of same app" at macOS system level)
+      if (e.ctrlKey && !e.metaKey && !e.shiftKey && e.key === "`") {
+        e.preventDefault();
+        useAppStore.getState().toggleTerminal();
+        return;
+      }
+
       // The remaining shortcuts are modifier-driven; they should still fire
       // inside editable surfaces because the modifier makes them unambiguous.
       if (!mod) return;
 
-      // Cmd+N — open the global new-task composer in place (no navigation)
-      if (!e.shiftKey && !e.altKey && (e.key === "n" || e.key === "N")) {
+      // Cmd+Shift+T — open the global new-task composer in place (no navigation)
+      // (Cmd+N conflicts with "New window" in every browser and on macOS system-level)
+      if (e.shiftKey && !e.altKey && (e.key === "t" || e.key === "T")) {
         e.preventDefault();
         window.dispatchEvent(new CustomEvent("cabinet:global-new-task"));
         return;
@@ -59,13 +68,6 @@ export function useGlobalHotkeys(): void {
         return;
       }
 
-      // Cmd+` — toggle terminal
-      if (!e.shiftKey && e.key === "`") {
-        e.preventDefault();
-        useAppStore.getState().toggleTerminal();
-        return;
-      }
-
       // Cmd+Shift+A — toggle AI panel
       if (e.shiftKey && (e.key === "a" || e.key === "A")) {
         e.preventDefault();
@@ -73,8 +75,9 @@ export function useGlobalHotkeys(): void {
         return;
       }
 
-      // Cmd+M — toggle Agents view
-      if (!e.shiftKey && (e.key === "m" || e.key === "M")) {
+      // Cmd+Shift+G — toggle Agents view
+      // (Cmd+M conflicts with "Minimize window" at macOS system level)
+      if (e.shiftKey && (e.key === "g" || e.key === "G")) {
         e.preventDefault();
         const app = useAppStore.getState();
         const { section, setSection } = app;

@@ -527,7 +527,7 @@ export function ShortcutsVisual() {
       <div className="flex flex-col gap-3">
         {/* row 1 — most important */}
         <div className="flex items-center gap-2">
-          <KbdChip delay={100}>⌘N</KbdChip>
+          <KbdChip delay={100}>⌘⇧T</KbdChip>
           <span className="text-[10px]" style={{ color: P.textTertiary }}>New task</span>
         </div>
         {/* row 2 */}
