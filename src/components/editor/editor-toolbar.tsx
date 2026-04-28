@@ -377,7 +377,7 @@ export function EditorToolbar({ editor }: EditorToolbarProps) {
         <div
           ref={scrollRef}
           onWheel={onWheel}
-          className="flex items-center gap-0.5 px-2 py-1 overflow-x-auto overflow-y-hidden scrollbar-thin"
+          className="flex items-center gap-0.5 px-2 pt-1 pb-1.5 overflow-x-scroll overflow-y-hidden editor-toolbar-scroll"
         >
           {[...primaryItems, { separator: true } as ButtonSpec, ...secondaryItems].map((item, i) => {
             if ("separator" in item) {
