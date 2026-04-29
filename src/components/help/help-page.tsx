@@ -215,7 +215,7 @@ const HELP_ITEMS: HelpItem[] = [
       </>
     ),
     description:
-      "Set OpenAI, Anthropic, GitHub, or any custom env var once and Cabinet hands it to every CLI and skill at spawn time. Stored locally in .cabinet.env, owner-only, gitignored.",
+      "Plug in your OpenAI, Anthropic, or GitHub account once — every agent and skill in Cabinet will use it. You pay your own bills, use your own quota, no middleman.",
     cta: "Watch the demo",
     visual: <IntegrationsVisual />,
     action: { kind: "demo", demoId: "api-keys" },

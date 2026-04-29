@@ -1,6 +1,6 @@
 "use client";
 
-import { KeyRound, Lock, Terminal, Sparkles } from "lucide-react";
+import { KeyRound, Lock, Bot, Calendar, Image as ImageIcon } from "lucide-react";
 import { TOUR_PALETTE as P } from "@/components/onboarding/tour/palette";
 import { DemoSlideShell, type DemoConfig } from "../demo-modal";
 
@@ -16,28 +16,54 @@ const KEYS: KeyRow[] = [
   { preset: "GitHub", envVar: "GITHUB_TOKEN", lastFour: "7Jp4" },
 ];
 
-/* ── Slide 1: Set keys once ─────────────────────────────────────────── */
+/**
+ * Small footnote that demotes developer-flavored details below the
+ * main human-readable description. Renders inline (lives inside <p>),
+ * but visually breaks to its own line.
+ */
+function DevFootnote({ children }: { children: React.ReactNode }) {
+  return (
+    <span
+      className="font-mono text-[11.5px] leading-relaxed"
+      style={{
+        display: "block",
+        marginTop: 14,
+        paddingTop: 10,
+        borderTop: `1px dashed ${P.border}`,
+        color: P.textTertiary,
+      }}
+    >
+      <span style={{ color: P.accentWarm, fontWeight: 600 }}>
+        {"// "}for developers ·{" "}
+      </span>
+      {children}
+    </span>
+  );
+}
+
+/* ── Slide 1: Plug in your AI accounts ──────────────────────────────── */
 
 function SlideSetOnce() {
   return (
     <DemoSlideShell
       title={
         <>
-          <span style={{ color: P.accent }}>Set</span> them once.
+          Plug in your <span style={{ color: P.accent }}>AI accounts</span>.
         </>
       }
       description={
         <>
-          Pick a provider, paste the key, save. Cabinet writes it to{" "}
-          <code style={{ background: P.paperWarm, padding: "1px 6px", borderRadius: 4 }}>
-            .cabinet.env
-          </code>{" "}
-          at the project root with{" "}
-          <code style={{ background: P.paperWarm, padding: "1px 6px", borderRadius: 4 }}>
-            0600
-          </code>{" "}
-          permissions and a gitignore guard. The plaintext never round-trips
-          through the UI again — only the last four show.
+          Pick a provider, paste your key, save. Cabinet remembers it so every
+          task you run uses <em>your</em> account — you pay your own bills, use
+          your own quota, no middleman.
+          <DevFootnote>
+            stored in{" "}
+            <code style={{ background: P.paperWarm, padding: "0 4px", borderRadius: 3 }}>
+              .cabinet.env
+            </code>{" "}
+            at the project root · mode 0600 · gitignored · plaintext never
+            round-trips through the UI (only the last four show).
+          </DevFootnote>
         </>
       }
     >
@@ -57,14 +83,14 @@ function SlideSetOnce() {
         >
           <KeyRound className="h-3.5 w-3.5" style={{ color: P.textSecondary }} />
           <span className="text-[12.5px] font-semibold" style={{ color: P.text }}>
-            API Keys
+            Your AI accounts
           </span>
           <span
             className="ml-auto inline-flex items-center gap-1 rounded-full px-1.5 py-0.5 text-[9px] font-semibold"
             style={{ background: P.accentBg, color: P.accentWarm }}
           >
             <Lock className="h-2.5 w-2.5" />
-            local · 0600
+            saved locally
           </span>
         </div>
 
@@ -121,7 +147,7 @@ function SlideSetOnce() {
   );
 }
 
-/* ── Slide 2: Used everywhere ───────────────────────────────────────── */
+/* ── Slide 2: Every agent uses them ──────────────────────────────────── */
 
 function SlideUsedEverywhere() {
   return (
@@ -129,22 +155,23 @@ function SlideUsedEverywhere() {
       reversed
       title={
         <>
-          Available <span style={{ color: P.accent }}>everywhere</span>.
+          Every agent <span style={{ color: P.accent }}>just uses them</span>.
         </>
       }
       description={
         <>
-          Cabinet merges your keys into every CLI subprocess at spawn time —
-          the Claude/Codex/Gemini adapters, every PTY session, and any script
-          inside an installed skill. No per-task plumbing, no shell rc edits.
-          Shell-supplied env still wins, so debug overrides Just Work.
+          Once a key is saved, every agent and skill in Cabinet picks it up on
+          its own. No copy-pasting into each task, no hunting for it later — it
+          just works.
+          <DevFootnote>
+            merged into every CLI subprocess at spawn (Claude, Codex, Gemini
+            adapters · PTY sessions · skill scripts) · shell-supplied env still
+            wins, so debug overrides Just Work · no shell rc edits.
+          </DevFootnote>
         </>
       }
     >
-      <div
-        className="space-y-2"
-        style={{ width: 420 }}
-      >
+      <div className="space-y-2" style={{ width: 420 }}>
         {/* Top: env file */}
         <div
           className="rounded-xl px-4 py-3 opacity-0"
@@ -159,7 +186,7 @@ function SlideUsedEverywhere() {
             className="mb-1 text-[9.5px] font-semibold uppercase tracking-wider"
             style={{ color: P.textTertiary }}
           >
-            .cabinet.env
+            Your saved keys
           </p>
           <p className="font-mono text-[11px]" style={{ color: P.textSecondary }}>
             OPENAI_API_KEY=••••x9aF
@@ -170,20 +197,17 @@ function SlideUsedEverywhere() {
 
         {/* Arrow line */}
         <div className="flex justify-center py-1">
-          <span
-            className="text-[16px]"
-            style={{ color: P.accent }}
-          >
+          <span className="text-[16px]" style={{ color: P.accent }}>
             ↓
           </span>
         </div>
 
-        {/* Bottom: spawned children */}
+        {/* Bottom: spawned children — friendly labels */}
         <div className="grid grid-cols-3 gap-2">
           {[
-            { icon: <Terminal className="h-3 w-3" />, label: "Claude CLI" },
-            { icon: <Terminal className="h-3 w-3" />, label: "PTY task" },
-            { icon: <Sparkles className="h-3 w-3" />, label: "Skill script" },
+            { icon: <Bot className="h-3 w-3" />, label: "Editor agent" },
+            { icon: <Calendar className="h-3 w-3" />, label: "Calendar agent" },
+            { icon: <ImageIcon className="h-3 w-3" />, label: "Image skill" },
           ].map((c, i) => (
             <div
               key={c.label}
@@ -204,8 +228,8 @@ function SlideUsedEverywhere() {
               <p className="text-[10.5px] font-semibold" style={{ color: P.accentWarm }}>
                 {c.label}
               </p>
-              <p className="mt-0.5 font-mono text-[8.5px]" style={{ color: P.textSecondary }}>
-                env inherited
+              <p className="mt-0.5 text-[9px]" style={{ color: P.textSecondary }}>
+                uses your key
               </p>
             </div>
           ))}
