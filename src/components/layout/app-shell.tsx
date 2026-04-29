@@ -321,14 +321,11 @@ export function AppShell() {
 
   // Onboarding tour. Auto-opens once per browser after the wizard. The
   // legal disclaimer is folded into the wizard's final step (single source
-  // of truth) — there is no separate disclaimer modal here. 700ms delay
-  // gives the user a beat to register the app before the tour pops in.
-  const tour = useTour(showWizard === false, { autoOpenDelayMs: 700 });
-
-  // True only on the render that immediately follows a wizard completion,
-  // so we can play a one-shot reveal animation without affecting reloads
-  // or subsequent navigations.
-  const [justCompletedWizard, setJustCompletedWizard] = useState(false);
+  // of truth) — there is no separate disclaimer modal here. The tour mounts
+  // synchronously before paint (useLayoutEffect inside useTour) so the
+  // user goes straight from wizard to "Meet your Cabinet" with no app
+  // flash in between.
+  const tour = useTour(showWizard === false);
 
   // Tour-finish task composer. Opened from the tour's "Write your first task"
   // CTA. We mount the dialog at AppShell level so the user can land on the
@@ -379,7 +376,6 @@ export function AppShell() {
   }, [openGlobalTask]);
 
   const handleWizardComplete = useCallback(() => {
-    setJustCompletedWizard(true);
     setShowWizard(false);
     try {
       window.localStorage.setItem(WIZARD_DONE_STORAGE_KEY, "1");
@@ -675,11 +671,7 @@ export function AppShell() {
   }
 
   return (
-    <div
-      className={`flex h-screen bg-background text-foreground${
-        justCompletedWizard ? " animate-app-reveal" : ""
-      }`}
-    >
+    <div className="flex h-screen bg-background text-foreground">
       <Sidebar />
       <div
         className="flex-1 flex flex-col overflow-hidden"

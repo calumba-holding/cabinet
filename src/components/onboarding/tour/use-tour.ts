@@ -1,6 +1,11 @@
 "use client";
 
-import { useCallback, useEffect, useRef, useState } from "react";
+import { useCallback, useEffect, useLayoutEffect, useRef, useState } from "react";
+
+// useLayoutEffect logs a no-op warning during SSR; alias to useEffect on the
+// server so the auto-open path stays sync-before-paint on the client without
+// console noise.
+const useIsoLayoutEffect = typeof window !== "undefined" ? useLayoutEffect : useEffect;
 
 const TOUR_DONE_STORAGE_KEY = "cabinet.tour-done";
 const SHOW_TOUR_EVENT = "cabinet:show-tour";
@@ -39,7 +44,11 @@ export function useTour(
   // Reacting to an externally-controlled ready signal (wizard done), so
   // setting state here is the right thing. The ref guards against
   // re-triggering if the consumer toggles the input back and forth.
-  useEffect(() => {
+  // useLayoutEffect (not useEffect) so the open flip lands before the
+  // browser paints — otherwise the user sees one frame of the bare app
+  // between wizard unmount and tour mount, which breaks the onboarding
+  // flow.
+  useIsoLayoutEffect(() => {
     if (didAutoOpenRef.current) return;
     if (!autoOpenOnMount) return;
     if (!shouldAutoOpenTour()) {
@@ -48,7 +57,6 @@ export function useTour(
     }
     didAutoOpenRef.current = true;
     if (delay <= 0) {
-      // eslint-disable-next-line react-hooks/set-state-in-effect
       setOpen(true);
       return;
     }
