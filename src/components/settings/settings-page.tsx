@@ -70,6 +70,7 @@ import {
 } from "@/hooks/use-user-profile";
 import { ICON_PICKER_KEYS, getIconByKey } from "@/lib/agents/icon-catalog";
 import { AGENT_PALETTE } from "@/lib/themes";
+import { StorageBackendSection } from "@/components/settings/storage-backend-section";
 import { version as pkgVersion } from "../../../package.json";
 import releaseJson from "../../../cabinet-release.json";
 import {
@@ -900,6 +901,8 @@ export function SettingsPage() {
                   variable, which takes priority over this setting.
                 </p>
               </div>
+
+              <StorageBackendSection />
             </div>
           )}
 
