@@ -1,7 +1,0 @@
-schemaVersion: 1
-id: my-cabinet-root
-name: My Cabinet
-kind: root
-version: 0.1.0
-description: My Cabinet cabinet.
-entry: index.md

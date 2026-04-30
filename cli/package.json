@@ -8,6 +8,9 @@
   "files": [
     "index.cjs"
   ],
+  "dependencies": {
+    "cabinetai": "0.3.4"
+  },
   "keywords": [
     "ai",
     "agents",
