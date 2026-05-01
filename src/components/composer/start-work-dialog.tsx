@@ -493,7 +493,11 @@ export function WhenChip({
           "inline-flex h-8 items-center gap-1.5 rounded-md border px-2 text-[11px] font-medium transition-colors",
           tone
         )}
-        title="When should this run?"
+        // Audit #002: title now matches the visible label so screen readers
+        // hear "Run now, menu" rather than "Run now, menu, When should this
+        // run?". The dropdown's content already explains the choice.
+        title={`${label} — change schedule`}
+        aria-label={`Schedule: ${label}. Click to change.`}
       >
         <Icon className="h-3.5 w-3.5" />
         <span>{label}</span>
