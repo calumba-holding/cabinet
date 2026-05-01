@@ -42,6 +42,7 @@ import {
 } from "./daemon-client";
 import { readLibraryPersona } from "./library-manager";
 import { listPersonas, readPersona, type AgentPersona } from "./persona-manager";
+import { renderPersonaBody } from "./persona-templating";
 import { getDefaultProviderId } from "./provider-runtime";
 import { looksLikeAwaitingInput } from "./task-heuristics";
 import { emit as emitTelemetry } from "@/lib/telemetry";
@@ -263,8 +264,22 @@ function buildAgentContextHeader(persona: AgentPersona | null, agentSlug: string
     ].join("\n");
   }
 
+  // Audit #027: substitute {{cabinet.name}} / {{user.name}} / {{agent.name}}
+  // placeholders so the persona body never speaks the wrong cabinet's name.
+  // The cabinet/user lookups are async, so this header keeps the same sync
+  // signature and only does in-memory templating; the cabinet/user values
+  // are filled by buildPromptContext at the conversation entrypoint and
+  // exposed via persona.cabinetPath / persona.name. For richer substitution
+  // (cabinet.name from manifest), the call paths fetching async data must
+  // populate persona.cabinetMeta upstream.
+  const body = renderPersonaBody(persona.body, {
+    cabinet: { path: persona.cabinetPath, slug: persona.cabinetPath },
+    agent: { name: persona.name, slug: agentSlug },
+    today: new Date().toISOString().slice(0, 10),
+  });
+
   return [
-    persona.body,
+    body,
     "",
     `You are working as ${persona.name} (${agentSlug}).`,
   ].join("\n");
