@@ -36,32 +36,42 @@ export function DepthDropdown({
           compact ? "px-1 py-0.5 text-[10px]" : "px-1.5 py-0.5 text-[11px]",
           className
         )}
-        title={current.label}
+        title={`Cabinet scope: ${current.label}. Click to change.`}
+        aria-label={`Cabinet scope: ${current.label}. Click to change.`}
       >
         {!compact && <FolderTree className="size-3.5" />}
+        <span className="sr-only">Cabinet scope: </span>
         <span className="tabular-nums">{current.shortLabel}</span>
         <ChevronDown className="size-3 opacity-60" />
       </DropdownMenuTrigger>
       <DropdownMenuContent
         align="end"
-        className="min-w-[220px]"
+        className="min-w-[260px]"
         collisionAvoidance={{ side: "none" }}
       >
+        <div className="px-2 pt-1.5 pb-1 text-[10px] font-semibold uppercase tracking-wide text-muted-foreground/70">
+          Cabinet scope
+        </div>
         {CABINET_VISIBILITY_OPTIONS.map((opt) => {
           const active = opt.value === mode;
           return (
             <DropdownMenuItem
               key={opt.value}
               onClick={() => onChange(opt.value)}
-              className="flex items-center justify-between gap-3 py-1.5"
+              className="flex items-start justify-between gap-3 py-1.5"
             >
-              <span className="flex items-center gap-2">
-                <span className="inline-flex w-6 shrink-0 justify-center text-[11px] font-semibold tabular-nums text-muted-foreground">
+              <span className="flex items-start gap-2">
+                <span className="inline-flex w-6 shrink-0 justify-center pt-0.5 text-[11px] font-semibold tabular-nums text-muted-foreground">
                   {opt.shortLabel}
                 </span>
-                <span className="text-[12.5px]">{opt.label}</span>
+                <span className="flex flex-col gap-0.5">
+                  <span className="text-[12.5px] leading-tight">{opt.label}</span>
+                  <span className="text-[11px] leading-tight text-muted-foreground/80">
+                    {opt.description}
+                  </span>
+                </span>
               </span>
-              {active && <Check className="size-3.5 text-primary" />}
+              {active && <Check className="mt-1 size-3.5 shrink-0 text-primary" />}
             </DropdownMenuItem>
           );
         })}

@@ -380,6 +380,37 @@ export function AgentsWorkspace({
 }) {
   const [agents, setAgents] = useState<AgentListItem[]>([]);
   const [agentsLoaded, setAgentsLoaded] = useState(false);
+
+  // Audit #022: the 3-paragraph intro is welcome on first visit, then it's
+  // a wall above the actual cards on every return. Persist a per-cabinet
+  // dismissal flag in localStorage so first-time users still get the full
+  // explainer; everyone else gets a single-line hint.
+  const introStorageKey = `cabinet.agents.intro-dismissed.${cabinetPath ?? "root"}`;
+  const [introDismissed, setIntroDismissed] = useState<boolean>(() => {
+    if (typeof window === "undefined") return false;
+    try {
+      return window.localStorage.getItem(introStorageKey) === "1";
+    } catch {
+      return false;
+    }
+  });
+  const dismissIntro = () => {
+    setIntroDismissed(true);
+    try {
+      window.localStorage.setItem(introStorageKey, "1");
+    } catch {
+      // Quota errors are non-fatal — the intro just won't persist its
+      // dismissal across sessions.
+    }
+  };
+  const showIntroAgain = () => {
+    setIntroDismissed(false);
+    try {
+      window.localStorage.removeItem(introStorageKey);
+    } catch {
+      // Non-fatal: state still flips even if localStorage write fails.
+    }
+  };
   const [conversations, setConversations] = useState<ConversationMeta[]>([]);
   const [mode, setMode] = useState<MainPanelMode>("composer");
   const [activeAgentSlug, setActiveAgentSlug] = useState<string | null>(
@@ -2777,7 +2808,8 @@ export function AgentsWorkspace({
                 </span>
                 <span className="inline-flex items-center gap-1 rounded-full bg-muted/40 px-2 py-0.5 text-[10px]">
                   <span className="font-semibold tabular-nums text-foreground">{groupedOrgAgents.length}</span>
-                  <span className="text-muted-foreground">depts</span>
+                  {/* Audit #020: don't abbreviate. */}
+                  <span className="text-muted-foreground">{groupedOrgAgents.length === 1 ? "department" : "departments"}</span>
                 </span>
               </div>
               <div className="ml-auto flex items-center gap-2">
@@ -2795,6 +2827,8 @@ export function AgentsWorkspace({
                   className="h-7 gap-1.5 text-[11px]"
                   onClick={() => setOrgChartOpen(true)}
                   disabled={agents.length === 0}
+                  // Audit #021: title disambiguates "what does this open"
+                  title="View this team as an org chart (opens fullscreen)"
                 >
                   <Network className="size-3.5" />
                   Org chart
@@ -2824,40 +2858,74 @@ export function AgentsWorkspace({
             {/* Main column: team view + schedules. */}
             <div className="min-h-0 flex-1 overflow-y-auto">
               <div className="mx-auto w-full max-w-5xl space-y-8 px-4 py-6 sm:px-6">
-                {/* Intro */}
-                <div className="space-y-4">
-                  <h1 className="text-[36px] font-semibold leading-[1.1] tracking-tight text-foreground sm:text-[44px]">
-                    This is your AI team.
-                  </h1>
-                  <p className="max-w-3xl text-[17px] leading-[1.55] text-muted-foreground">
-                    A small crew of agents that{" "}
-                    <span className="font-semibold text-foreground">
-                      work for you around the clock
+                {/* Intro — full on first visit, single-line hint thereafter
+                    (Audit #022). Dismissal persists per-cabinet in
+                    localStorage; the "Show explainer" affordance lets a
+                    user re-open the full version any time. */}
+                {introDismissed ? (
+                  <div className="flex items-center justify-between gap-3 rounded-lg border border-border/40 bg-muted/20 px-3 py-2 text-[13px]">
+                    <span className="text-muted-foreground">
+                      Your team works on a schedule.
                     </span>
-                    . Each agent has a role, a personality, and a memory. They{" "}
-                    <span className="font-semibold text-foreground">
-                      wake up on schedule
-                    </span>
-                    ,{" "}
-                    <span className="font-semibold text-foreground">
-                      check in while you sleep
-                    </span>
-                    , and{" "}
-                    <span className="font-semibold text-foreground">
-                      ship work into your knowledge base
-                    </span>{" "}
-                    — no prompting from you required.
-                  </p>
-                  <p className="max-w-3xl text-[15px] leading-[1.6] text-muted-foreground">
-                    On this page you can{" "}
-                    <span className="font-semibold text-foreground">meet your team</span>,{" "}
-                    <span className="font-semibold text-foreground">set up routines</span>{" "}
-                    you want them to run every day or every hour, and{" "}
-                    <span className="font-semibold text-foreground">check in</span>{" "}
-                    on what they've been doing. The sidebar on the right shows
-                    everything live.
-                  </p>
-                </div>
+                    <button
+                      type="button"
+                      onClick={showIntroAgain}
+                      className="shrink-0 text-[12px] font-medium text-primary underline underline-offset-2 hover:text-primary/80 transition-colors"
+                    >
+                      Show explainer
+                    </button>
+                  </div>
+                ) : (
+                  <div className="relative space-y-4">
+                    <button
+                      type="button"
+                      onClick={dismissIntro}
+                      title="Hide this intro"
+                      aria-label="Hide this intro"
+                      className="absolute right-0 top-1 inline-flex size-7 items-center justify-center rounded-md text-muted-foreground/70 transition-colors hover:bg-muted hover:text-foreground"
+                    >
+                      <X className="size-4" />
+                    </button>
+                    <h1 className="text-[36px] font-semibold leading-[1.1] tracking-tight text-foreground sm:text-[44px]">
+                      This is your AI team.
+                    </h1>
+                    <p className="max-w-3xl pr-8 text-[17px] leading-[1.55] text-muted-foreground">
+                      A small crew of agents that{" "}
+                      <span className="font-semibold text-foreground">
+                        work for you around the clock
+                      </span>
+                      . Each agent has a role, a personality, and a memory. They{" "}
+                      <span className="font-semibold text-foreground">
+                        wake up on schedule
+                      </span>
+                      ,{" "}
+                      <span className="font-semibold text-foreground">
+                        check in while you sleep
+                      </span>
+                      , and{" "}
+                      <span className="font-semibold text-foreground">
+                        ship work into your knowledge base
+                      </span>{" "}
+                      — no prompting from you required.
+                    </p>
+                    <p className="max-w-3xl pr-8 text-[15px] leading-[1.6] text-muted-foreground">
+                      On this page you can{" "}
+                      <span className="font-semibold text-foreground">meet your team</span>,{" "}
+                      <span className="font-semibold text-foreground">set up routines</span>{" "}
+                      you want them to run every day or every hour, and{" "}
+                      <span className="font-semibold text-foreground">check in</span>{" "}
+                      on what they've been doing. The sidebar on the right shows
+                      everything live.
+                    </p>
+                    <button
+                      type="button"
+                      onClick={dismissIntro}
+                      className="text-[12px] font-medium text-muted-foreground underline underline-offset-2 hover:text-foreground transition-colors"
+                    >
+                      Got it — hide this
+                    </button>
+                  </div>
+                )}
 
                 {/* Agents grid */}
                 <section className="space-y-4">
@@ -2999,6 +3067,7 @@ export function AgentsWorkspace({
                   <div>
                     <DropdownMenu>
                       <DropdownMenuTrigger
+                        data-add-routine-trigger
                         className={cn(
                           "inline-flex h-12 items-center gap-2.5 rounded-xl bg-foreground px-5 text-[15px] font-semibold text-background shadow-sm transition-colors hover:bg-foreground/90 disabled:pointer-events-none disabled:opacity-50"
                         )}
@@ -3031,10 +3100,12 @@ export function AgentsWorkspace({
                         ))}
                       </DropdownMenuContent>
                     </DropdownMenu>
-                    <p className="mt-2 text-[12px] text-muted-foreground/80">
-                      Pick which agent runs this routine, then set the prompt
-                      and schedule.
-                    </p>
+                    {/*
+                     * Audit #024: orphan help text was sitting outside the
+                     * Add-routine popover. Removed from the page; the popover
+                     * itself + the empty-state card in the Routines section
+                     * already explain what a routine is.
+                     */}
                   </div>
 
                   {/* Team schedule board — embed the existing ScheduleView */}
@@ -3116,13 +3187,26 @@ export function AgentsWorkspace({
                       </p>
                     </div>
                     {allJobs.length === 0 ? (
-                      <p className="rounded-lg border border-dashed border-border/60 px-4 py-6 text-center text-[13px] text-muted-foreground">
-                        No routines yet. Use{" "}
-                        <span className="font-semibold text-foreground">
-                          Add routine
-                        </span>{" "}
-                        above to create your first one.
-                      </p>
+                      // Audit #023: empty state was dead text. Make it a
+                      // clickable card that opens the Add-routine popover.
+                      <button
+                        type="button"
+                        onClick={() => {
+                          const trigger = document.querySelector<HTMLButtonElement>(
+                            "[data-add-routine-trigger]"
+                          );
+                          trigger?.click();
+                        }}
+                        className="group block w-full rounded-lg border border-dashed border-border/60 px-4 py-7 text-center transition-colors hover:border-primary/40 hover:bg-primary/[0.03]"
+                      >
+                        <Clock3 className="mx-auto mb-2 size-5 text-muted-foreground/70 group-hover:text-primary/80" />
+                        <div className="text-[13px] font-medium text-foreground">
+                          Schedule a routine
+                        </div>
+                        <div className="mt-0.5 text-[11.5px] text-muted-foreground">
+                          Pick an agent. Write a prompt. Set a cron. Run it forever.
+                        </div>
+                      </button>
                     ) : (
                       <ul className="divide-y divide-border/60 overflow-hidden rounded-xl border border-border/70 bg-card">
                         {allJobs.map(({ job, agent: owner }) => (

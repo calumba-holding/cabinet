@@ -141,9 +141,43 @@ function StarExplosion() {
   );
 }
 
+// Audit #018: relative-time formatter for the persistent "Saved · Xs ago"
+// state. Returns short tokens (s/m/h) with "just now" for the first 5
+// seconds. Updated on a 10s tick by the StatusBar; the indicator never
+// claims more precision than it can deliver.
+function formatRelativeSavedAgo(ts: number, now: number): string {
+  const diffSec = Math.max(0, Math.floor((now - ts) / 1000));
+  if (diffSec < 5) return "just now";
+  if (diffSec < 60) return `${diffSec}s ago`;
+  const diffMin = Math.floor(diffSec / 60);
+  if (diffMin < 60) return `${diffMin}m ago`;
+  const diffHr = Math.floor(diffMin / 60);
+  if (diffHr < 24) return `${diffHr}h ago`;
+  const diffDay = Math.floor(diffHr / 24);
+  return `${diffDay}d ago`;
+}
+
 export function StatusBar() {
-  const { saveStatus, currentPath } = useEditorStore();
+  const { saveStatus, currentPath, isDirty, lastSavedAt } = useEditorStore();
   const retrySave = useEditorStore((s) => s.save);
+
+  // Audit #018: rerender every 10s so the relative timestamp ticks. The
+  // indicator only mounts when a page is open, so this isn't a global cost.
+  const [savedTick, setSavedTick] = useState(0);
+  useEffect(() => {
+    if (!lastSavedAt || saveStatus !== "idle" || isDirty) return;
+    const id = window.setInterval(() => setSavedTick((n) => n + 1), 10_000);
+    return () => window.clearInterval(id);
+  }, [lastSavedAt, saveStatus, isDirty]);
+  // Reference savedTick so the relative label re-renders on the interval.
+  const savedAgoLabel = useMemo(() => {
+    if (!lastSavedAt) return null;
+    return formatRelativeSavedAgo(lastSavedAt, Date.now());
+    // savedTick is intentionally a dependency: bumping it forces a re-render
+    // so the relative label updates without recomputing on every parent
+    // re-render.
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [lastSavedAt, savedTick]);
   const loadTree = useTreeStore((s) => s.loadTree);
   const selectedPath = useTreeStore((s) => s.selectedPath);
   const section = useAppStore((s) => s.section);
@@ -193,8 +227,29 @@ export function StatusBar() {
     }
   };
   const [isGitRepo, setIsGitRepo] = useState(false);
+  // Audit #049: track when the last successful pull completed so the Sync
+  // button's tooltip can answer "did the team's overnight work land?"
+  // without the user having to click and watch the spinner.
+  const [lastSyncedAt, setLastSyncedAt] = useState<number | null>(null);
+  const [syncTick, setSyncTick] = useState(0);
+  useEffect(() => {
+    if (!lastSyncedAt) return;
+    const id = window.setInterval(() => setSyncTick((n) => n + 1), 30_000);
+    return () => window.clearInterval(id);
+  }, [lastSyncedAt]);
+  const lastSyncedLabel = useMemo(() => {
+    if (!lastSyncedAt) return null;
+    return formatRelativeSavedAgo(lastSyncedAt, Date.now());
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [lastSyncedAt, syncTick]);
   const [uncommitted, setUncommitted] = useState(0);
   const [uncommittedFiles, setUncommittedFiles] = useState<Array<{ path: string; status: "M" | "?" | "A" | "D" | "R" }>>([]);
+  // Audit #050: lightweight commit form inside the uncommitted popover.
+  // Diff/discard intentionally deferred — would need /api/git/diff for the
+  // working tree (not just by hash) and a confirmation flow respectively.
+  const [commitMessage, setCommitMessage] = useState("");
+  const [committing, setCommitting] = useState(false);
+  const [commitError, setCommitError] = useState<string | null>(null);
   const [uncommittedTruncated, setUncommittedTruncated] = useState(false);
   const [showUncommittedPopup, setShowUncommittedPopup] = useState(false);
   const [showCommunityPopup, setShowCommunityPopup] = useState(false);
@@ -301,6 +356,7 @@ export function StatusBar() {
         } else {
           setPullStatus("up-to-date");
         }
+        setLastSyncedAt(Date.now());
       } else {
         setPullStatus("error");
       }
@@ -330,9 +386,22 @@ export function StatusBar() {
       void fetchGitStatus();
     }, 0);
     const interval = setInterval(fetchGitStatus, 15000);
+    // Audit #058: refresh on tab focus so a banner stuck at "1 uncommitted"
+    // updates the moment the user comes back. The 15s interval still
+    // catches background changes between focus events.
+    const onFocus = () => {
+      void fetchGitStatus();
+    };
+    const onVisibility = () => {
+      if (document.visibilityState === "visible") void fetchGitStatus();
+    };
+    window.addEventListener("focus", onFocus);
+    document.addEventListener("visibilitychange", onVisibility);
     return () => {
       window.clearTimeout(initialFetch);
       clearInterval(interval);
+      window.removeEventListener("focus", onFocus);
+      document.removeEventListener("visibilitychange", onVisibility);
     };
   }, []);
 
@@ -378,7 +447,15 @@ export function StatusBar() {
   }, [githubStars]);
 
   return (
-    <div className="relative flex items-center justify-between px-3 py-1 border-t border-border text-[11px] text-muted-foreground/60 bg-background">
+    /* Audit #060: status bar is contentinfo for the page. Audit #048: gap-3
+       between groups becomes gap-3 + 1px separators on either side of the
+       diagnostics + tools clusters so the bar reads as
+       [diagnostics | tools | brand] rather than seven flat items. */
+    <footer
+      role="contentinfo"
+      aria-label="Status bar"
+      className="relative flex items-center justify-between px-3 py-1 border-t border-border text-[11px] text-muted-foreground/60 bg-background"
+    >
       {/* Center: AI edit pill + runtime picker. Picker sits to the LEFT of
           the pill so the narrow input stays readable; the same value is sent
           in the createConversation call (terminal mode swaps to legacy PTY). */}
@@ -674,6 +751,28 @@ export function StatusBar() {
               <Check className="h-3 w-3" />
               Saved
             </span>
+          ) : isDirty ? (
+            // Audit #018: while the user is mid-burst (debounce open),
+            // surface a soft "Editing…" so they don't feel autosave has
+            // forgotten about them. Pulses subtly via animate-pulse.
+            <span
+              className="flex items-center gap-1 text-muted-foreground/60"
+              title="Editing — autosave will run when you pause"
+            >
+              <CircleDot className="h-3 w-3 animate-pulse" />
+              Editing…
+            </span>
+          ) : savedAgoLabel ? (
+            // Audit #018: persistent "Saved · Xs ago" replaces the empty
+            // idle state — the timestamp is the trust anchor that confirms
+            // autosave is alive even when nothing is happening.
+            <span
+              className="flex items-center gap-1 text-muted-foreground/60"
+              title="Force save: ⌘S"
+            >
+              <Check className="h-3 w-3 text-emerald-500/70" />
+              Saved · {savedAgoLabel}
+            </span>
           ) : null
         )}
         {pullStatus === "pulling" && (
@@ -728,12 +827,17 @@ export function StatusBar() {
             type="button"
             onClick={() => uncommitted > 0 && setShowUncommittedPopup((v) => !v)}
             disabled={uncommitted === 0}
+            // Audit #006: pluralize properly (was "1 uncommitted files" before).
             aria-label={
               uncommitted > 0
-                ? `${uncommitted} uncommitted files — click to see the list`
+                ? `${uncommitted} uncommitted ${uncommitted === 1 ? "file" : "files"} — click to see the list`
                 : "All committed"
             }
-            title={uncommitted > 0 ? "Click to see uncommitted files" : "All committed"}
+            title={
+              uncommitted > 0
+                ? `Click to see uncommitted ${uncommitted === 1 ? "file" : "files"}`
+                : "All committed"
+            }
             className="flex items-center gap-1 rounded-md px-1.5 py-0.5 transition-colors hover:bg-muted hover:text-foreground disabled:cursor-default disabled:hover:bg-transparent disabled:hover:text-current"
           >
             <GitBranch className="h-3 w-3" />
@@ -782,6 +886,75 @@ export function StatusBar() {
                   for the full list.
                 </p>
               )}
+
+              {/* Audit #050: commit affordance inside the popover so the
+                  indicator becomes a workflow, not just a nag. Sends to the
+                  existing /api/git/commit endpoint with the user's message
+                  (or a sensible default when empty). */}
+              <form
+                className="mt-2 space-y-1.5 border-t border-border/60 pt-2"
+                onSubmit={async (e) => {
+                  e.preventDefault();
+                  if (committing) return;
+                  setCommitting(true);
+                  setCommitError(null);
+                  try {
+                    const message =
+                      commitMessage.trim() ||
+                      `Update ${uncommittedFiles.length} file${
+                        uncommittedFiles.length === 1 ? "" : "s"
+                      }`;
+                    const res = await fetch("/api/git/commit", {
+                      method: "POST",
+                      headers: { "Content-Type": "application/json" },
+                      body: JSON.stringify({ message }),
+                    });
+                    if (!res.ok) {
+                      const body = await res.json().catch(() => ({}));
+                      throw new Error(body?.error || `Commit failed (${res.status})`);
+                    }
+                    setCommitMessage("");
+                    await fetchGitStatus();
+                  } catch (err) {
+                    setCommitError(
+                      err instanceof Error ? err.message : "Commit failed"
+                    );
+                  } finally {
+                    setCommitting(false);
+                  }
+                }}
+              >
+                <input
+                  type="text"
+                  value={commitMessage}
+                  onChange={(e) => setCommitMessage(e.target.value)}
+                  placeholder={`Update ${uncommittedFiles.length} file${
+                    uncommittedFiles.length === 1 ? "" : "s"
+                  }`}
+                  disabled={committing}
+                  aria-label="Commit message"
+                  className="w-full rounded border border-border/60 bg-background px-2 py-1 text-[11px] outline-none focus-visible:ring-1 focus-visible:ring-ring/60"
+                />
+                {commitError && (
+                  <p className="text-[10px] text-destructive">{commitError}</p>
+                )}
+                <div className="flex items-center justify-end gap-1.5">
+                  <button
+                    type="submit"
+                    disabled={committing}
+                    className="inline-flex items-center gap-1 rounded-md bg-primary px-2 py-0.5 text-[10.5px] font-medium text-primary-foreground transition-opacity hover:opacity-90 disabled:opacity-50"
+                  >
+                    {committing ? (
+                      <>
+                        <Loader2 className="size-3 animate-spin" />
+                        Committing…
+                      </>
+                    ) : (
+                      "Commit"
+                    )}
+                  </button>
+                </div>
+              </form>
             </div>
           )}
         </div>
@@ -789,9 +962,17 @@ export function StatusBar() {
           <button
             onClick={pullAndRefresh}
             disabled={pulling}
-            aria-label="Pull latest changes from GitHub and refresh"
+            aria-label={
+              lastSyncedLabel
+                ? `Pull latest changes from GitHub and refresh. Last synced ${lastSyncedLabel}.`
+                : "Pull latest changes from GitHub and refresh"
+            }
             className="flex items-center gap-1 rounded-md px-1.5 py-0.5 hover:bg-muted hover:text-foreground transition-colors disabled:opacity-50 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring/60 focus-visible:ring-offset-1"
-            title="Pull latest from GitHub & refresh"
+            title={
+              lastSyncedLabel
+                ? `Pull latest from GitHub & refresh. Last synced ${lastSyncedLabel}.`
+                : "Pull latest from GitHub & refresh"
+            }
           >
             <RefreshCw className={`h-3 w-3 ${pulling ? "animate-spin" : ""}`} />
             Sync
@@ -826,7 +1007,14 @@ export function StatusBar() {
             Help
           </span>
           {displayStars !== null && (
-            <span className="-mr-0.5 inline-flex items-center gap-0.5 rounded-full bg-amber-500/15 px-1.5 py-px text-[9px] font-semibold text-amber-700 dark:text-amber-300">
+            <span
+              // Audit #004: explain what the count is on hover. The whole
+              // Help button opens a popup that links to GitHub, so the
+              // number itself doesn't need an extra click target — just
+              // a clear name.
+              title={`${formatGithubStars(displayStars)} GitHub stars — open Help & community menu to star Cabinet`}
+              className="-mr-0.5 inline-flex items-center gap-0.5 rounded-full bg-amber-500/15 px-1.5 py-px text-[9px] font-semibold text-amber-700 dark:text-amber-300"
+            >
               <Star className="h-2.5 w-2.5 fill-current" />
               {formatGithubStars(displayStars)}
             </span>
@@ -893,6 +1081,6 @@ export function StatusBar() {
           </div>
         )}
       </div>
-    </div>
+    </footer>
   );
 }

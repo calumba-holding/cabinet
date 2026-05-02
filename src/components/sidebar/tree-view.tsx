@@ -415,7 +415,13 @@ export function TreeView() {
             className="flex min-w-0 flex-1 items-center gap-2 text-left"
           >
             <Archive className="h-[18px] w-[18px] shrink-0 text-amber-400" />
-            <span className="min-w-0 flex-1 truncate text-sm font-medium text-muted-foreground">
+            {/*
+             * Audit #008 (review feedback 2026-05-02): match the drawer
+             * tabs' uppercase treatment so the cabinet name reads as a
+             * "header" of the same family. Slightly looser tracking
+             * because the name is wider than the 4-letter tab labels.
+             */}
+            <span className="min-w-0 flex-1 truncate text-sm font-semibold uppercase tracking-wide text-muted-foreground">
               {cabinetAgentScopeName || activeCabinet?.frontmatter?.title || activeCabinet?.name || "Cabinet"}
             </span>
           </button>
@@ -601,7 +607,13 @@ export function TreeView() {
                           )}
                         />
                         <Icon className="h-[18px] w-[18px] shrink-0" />
-                        <span className="text-[8px] font-semibold uppercase tracking-[0.1em]">
+                        {/*
+                         * Audit #008 (review feedback 2026-05-02): user
+                         * preferred the original ALL CAPS treatment. Restored
+                         * uppercase + wider tracking; font-semibold keeps the
+                         * active tab's weight emphasis.
+                         */}
+                        <span className="text-[10px] font-semibold uppercase tracking-wider">
                           {drawer.label}
                         </span>
                       </button>

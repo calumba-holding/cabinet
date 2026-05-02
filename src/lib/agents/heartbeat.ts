@@ -12,6 +12,37 @@ import {
   getHeartbeatHistory,
   type AgentPersona,
 } from "./persona-manager";
+import { renderPersonaBody } from "./persona-templating";
+import { readCabinetReferenceByPath } from "@/lib/cabinets/overview";
+import { readUserProfile } from "@/lib/user/profile-io";
+import { ROOT_CABINET_PATH } from "@/lib/cabinets/paths";
+
+async function buildPersonaPromptBody(persona: AgentPersona): Promise<string> {
+  const cabinetPath = persona.cabinetPath || ROOT_CABINET_PATH;
+  let cabinetName: string | undefined;
+  let cabinetSlug: string | undefined;
+  try {
+    const ref = await readCabinetReferenceByPath(cabinetPath);
+    cabinetName = ref?.name;
+    cabinetSlug = ref?.id;
+  } catch {
+    /* fall through — leave placeholders intact */
+  }
+  let userName: string | undefined;
+  try {
+    const profile = await readUserProfile();
+    const raw = (profile.displayName || profile.name || "").trim();
+    if (raw && raw.toLowerCase() !== "you") userName = raw;
+  } catch {
+    /* fall through */
+  }
+  return renderPersonaBody(persona.body, {
+    cabinet: { name: cabinetName, slug: cabinetSlug, path: cabinetPath },
+    user: { name: userName },
+    agent: { name: persona.name, slug: persona.slug },
+    today: new Date().toISOString().slice(0, 10),
+  });
+}
 import { readFileContent, fileExists } from "@/lib/storage/fs-operations";
 import { autoCommit } from "@/lib/git/git-service";
 import { postMessage } from "./slack-manager";
@@ -79,7 +110,8 @@ async function buildHeartbeatContext(slug: string, cabinetPath?: string): Promis
     }
   } catch { /* ignore */ }
 
-  const prompt = `${persona.body}
+  const personaBody = await buildPersonaPromptBody(persona);
+  const prompt = `${personaBody}
 
 ---
 
@@ -483,7 +515,8 @@ export async function runQuickResponse(
     /* ignore */
   }
 
-  const prompt = `${persona.body}
+  const personaBody = await buildPersonaPromptBody(persona);
+  const prompt = `${personaBody}
 
 ---
 

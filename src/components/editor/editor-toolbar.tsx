@@ -268,6 +268,13 @@ export function EditorToolbar({ editor }: EditorToolbarProps) {
         style?: React.CSSProperties;
       };
 
+  // Audit #012 (review feedback 2026-05-02): the heading-dropdown +
+  // More-overflow refactor was reverted. User preferred the original
+  // single scrollable row with gradient-fade indicators on both edges.
+  // Headings live inline; alignment, sup/sub, divider, embed, video, and
+  // RTL stay in the row too. The horizontal-scroll fade + ChevronLeft/
+  // Right buttons handle overflow when the viewport is narrow.
+
   // Primary items — always visible in the toolbar
   const primaryItems: ButtonSpec[] = [
     { icon: Heading1, action: () => editor.chain().focus().toggleHeading({ level: 1 }).run(), isActive: editor.isActive("heading", { level: 1 }), label: "Heading 1" },
@@ -305,7 +312,7 @@ export function EditorToolbar({ editor }: EditorToolbarProps) {
     { icon: Minus, action: () => editor.chain().focus().setHorizontalRule().run(), isActive: false, label: "Divider" },
   ];
 
-  // Secondary items — appended to the scrollable row after the primary set
+  // Secondary items — appended to the same scrollable row after the primary set
   const secondaryItems: ButtonSpec[] = [
     { icon: AlignLeft, action: () => editor.chain().focus().setTextAlign("left").run(), isActive: editor.isActive({ textAlign: "left" }), label: "Align left" },
     { icon: AlignCenter, action: () => editor.chain().focus().setTextAlign("center").run(), isActive: editor.isActive({ textAlign: "center" }), label: "Align center" },

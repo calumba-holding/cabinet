@@ -1,6 +1,12 @@
 "use client";
 
-import { Users } from "lucide-react";
+import { Users, Check, ChevronDown } from "lucide-react";
+import {
+  DropdownMenu,
+  DropdownMenuContent,
+  DropdownMenuItem,
+  DropdownMenuTrigger,
+} from "@/components/ui/dropdown-menu";
 import { cn } from "@/lib/utils";
 import { getAgentColor, tintFromHex } from "@/lib/agents/cron-compute";
 import { resolveAgentIcon } from "@/lib/agents/icon-catalog";
@@ -64,83 +70,123 @@ export function TriggerChip({
 }
 
 /**
- * Agent filter pill row — horizontally scrollable.
+ * Agent filter dropdown — replaces the horizontally-scrolling pill row from
+ * before audit #036. Renders a single trigger ("Agents: All" / "Agents:
+ * Editor") that opens a list. Single-select preserves the existing
+ * agentFilter API; "All agents" clears the filter.
+ *
  * Returns null when no agents are in the cabinet.
  */
-export function FilterBar({
+export function AgentFilterDropdown({
   agents,
   agentFilter,
   onAgentChange,
+  className,
 }: {
   agents: CabinetAgentSummary[];
   agentFilter: string | null;
   onAgentChange: (slug: string | null) => void;
+  className?: string;
 }) {
   if (agents.length === 0) return null;
+  const selected = agentFilter
+    ? agents.find((a) => a.slug === agentFilter) ?? null
+    : null;
+  const triggerLabel = selected
+    ? selected.displayName ?? selected.name
+    : "All agents";
+  const hasImage = selected ? hasAgentAvatarImage(selected) : false;
+  const SelectedIcon = selected
+    ? resolveAgentIcon(selected.slug, selected.iconKey ?? null)
+    : null;
   return (
-    <div className="border-b border-border/60 px-4 py-2 text-[11px]">
-      {/* Audit #133: hide the chunky native horizontal scrollbar — keeps
-          the scroll behavior, drops the visible track that ate vertical
-          space below the agent chips. */}
-      <div className="flex items-center gap-1.5 overflow-x-auto scrollbar-none">
-        <span className="inline-flex shrink-0 items-center gap-1 text-[10px] font-semibold uppercase tracking-wider text-muted-foreground">
+    <DropdownMenu>
+      <DropdownMenuTrigger
+        title={`Filter by agent: ${triggerLabel}`}
+        aria-label={`Filter by agent: ${triggerLabel}`}
+        className={cn(
+          "inline-flex h-7 items-center gap-1.5 rounded-md border border-border/70 bg-card/60 px-2 text-[11px] text-foreground/80 transition-colors hover:bg-accent hover:text-foreground hover:border-border data-[popup-open]:bg-accent",
+          selected && "border-primary/60",
+          className
+        )}
+      >
+        {selected ? (
+          hasImage ? (
+            <AgentAvatar agent={selected} shape="circle" size="xs" />
+          ) : SelectedIcon ? (
+            <SelectedIcon className="size-3" />
+          ) : (
+            <Users className="size-3" />
+          )
+        ) : (
           <Users className="size-3" />
-          Agents
-        </span>
-        <button
-          type="button"
+        )}
+        <span className="font-medium">{triggerLabel}</span>
+        <ChevronDown className="size-3 opacity-60" />
+      </DropdownMenuTrigger>
+      <DropdownMenuContent align="end" className="min-w-[220px] max-h-[60vh] overflow-y-auto">
+        <DropdownMenuItem
           onClick={() => onAgentChange(null)}
-          className={cn(
-            "shrink-0 rounded-full border px-2.5 py-0.5 font-medium transition-colors",
-            agentFilter === null
-              ? "border-primary bg-primary text-primary-foreground"
-              : "border-border/60 text-muted-foreground hover:text-foreground"
-          )}
+          className="flex items-center justify-between gap-2 py-1.5"
         >
-          All agents
-        </button>
+          <span className="flex items-center gap-2">
+            <Users className="size-3.5 text-muted-foreground" />
+            <span className="text-[12.5px]">All agents</span>
+          </span>
+          {agentFilter === null && <Check className="size-3.5 text-primary" />}
+        </DropdownMenuItem>
         {agents.map((agent) => {
           const active = agentFilter === agent.slug;
-          const hasImage = hasAgentAvatarImage(agent);
-          const tint = agent.color ? tintFromHex(agent.color) : getAgentColor(agent.slug);
+          const agentHasImage = hasAgentAvatarImage(agent);
+          const tint = agent.color
+            ? tintFromHex(agent.color)
+            : getAgentColor(agent.slug);
           const Icon = resolveAgentIcon(agent.slug, agent.iconKey ?? null);
           return (
-            <button
+            <DropdownMenuItem
               key={agent.scopedId}
-              type="button"
-              onClick={() => onAgentChange(active ? null : agent.slug)}
-              className={cn(
-                "inline-flex shrink-0 items-center gap-1 rounded-full border py-0.5 font-medium transition-colors",
-                hasImage ? "pl-0.5 pr-2" : "px-2",
-                active ? "border-primary" : "border-transparent hover:border-border/60",
-                hasImage && (active
-                  ? "bg-muted text-foreground"
-                  : "bg-muted/60 text-muted-foreground hover:text-foreground")
-              )}
-              style={
-                hasImage
-                  ? undefined
-                  : { backgroundColor: tint.bg, color: tint.text }
-              }
-              title={
-                agent.active
-                  ? agent.displayName ?? agent.name
-                  : `${agent.displayName ?? agent.name} (paused)`
-              }
+              onClick={() => onAgentChange(agent.slug)}
+              className="flex items-center justify-between gap-2 py-1.5"
             >
-              {hasImage ? (
-                <AgentAvatar agent={agent} shape="circle" size="xs" />
-              ) : (
-                <Icon className="size-3" />
-              )}
-              {agent.displayName ?? agent.name}
-            </button>
+              <span className="flex items-center gap-2">
+                {agentHasImage ? (
+                  <AgentAvatar agent={agent} shape="circle" size="xs" />
+                ) : (
+                  <span
+                    className="inline-flex size-4 items-center justify-center rounded-full"
+                    style={{ backgroundColor: tint.bg, color: tint.text }}
+                  >
+                    <Icon className="size-2.5" />
+                  </span>
+                )}
+                <span
+                  className={cn(
+                    "text-[12.5px]",
+                    !agent.active && "text-muted-foreground"
+                  )}
+                >
+                  {agent.displayName ?? agent.name}
+                  {!agent.active && (
+                    <span className="ml-1 text-[10px] text-muted-foreground/70">
+                      (paused)
+                    </span>
+                  )}
+                </span>
+              </span>
+              {active && <Check className="size-3.5 text-primary" />}
+            </DropdownMenuItem>
           );
         })}
-      </div>
-    </div>
+      </DropdownMenuContent>
+    </DropdownMenu>
   );
 }
+
+/**
+ * Backwards-compat alias for the audit #036 rename.
+ * @deprecated Use AgentFilterDropdown instead.
+ */
+export const FilterBar = AgentFilterDropdown;
 
 /**
  * Map a TriggerFilter to the underlying conversation trigger (undefined = all).

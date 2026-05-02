@@ -110,7 +110,7 @@ async function readCabinetManifestAtDir(dirPath: string): Promise<CabinetManifes
   return normalizeManifest(await readYamlFile(manifestPath), path.basename(dirPath) || "Cabinet");
 }
 
-async function readCabinetReferenceByPath(
+export async function readCabinetReferenceByPath(
   virtualPath: string,
   cabinetDepth?: number
 ): Promise<CabinetReference | null> {

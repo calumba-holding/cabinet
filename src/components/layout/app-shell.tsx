@@ -34,6 +34,9 @@ import { TerminalTabs } from "@/components/terminal/terminal-tabs";
 import { AIPanel } from "@/components/ai-panel/ai-panel";
 import { TaskDetailPanel } from "@/components/tasks/task-detail-panel";
 import { SearchPalette } from "@/components/search/search-palette";
+import { KeyboardShortcutsModal } from "@/components/help/keyboard-shortcuts-modal";
+import { WhatsNewCard } from "@/components/help/whats-new-card";
+import { NarrowViewportHint } from "@/components/layout/narrow-viewport-hint";
 import { ConfirmDialogHost } from "@/components/ui/confirm-dialog-host";
 import { useGlobalHotkeys } from "@/hooks/use-global-hotkeys";
 import { dedupFetch } from "@/lib/api/dedup-fetch";
@@ -101,6 +104,7 @@ import { useCabinetUpdate } from "@/hooks/use-cabinet-update";
 import { useHashRoute } from "@/hooks/use-hash-route";
 import { useTreeStore } from "@/stores/tree-store";
 import { useAppStore } from "@/stores/app-store";
+import { useEditorStore } from "@/stores/editor-store";
 
 const DISMISSED_UPDATE_STORAGE_KEY = "cabinet.dismissed-update-version";
 const WIZARD_DONE_STORAGE_KEY = "cabinet.wizard-done";
@@ -167,6 +171,41 @@ export function AppShell() {
 
   const loadProviders = useAppStore((s) => s.loadProviders);
 
+  // Audit #017: page tab title should use the human title from frontmatter
+  // when present, falling back to the slug. Read from the editor store so the
+  // title reflects the currently-loaded page (selectedPath can race ahead of
+  // the actual editor content during loadPage).
+  const editorFrontmatterTitle = useEditorStore((s) => s.frontmatter?.title);
+  const editorCurrentPath = useEditorStore((s) => s.currentPath);
+
+  // Audit #045: when "Match system" is on, listen to OS color-scheme
+  // changes and re-apply the appropriate light/dark variant from the
+  // stored pair without a reload.
+  useEffect(() => {
+    let cancelled = false;
+    const apply = async () => {
+      const themesMod = await import("@/lib/themes");
+      if (cancelled) return;
+      const mode = themesMod.getStoredThemeMode();
+      if (mode !== "system") return;
+      const active = themesMod.resolveActiveTheme();
+      if (active) themesMod.applyTheme(active);
+    };
+    const mq =
+      typeof window !== "undefined"
+        ? window.matchMedia("(prefers-color-scheme: dark)")
+        : null;
+    const handler = () => {
+      void apply();
+    };
+    mq?.addEventListener("change", handler);
+    void apply();
+    return () => {
+      cancelled = true;
+      mq?.removeEventListener("change", handler);
+    };
+  }, []);
+
   useEffect(() => {
     loadTree();
   }, [loadTree]);
@@ -178,22 +217,44 @@ export function AppShell() {
   // Dynamic document.title — reflects the current section and page.
   useEffect(() => {
     const base = "Cabinet";
+    // Audit #017: prefer the frontmatter `title` over the slug whenever a
+    // page is loaded. Falls back to the slug when the frontmatter is absent
+    // or the editor store hasn't caught up to the new selection yet.
+    const pageDisplayTitle = (() => {
+      if (!selectedPath) return null;
+      const slug = selectedPath.split("/").pop() ?? selectedPath;
+      if (
+        editorCurrentPath === selectedPath &&
+        typeof editorFrontmatterTitle === "string" &&
+        editorFrontmatterTitle.trim()
+      ) {
+        return editorFrontmatterTitle.trim();
+      }
+      return slug;
+    })();
     let title: string;
     switch (section.type) {
       case "home":
         title = base;
         break;
+      case "page":
+        title = pageDisplayTitle ? `${pageDisplayTitle} — ${base}` : base;
+        break;
       case "cabinet":
-        title = selectedPath
-          ? `${selectedPath.split("/").pop() ?? selectedPath} — ${base}`
-          : base;
+        title = pageDisplayTitle ? `${pageDisplayTitle} — ${base}` : base;
         break;
       case "agents":
         title = `Agents — ${base}`;
         break;
       case "agent":
+        // Audit #025: title-case the slug so the tab title matches the
+        // agent's display name (was lowercase "assistant — Cabinet"). Use
+        // word-by-word capitalization on the dasherized slug.
         title = section.slug
-          ? `${section.slug.replace(/-/g, " ")} — ${base}`
+          ? `${section.slug
+              .split("-")
+              .map((w) => (w ? w.charAt(0).toUpperCase() + w.slice(1) : w))
+              .join(" ")} — ${base}`
           : `Agents — ${base}`;
         break;
       case "tasks":
@@ -203,7 +264,11 @@ export function AppShell() {
         title = `Task — ${base}`;
         break;
       case "settings":
-        title = `Settings — ${base}`;
+        // Audit #062: include the active settings tab in the title so window
+        // history shows "Appearance — Settings — Cabinet" not just "Settings".
+        title = section.slug
+          ? `${section.slug.charAt(0).toUpperCase() + section.slug.slice(1)} — Settings — ${base}`
+          : `Settings — ${base}`;
         break;
       case "help":
         title = `Help — ${base}`;
@@ -215,7 +280,19 @@ export function AppShell() {
         title = base;
     }
     document.title = title;
-  }, [section, selectedPath]);
+    // Audit #031: write the new page title into the SR live region so
+    // VoiceOver/NVDA announce route changes. Cleared briefly first so the
+    // same string on repeat-nav still triggers an announcement, then set
+    // on the next tick.
+    const announcer = document.getElementById("cabinet-page-announcer");
+    if (announcer) {
+      announcer.textContent = "";
+      const id = window.setTimeout(() => {
+        if (announcer) announcer.textContent = title;
+      }, 30);
+      return () => window.clearTimeout(id);
+    }
+  }, [section, selectedPath, editorFrontmatterTitle, editorCurrentPath]);
 
   // Track the last known file context so new terminal tabs open in the right CWD.
   useEffect(() => {
@@ -672,12 +749,25 @@ export function AppShell() {
 
   return (
     <div className="flex h-screen bg-background text-foreground">
+      {/* Audit #031: SR-only live region announcing the active page title
+          on every route change. role="status" + aria-live="polite" so it
+          doesn't interrupt other speech; aria-atomic so the entire string
+          is read on each update. The effect that writes document.title
+          also writes here. */}
+      <div
+        id="cabinet-page-announcer"
+        role="status"
+        aria-live="polite"
+        aria-atomic="true"
+        className="sr-only"
+      />
       <Sidebar />
       <div
         className="flex-1 flex flex-col overflow-hidden"
         style={{ '--sidebar-toggle-offset': sidebarCollapsed ? '2.25rem' : '0px' } as React.CSSProperties}
       >
         <DaemonHealthBanner />
+        <NarrowViewportHint />
         <main className="flex-1 flex flex-col overflow-hidden">
           {renderContent()}
         </main>
@@ -688,6 +778,8 @@ export function AppShell() {
       {taskPanelConversation && <TaskDetailPanel />}
       {!aiPanelCollapsed && <AIPanel />}
       <SearchPalette />
+      <KeyboardShortcutsModal />
+      <WhatsNewCard />
       <ConfirmDialogHost />
       <UpdateDialog
         open={effectiveUpdateDialogOpen}

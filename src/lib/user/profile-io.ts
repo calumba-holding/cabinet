@@ -1,5 +1,6 @@
 import path from "path";
 import fs from "fs/promises";
+import os from "os";
 import { DATA_DIR } from "@/lib/storage/path-utils";
 
 export interface UserProfile {
@@ -55,11 +56,35 @@ interface CompanyJson {
  */
 export async function readUserProfile(): Promise<UserProfile> {
   const existing = await readJson<UserProfile>(USER_FILE);
-  if (existing) return existing;
+  if (existing) {
+    // Audit #039: legacy installs shipped with `name: "You"` baked in. Upgrade
+    // those silently — re-seed from the workspace home name / OS username.
+    // Anything the user explicitly typed (even "you") wins, so we treat the
+    // upgrade as opt-out: only swap when name is exactly "You" (case-sensitive
+    // — matches the legacy literal, not user-typed variants).
+    if (existing.name === "You") {
+      const seeded = await seedProfileFromOnboarding();
+      const upgraded: UserProfile = { ...existing, name: seeded.name };
+      await writeJson(USER_FILE, upgraded);
+      return upgraded;
+    }
+    return existing;
+  }
 
   const seeded = await seedProfileFromOnboarding();
   await writeJson(USER_FILE, seeded);
   return seeded;
+}
+
+function inferOsName(): string {
+  try {
+    const raw = os.userInfo().username || "";
+    if (!raw) return "";
+    // Username may be lowercase; capitalize first letter for display.
+    return raw.charAt(0).toUpperCase() + raw.slice(1);
+  } catch {
+    return "";
+  }
 }
 
 async function seedProfileFromOnboarding(): Promise<UserProfile> {
@@ -68,7 +93,7 @@ async function seedProfileFromOnboarding(): Promise<UserProfile> {
   // "Hila's Home" → "Hila"
   const inferredName = home.replace(/['’]s Home$/i, "").trim();
   return {
-    name: inferredName || "You",
+    name: inferredName || inferOsName() || "",
     displayName: "",
     role: "",
     avatar: "",

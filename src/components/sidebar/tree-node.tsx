@@ -32,6 +32,7 @@ import {
   ArrowRightLeft,
   Loader2,
   Upload,
+  ArrowUpRight,
 } from "lucide-react";
 import { cn } from "@/lib/utils";
 import type { TreeNode as TreeNodeType } from "@/types";
@@ -410,9 +411,15 @@ export function TreeNode({
             onDrop={handleDrop}
             disabled={isMoving}
             className={cn(
-              "group flex items-center gap-2 w-full text-left py-1 px-2 text-[12px] text-foreground/75 rounded-md transition-colors",
+              "group relative flex items-center gap-2 w-full text-left py-1 px-2 text-[12px] text-foreground/75 rounded-md transition-colors",
               "hover:bg-foreground/[0.03] hover:text-foreground !cursor-grab active:!cursor-grabbing",
-              isSelected && "bg-accent text-accent-foreground font-medium",
+              // Audit #015: active row needs two cues, not just background.
+              // Adds a 2px primary-color accent bar on the left edge via a
+              // before:: pseudo (does not fight the row's existing padding)
+              // and bumps the label weight to font-semibold. Row background
+              // stays subtle so hover (no bar, no weight) reads as lighter.
+              isSelected &&
+                "bg-accent/70 text-accent-foreground font-semibold before:absolute before:left-0 before:top-1 before:bottom-1 before:w-[2px] before:rounded-r-full before:bg-primary",
               showInto &&
                 "bg-primary/10 ring-1 ring-primary/30 ring-inset",
               blink && "cabinet-tree-blink",
@@ -423,9 +430,19 @@ export function TreeNode({
             {hasChildren ? (
               <span
                 role="button"
+                tabIndex={0}
+                aria-label={isExpanded ? `Collapse ${title}` : `Expand ${title}`}
+                aria-expanded={isExpanded}
                 onClick={(e) => {
                   e.stopPropagation();
                   toggleExpand(node.path);
+                }}
+                onKeyDown={(e) => {
+                  if (e.key === "Enter" || e.key === " ") {
+                    e.preventDefault();
+                    e.stopPropagation();
+                    toggleExpand(node.path);
+                  }
                 }}
                 className="shrink-0 -ml-1 flex items-center justify-center w-3 h-3 rounded hover:bg-accent"
               >
@@ -468,6 +485,11 @@ export function TreeNode({
             ) : node.type === "unknown" ? (
               <File className="h-3.5 w-3.5 shrink-0 text-muted-foreground/50" />
             ) : node.type === "cabinet" ? (
+              // Audit #016 (review feedback 2026-05-02): keep the Archive
+              // icon — it's the brand glyph used by the sidebar header and
+              // the rest of the app. Persistent amber-400 color so cabinet
+              // rows read consistently across the tree, sidebar header,
+              // and any breadcrumb references.
               <Archive className="h-3.5 w-3.5 shrink-0 text-amber-400" />
             ) : node.hasRepo ? (
               <GitBranch className="h-3.5 w-3.5 shrink-0 text-orange-400" />
@@ -482,17 +504,26 @@ export function TreeNode({
             ) : (
               <FileText className="h-3.5 w-3.5 shrink-0 text-muted-foreground" />
             )}
-            <span className={cn("truncate", node.type === "unknown" && "opacity-50")}>{title}</span>
+            <span
+              className={cn(
+                "truncate",
+                node.type === "unknown" && "opacity-50",
+                // Audit #016: bump cabinet rows to medium weight so the eye
+                // can scan "places vs. things" without reading the icon.
+                node.type === "cabinet" && "font-medium"
+              )}
+            >
+              {title}
+            </span>
             {isMoving && (
               <Loader2 className="ml-auto h-3 w-3 shrink-0 animate-spin text-muted-foreground" />
             )}
             {node.type === "cabinet" && !isMoving && (
-              // Hover-revealed "Open cabinet" pill — the row click now acts
-              // like a normal folder (expand + load index), and this pill is
-              // the explicit affordance to switch into the cabinet's scoped
-              // view. Rendered as a span (not a nested <button>) because
-              // <button> inside <button> is invalid HTML; pointer/keyboard
-              // affordances are reproduced via role="button" + tabIndex.
+              // Audit #016: the "Cabinet" label sits on the row at rest
+              // (subtle, no border) so the row identifies as a cabinet
+              // without hover. On row hover it strengthens and gains the
+              // ↗ glyph, signalling click-to-open. <span> + role/tabIndex
+              // because <button> inside <button> is invalid HTML.
               <span
                 role="button"
                 tabIndex={0}
@@ -506,18 +537,14 @@ export function TreeNode({
                 }}
                 onPointerDown={(e) => e.stopPropagation()}
                 className={cn(
-                  // Hidden at rest, revealed on row hover or pill focus.
-                  // Faint amber wash with amber text — borderless, blends
-                  // with the row instead of competing with it.
-                  // Row hover: calm theme tokens, almost unnoticeable.
-                  // Pill hover: stronger theme tokens (accent), grounded in
-                  // the app's palette rather than a yellow CTA.
-                  "ml-auto shrink-0 rounded-md bg-foreground/[0.04] px-2 py-0.5 text-[10px] font-medium uppercase tracking-wide text-muted-foreground/80 transition-[opacity,background-color,color]",
-                  "opacity-0 group-hover:opacity-100 focus:opacity-100",
-                  "hover:bg-accent hover:text-accent-foreground cursor-pointer"
+                  "ml-auto shrink-0 inline-flex items-center gap-1 rounded-md px-1.5 py-0.5 text-[10px] font-medium uppercase tracking-wide transition-[background-color,color]",
+                  "text-amber-600/80 dark:text-amber-400/70",
+                  "group-hover:bg-amber-500/10 group-hover:text-amber-600 dark:group-hover:text-amber-400",
+                  "hover:!bg-accent hover:!text-accent-foreground cursor-pointer"
                 )}
               >
-                Open
+                Cabinet
+                <ArrowUpRight className="size-2.5 opacity-0 transition-opacity group-hover:opacity-100" />
               </span>
             )}
           </button>

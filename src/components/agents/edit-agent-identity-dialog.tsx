@@ -12,7 +12,7 @@ import {
 } from "@/components/ui/dialog";
 import { Input } from "@/components/ui/input";
 import { Button } from "@/components/ui/button";
-import { ICON_PICKER_KEYS, getIconByKey } from "@/lib/agents/icon-catalog";
+import { ICON_PICKER_KEYS, getIconByKey, friendlyIconName } from "@/lib/agents/icon-catalog";
 import { showError } from "@/lib/ui/toast";
 import { AGENT_PALETTE } from "@/lib/themes";
 import { AVATAR_PRESETS } from "@/lib/agents/avatar-catalog";
@@ -250,6 +250,7 @@ export function EditAgentIdentityDialog({
                   const Icon = getIconByKey(key);
                   if (!Icon) return null;
                   const selected = state.iconKey === key;
+                  const label = friendlyIconName(key);
                   return (
                     <button
                       key={key}
@@ -264,7 +265,8 @@ export function EditAgentIdentityDialog({
                         "flex h-7 w-7 items-center justify-center rounded-md transition-colors hover:bg-muted",
                         selected && "bg-accent text-accent-foreground"
                       )}
-                      title={key}
+                      title={label}
+                      aria-label={label}
                     >
                       <Icon className="h-3.5 w-3.5" />
                     </button>

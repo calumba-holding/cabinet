@@ -239,7 +239,7 @@ function SlideEachATeam() {
 /* ── Slide 3: Visibility, your call ──────────────────────────────────── */
 function SlideVisibility() {
   const options = [
-    { label: "Own agents only", short: "Own", description: "This cabinet's agents and tasks", selected: true },
+    { label: "This cabinet only", short: "Own", description: "Pages, agents, and tasks from this cabinet only", selected: true },
     { label: "Include direct children", short: "+1" },
     { label: "Include two cabinet levels", short: "+2" },
     { label: "Include all descendants", short: "All" },
