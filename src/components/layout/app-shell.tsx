@@ -249,6 +249,18 @@ export function AppShell() {
         title = base;
     }
     document.title = title;
+    // Audit #031: write the new page title into the SR live region so
+    // VoiceOver/NVDA announce route changes. Cleared briefly first so the
+    // same string on repeat-nav still triggers an announcement, then set
+    // on the next tick.
+    const announcer = document.getElementById("cabinet-page-announcer");
+    if (announcer) {
+      announcer.textContent = "";
+      const id = window.setTimeout(() => {
+        if (announcer) announcer.textContent = title;
+      }, 30);
+      return () => window.clearTimeout(id);
+    }
   }, [section, selectedPath, editorFrontmatterTitle, editorCurrentPath]);
 
   // Track the last known file context so new terminal tabs open in the right CWD.
@@ -706,6 +718,18 @@ export function AppShell() {
 
   return (
     <div className="flex h-screen bg-background text-foreground">
+      {/* Audit #031: SR-only live region announcing the active page title
+          on every route change. role="status" + aria-live="polite" so it
+          doesn't interrupt other speech; aria-atomic so the entire string
+          is read on each update. The effect that writes document.title
+          also writes here. */}
+      <div
+        id="cabinet-page-announcer"
+        role="status"
+        aria-live="polite"
+        aria-atomic="true"
+        className="sr-only"
+      />
       <Sidebar />
       <div
         className="flex-1 flex flex-col overflow-hidden"
