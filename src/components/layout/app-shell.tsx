@@ -101,6 +101,7 @@ import { useCabinetUpdate } from "@/hooks/use-cabinet-update";
 import { useHashRoute } from "@/hooks/use-hash-route";
 import { useTreeStore } from "@/stores/tree-store";
 import { useAppStore } from "@/stores/app-store";
+import { useEditorStore } from "@/stores/editor-store";
 
 const DISMISSED_UPDATE_STORAGE_KEY = "cabinet.dismissed-update-version";
 const WIZARD_DONE_STORAGE_KEY = "cabinet.wizard-done";
@@ -167,6 +168,13 @@ export function AppShell() {
 
   const loadProviders = useAppStore((s) => s.loadProviders);
 
+  // Audit #017: page tab title should use the human title from frontmatter
+  // when present, falling back to the slug. Read from the editor store so the
+  // title reflects the currently-loaded page (selectedPath can race ahead of
+  // the actual editor content during loadPage).
+  const editorFrontmatterTitle = useEditorStore((s) => s.frontmatter?.title);
+  const editorCurrentPath = useEditorStore((s) => s.currentPath);
+
   useEffect(() => {
     loadTree();
   }, [loadTree]);
@@ -178,15 +186,31 @@ export function AppShell() {
   // Dynamic document.title — reflects the current section and page.
   useEffect(() => {
     const base = "Cabinet";
+    // Audit #017: prefer the frontmatter `title` over the slug whenever a
+    // page is loaded. Falls back to the slug when the frontmatter is absent
+    // or the editor store hasn't caught up to the new selection yet.
+    const pageDisplayTitle = (() => {
+      if (!selectedPath) return null;
+      const slug = selectedPath.split("/").pop() ?? selectedPath;
+      if (
+        editorCurrentPath === selectedPath &&
+        typeof editorFrontmatterTitle === "string" &&
+        editorFrontmatterTitle.trim()
+      ) {
+        return editorFrontmatterTitle.trim();
+      }
+      return slug;
+    })();
     let title: string;
     switch (section.type) {
       case "home":
         title = base;
         break;
+      case "page":
+        title = pageDisplayTitle ? `${pageDisplayTitle} — ${base}` : base;
+        break;
       case "cabinet":
-        title = selectedPath
-          ? `${selectedPath.split("/").pop() ?? selectedPath} — ${base}`
-          : base;
+        title = pageDisplayTitle ? `${pageDisplayTitle} — ${base}` : base;
         break;
       case "agents":
         title = `Agents — ${base}`;
@@ -225,7 +249,7 @@ export function AppShell() {
         title = base;
     }
     document.title = title;
-  }, [section, selectedPath]);
+  }, [section, selectedPath, editorFrontmatterTitle, editorCurrentPath]);
 
   // Track the last known file context so new terminal tabs open in the right CWD.
   useEffect(() => {

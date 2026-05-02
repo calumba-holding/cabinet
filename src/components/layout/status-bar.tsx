@@ -141,9 +141,43 @@ function StarExplosion() {
   );
 }
 
+// Audit #018: relative-time formatter for the persistent "Saved · Xs ago"
+// state. Returns short tokens (s/m/h) with "just now" for the first 5
+// seconds. Updated on a 10s tick by the StatusBar; the indicator never
+// claims more precision than it can deliver.
+function formatRelativeSavedAgo(ts: number, now: number): string {
+  const diffSec = Math.max(0, Math.floor((now - ts) / 1000));
+  if (diffSec < 5) return "just now";
+  if (diffSec < 60) return `${diffSec}s ago`;
+  const diffMin = Math.floor(diffSec / 60);
+  if (diffMin < 60) return `${diffMin}m ago`;
+  const diffHr = Math.floor(diffMin / 60);
+  if (diffHr < 24) return `${diffHr}h ago`;
+  const diffDay = Math.floor(diffHr / 24);
+  return `${diffDay}d ago`;
+}
+
 export function StatusBar() {
-  const { saveStatus, currentPath } = useEditorStore();
+  const { saveStatus, currentPath, isDirty, lastSavedAt } = useEditorStore();
   const retrySave = useEditorStore((s) => s.save);
+
+  // Audit #018: rerender every 10s so the relative timestamp ticks. The
+  // indicator only mounts when a page is open, so this isn't a global cost.
+  const [savedTick, setSavedTick] = useState(0);
+  useEffect(() => {
+    if (!lastSavedAt || saveStatus !== "idle" || isDirty) return;
+    const id = window.setInterval(() => setSavedTick((n) => n + 1), 10_000);
+    return () => window.clearInterval(id);
+  }, [lastSavedAt, saveStatus, isDirty]);
+  // Reference savedTick so the relative label re-renders on the interval.
+  const savedAgoLabel = useMemo(() => {
+    if (!lastSavedAt) return null;
+    return formatRelativeSavedAgo(lastSavedAt, Date.now());
+    // savedTick is intentionally a dependency: bumping it forces a re-render
+    // so the relative label updates without recomputing on every parent
+    // re-render.
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [lastSavedAt, savedTick]);
   const loadTree = useTreeStore((s) => s.loadTree);
   const selectedPath = useTreeStore((s) => s.selectedPath);
   const section = useAppStore((s) => s.section);
@@ -681,6 +715,28 @@ export function StatusBar() {
             <span className="flex items-center gap-1 text-emerald-500/80" title="Force save: ⌘S">
               <Check className="h-3 w-3" />
               Saved
+            </span>
+          ) : isDirty ? (
+            // Audit #018: while the user is mid-burst (debounce open),
+            // surface a soft "Editing…" so they don't feel autosave has
+            // forgotten about them. Pulses subtly via animate-pulse.
+            <span
+              className="flex items-center gap-1 text-muted-foreground/60"
+              title="Editing — autosave will run when you pause"
+            >
+              <CircleDot className="h-3 w-3 animate-pulse" />
+              Editing…
+            </span>
+          ) : savedAgoLabel ? (
+            // Audit #018: persistent "Saved · Xs ago" replaces the empty
+            // idle state — the timestamp is the trust anchor that confirms
+            // autosave is alive even when nothing is happening.
+            <span
+              className="flex items-center gap-1 text-muted-foreground/60"
+              title="Force save: ⌘S"
+            >
+              <Check className="h-3 w-3 text-emerald-500/70" />
+              Saved · {savedAgoLabel}
             </span>
           ) : null
         )}

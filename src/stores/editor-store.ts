@@ -17,6 +17,10 @@ interface EditorState {
   loadStatus: LoadStatus;
   isDirty: boolean;
   isLoading: boolean;
+  // Audit #018: epoch ms of the last successful save for the current page.
+  // Used by the status bar to render "Saved · 12s ago" while idle, instead
+  // of going completely silent after the 2s "Saved ✓" flash.
+  lastSavedAt: number | null;
 
   loadPage: (path: string) => Promise<void>;
   createMissingPage: (title: string) => Promise<void>;
@@ -67,6 +71,7 @@ export const useEditorStore = create<EditorState>((set, get) => ({
   loadStatus: "idle",
   isDirty: false,
   isLoading: false,
+  lastSavedAt: null,
 
   loadPage: async (path: string) => {
     // Cancel any pending save for the previous page
@@ -88,6 +93,7 @@ export const useEditorStore = create<EditorState>((set, get) => ({
         loadStatus: "loading",
         isDirty: false,
         isLoading: true,
+        lastSavedAt: null,
       });
     }
 
@@ -104,6 +110,7 @@ export const useEditorStore = create<EditorState>((set, get) => ({
         loadStatus: "loading",
         isDirty: false,
         isLoading: false,
+        lastSavedAt: null,
       });
     }
 
@@ -120,6 +127,7 @@ export const useEditorStore = create<EditorState>((set, get) => ({
         loadStatus: "ok",
         isDirty: false,
         isLoading: false,
+        lastSavedAt: null,
       });
       saveCachedPage({
         path,
@@ -139,6 +147,7 @@ export const useEditorStore = create<EditorState>((set, get) => ({
           loadStatus,
           isDirty: false,
           isLoading: false,
+          lastSavedAt: null,
         });
       } else {
         set({ isLoading: false, loadStatus });
@@ -189,7 +198,7 @@ export const useEditorStore = create<EditorState>((set, get) => ({
     set({ saveStatus: "saving" });
     try {
       await savePage(currentPath, content, frontmatter || {});
-      set({ saveStatus: "saved", isDirty: false });
+      set({ saveStatus: "saved", isDirty: false, lastSavedAt: Date.now() });
       saveCachedPage({
         path: currentPath,
         content,
@@ -216,6 +225,7 @@ export const useEditorStore = create<EditorState>((set, get) => ({
       loadStatus: "idle",
       isDirty: false,
       isLoading: false,
+      lastSavedAt: null,
     });
   },
 }));
