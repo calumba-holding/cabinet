@@ -341,6 +341,33 @@ export function getIconByKey(key: string | undefined | null): LucideIcon | null 
   return ICON_CATALOG[key] ?? null;
 }
 
+// Audit #041: lucide identifiers like "BarChart3", "ShieldCheck", "PenTool"
+// leaked into the UI via `title=` tooltips and screen-reader labels. This
+// helper turns the camelCase id into a friendly label users actually
+// recognise: "Bar chart 3", "Shield check", "Pen tool". Hand-overrides for
+// a handful of acronyms / awkward splits live in ICON_LABEL_OVERRIDES.
+const ICON_LABEL_OVERRIDES: Record<string, string> = {
+  Cpu: "CPU",
+  Hdd: "HDD",
+  Wifi: "Wi-Fi",
+  Github: "GitHub",
+  Gitlab: "GitLab",
+  PenTool: "Pen tool",
+  Sparkles: "Sparkles",
+};
+
+export function friendlyIconName(key: string): string {
+  if (!key) return key;
+  if (ICON_LABEL_OVERRIDES[key]) return ICON_LABEL_OVERRIDES[key];
+  // Split camelCase / PascalCase into words; keep digit suffixes.
+  const spaced = key
+    .replace(/([a-z0-9])([A-Z])/g, "$1 $2")
+    .replace(/([A-Z]+)([A-Z][a-z])/g, "$1 $2");
+  // Lowercase everything except the first character.
+  const lower = spaced.toLowerCase();
+  return lower.charAt(0).toUpperCase() + lower.slice(1);
+}
+
 export function resolveAgentIcon(
   slug: string,
   iconKey?: string | null

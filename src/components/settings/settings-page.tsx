@@ -70,7 +70,7 @@ import {
   setUserProfileOptimistic,
   useUserProfile,
 } from "@/hooks/use-user-profile";
-import { ICON_PICKER_KEYS, getIconByKey } from "@/lib/agents/icon-catalog";
+import { ICON_PICKER_KEYS, getIconByKey, friendlyIconName } from "@/lib/agents/icon-catalog";
 import { AGENT_PALETTE } from "@/lib/themes";
 import { StorageBackendSection } from "@/components/settings/storage-backend-section";
 import { version as pkgVersion } from "../../../package.json";
@@ -562,16 +562,37 @@ export function SettingsPage() {
     });
   };
 
-  const tabs: { id: Tab; label: string; icon: React.ReactNode }[] = [
-    { id: "profile", label: "Profile", icon: <CircleUser className="h-3.5 w-3.5" /> },
-    { id: "providers", label: "Providers", icon: <Cpu className="h-3.5 w-3.5" /> },
-    { id: "skills", label: "Skills", icon: <Sparkles className="h-3.5 w-3.5" /> },
-    { id: "storage", label: "Storage", icon: <HardDrive className="h-3.5 w-3.5" /> },
-    { id: "integrations", label: "Integrations", icon: <Plug className="h-3.5 w-3.5" /> },
-    { id: "notifications", label: "Notifications", icon: <Bell className="h-3.5 w-3.5" /> },
-    { id: "appearance", label: "Appearance", icon: <Palette className="h-3.5 w-3.5" /> },
-    { id: "updates", label: "Updates", icon: <CloudDownload className="h-3.5 w-3.5" /> },
-    { id: "about", label: "About", icon: <Info className="h-3.5 w-3.5" /> },
+  // Audit #040: 9 horizontal tabs broke the visual rhythm; switched to a
+  // vertical rail (~200px) with three semantic groups. macOS Settings,
+  // Linear Settings, GitHub Settings, all do this for >5 categories.
+  const tabGroups: {
+    label: string;
+    items: { id: Tab; label: string; icon: React.ReactNode }[];
+  }[] = [
+    {
+      label: "You",
+      items: [
+        { id: "profile", label: "Profile", icon: <CircleUser className="h-3.5 w-3.5" /> },
+        { id: "notifications", label: "Notifications", icon: <Bell className="h-3.5 w-3.5" /> },
+        { id: "appearance", label: "Appearance", icon: <Palette className="h-3.5 w-3.5" /> },
+      ],
+    },
+    {
+      label: "Workspace",
+      items: [
+        { id: "providers", label: "Providers", icon: <Cpu className="h-3.5 w-3.5" /> },
+        { id: "skills", label: "Skills", icon: <Sparkles className="h-3.5 w-3.5" /> },
+        { id: "storage", label: "Storage", icon: <HardDrive className="h-3.5 w-3.5" /> },
+        { id: "integrations", label: "Integrations", icon: <Plug className="h-3.5 w-3.5" /> },
+      ],
+    },
+    {
+      label: "App",
+      items: [
+        { id: "updates", label: "Updates", icon: <CloudDownload className="h-3.5 w-3.5" /> },
+        { id: "about", label: "About", icon: <Info className="h-3.5 w-3.5" /> },
+      ],
+    },
   ];
 
   return (
@@ -603,27 +624,66 @@ export function SettingsPage() {
         </div>
       </div>
 
-      {/* Tabs */}
-      <div className="flex items-center gap-1 px-4 py-2 border-b border-border">
-        {tabs.map((t) => (
-          <a
-            key={t.id}
-            href={`#/settings/${t.id}`}
-            onClick={(e) => { e.preventDefault(); setTab(t.id); }}
-            className={cn(
-              "flex items-center gap-1.5 px-3 py-1.5 rounded-md text-[12px] font-medium transition-colors no-underline",
-              tab === t.id
-                ? "bg-primary/10 text-primary"
-                : "text-muted-foreground hover:text-foreground hover:bg-accent/50"
-            )}
-          >
-            {t.icon}
-            {t.label}
-          </a>
-        ))}
-      </div>
+      {/* Audit #040: vertical sidebar instead of a 9-tab horizontal strip. */}
+      <div className="flex min-h-0 flex-1 overflow-hidden">
+        <nav
+          aria-label="Settings categories"
+          className="hidden w-[212px] shrink-0 flex-col gap-3 border-r border-border bg-muted/10 px-2 py-3 md:flex"
+        >
+          {tabGroups.map((group) => (
+            <div key={group.label} className="flex flex-col gap-0.5">
+              <div className="px-2 pb-1 pt-1 text-[10px] font-semibold uppercase tracking-wider text-muted-foreground/70">
+                {group.label}
+              </div>
+              {group.items.map((t) => (
+                <a
+                  key={t.id}
+                  href={`#/settings/${t.id}`}
+                  onClick={(e) => {
+                    e.preventDefault();
+                    setTab(t.id);
+                  }}
+                  className={cn(
+                    "flex items-center gap-2 rounded-md px-2 py-1.5 text-[12.5px] font-medium transition-colors no-underline",
+                    tab === t.id
+                      ? "bg-primary/10 text-primary"
+                      : "text-muted-foreground hover:text-foreground hover:bg-accent/50"
+                  )}
+                >
+                  {t.icon}
+                  {t.label}
+                </a>
+              ))}
+            </div>
+          ))}
+        </nav>
 
-      <ScrollArea className="flex-1 min-h-0 overflow-hidden">
+        {/* On narrow viewports the rail collapses; expose the tabs as a
+            compact horizontal row at the top of the content pane. */}
+        <div className="flex min-h-0 min-w-0 flex-1 flex-col">
+          <div className="flex items-center gap-1 overflow-x-auto border-b border-border px-3 py-1.5 md:hidden">
+            {tabGroups.flatMap((g) => g.items).map((t) => (
+              <a
+                key={t.id}
+                href={`#/settings/${t.id}`}
+                onClick={(e) => {
+                  e.preventDefault();
+                  setTab(t.id);
+                }}
+                className={cn(
+                  "flex shrink-0 items-center gap-1.5 rounded-md px-2.5 py-1 text-[12px] font-medium transition-colors no-underline",
+                  tab === t.id
+                    ? "bg-primary/10 text-primary"
+                    : "text-muted-foreground hover:text-foreground hover:bg-accent/50"
+                )}
+              >
+                {t.icon}
+                {t.label}
+              </a>
+            ))}
+          </div>
+
+          <ScrollArea className="flex-1 min-h-0 overflow-hidden">
         <div className={cn("p-4 space-y-6", tab !== "skills" && "max-w-2xl")}>
           {/* Profile Tab */}
           {tab === "profile" && <ProfileTab />}
@@ -1562,7 +1622,9 @@ export function SettingsPage() {
             </div>
           )}
         </div>
-      </ScrollArea>
+          </ScrollArea>
+        </div>
+      </div>
     </div>
   );
 }
@@ -1766,7 +1828,14 @@ function IconPicker({
   const trimmed = query.trim().toLowerCase();
   const filtered: string[] = useMemo(() => {
     if (!trimmed) return ICON_PICKER_KEYS;
-    return ICON_PICKER_KEYS.filter((k) => k.toLowerCase().includes(trimmed));
+    // Audit #041: search the friendly label too — typing "shield" should
+    // find "ShieldCheck", typing "bar chart" should find "BarChart3".
+    return ICON_PICKER_KEYS.filter((k) => {
+      const friendly = friendlyIconName(k).toLowerCase();
+      return (
+        k.toLowerCase().includes(trimmed) || friendly.includes(trimmed)
+      );
+    });
   }, [trimmed]);
 
   const visibleKeys: string[] = useMemo(() => {
@@ -1804,6 +1873,7 @@ function IconPicker({
           const Icon = getIconByKey(key);
           if (!Icon) return null;
           const selected = selectedKey === key;
+          const label = friendlyIconName(key);
           return (
             <button
               key={key}
@@ -1813,7 +1883,8 @@ function IconPicker({
                 "flex h-7 w-7 items-center justify-center rounded-md transition-colors hover:bg-muted",
                 selected && "bg-accent text-accent-foreground",
               )}
-              title={key}
+              title={label}
+              aria-label={label}
             >
               <Icon className="h-3.5 w-3.5" />
             </button>
