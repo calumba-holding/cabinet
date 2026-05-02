@@ -6,7 +6,7 @@ import { useTreeStore } from "@/stores/tree-store";
 import { selectDaemonLevel, useHealthStore } from "@/stores/health-store";
 import { ROOT_CABINET_PATH } from "@/lib/cabinets/paths";
 import { fetchCabinetOverviewClient } from "@/lib/cabinets/overview-client";
-import { Download, Loader2 } from "lucide-react";
+import { Download, Loader2, RefreshCw } from "lucide-react";
 import { cn } from "@/lib/utils";
 import { flattenTree } from "@/lib/tree-utils";
 import { createConversation } from "@/lib/agents/conversation-client";
@@ -106,6 +106,50 @@ const QUICK_ACTIONS: QuickAction[] = [
     preferredAgents: LEAD_FALLBACKS,
     prompt:
       "Plan a beginner physics curriculum across 6 modules (motion, forces, energy, waves, electricity, light). Dispatch one LAUNCH_TASK per module to the editor (effort=high) to build an interactive lesson page. Save them under @Physics 101.",
+  },
+  {
+    label: "Outline a short story",
+    prompt:
+      "Outline a 5-chapter short story with a clear arc, a protagonist, and a twist in chapter 4. Save it as @Story Outline. Don't write the prose yet — just chapter titles and 3–4 beats each.",
+  },
+  {
+    label: "Hourly stand-up nudge",
+    preferredAgents: LEAD_FALLBACKS,
+    prompt:
+      "Schedule a SCHEDULE_JOB on the assistant with cron `0 9-18 * * 1-5` — every weekday hour from 9am–6pm, ask me what I'm working on right now and append the answer to @Hourly Log.",
+  },
+  {
+    label: "Research my next phone",
+    preferredAgents: LEAD_FALLBACKS,
+    prompt:
+      "Dispatch the librarian to research the current top-3 flagship phones for someone who values battery life and camera. Compile the comparison into @Phone Research with a recommendation and the trade-offs.",
+  },
+  {
+    label: "Translate this cabinet to Spanish",
+    preferredAgents: LEAD_FALLBACKS,
+    prompt:
+      "Read every page in this cabinet and dispatch a LAUNCH_TASK per page to the editor (effort=low) to write a Spanish translation. Save each under @Translations/<original page name>.",
+  },
+  {
+    label: "Refactor my note-taking system",
+    prompt:
+      "Audit the structure of this cabinet — folders, naming, orphans, duplicates. Propose a cleaner structure as @Note System Audit with concrete moves (don't apply them yet).",
+  },
+  {
+    label: "Plan a birthday party",
+    prompt:
+      "Plan a birthday party for 12 adults at home. Output @Party Plan with: theme suggestions (3 options), shopping list, day-of timeline, and a music vibe.",
+  },
+  {
+    label: "Draft a board update",
+    prompt:
+      "Write a concise monthly board update. Cover: traction, shipped, missed, asks. Pull anything I've worked on this month from recently-modified pages. Save as @Board Update.",
+  },
+  {
+    label: "Simulate 5 customer interviews",
+    preferredAgents: LEAD_FALLBACKS,
+    prompt:
+      "Dispatch 5 LAUNCH_TASKs to the editor — each writes a transcript of a customer interview from a different persona (busy parent, freelancer, student, retiree, founder). Use my product as the subject. Save under @Interviews.",
   },
 ];
 
@@ -373,6 +417,7 @@ export function HomeScreen() {
   // layout. The 2.5s timeout is a safety net for a hung request; in practice
   // the local overview fetch settles in under 200ms.
   const [chipsReady, setChipsReady] = useState(false);
+  const [chipShuffle, setChipShuffle] = useState(0);
   const [selectedAgentSlug, setSelectedAgentSlug] = useState<string | null>(
     null
   );
@@ -492,11 +537,29 @@ export function HomeScreen() {
     return agents[0]?.slug ?? null;
   };
 
-  // All chips render. Delegation chips that don't have any installed agent
-  // to dispatch to fall through to composer.submit, which currently routes
-  // to "editor" — that path may surface a clearer error on agent-less
-  // cabinets but doesn't silently drop the click.
-  const visibleActions = QUICK_ACTIONS;
+  // Audit #010: previously rendered the full pool every time; the same 9
+  // chips greeted every cold-boot. Now: keep the first chip stable as a
+  // landmark, then surface a random window of CHIP_DISPLAY_COUNT-1 from the
+  // remaining pool. The shuffle button (RefreshCw) below bumps `chipShuffle`
+  // to re-roll. All chips still render — it's just which ones are visible.
+  const CHIP_DISPLAY_COUNT = 9;
+  const visibleActions = useMemo(() => {
+    if (QUICK_ACTIONS.length <= CHIP_DISPLAY_COUNT) return QUICK_ACTIONS;
+    const [head, ...rest] = QUICK_ACTIONS;
+    const indices = rest.map((_, i) => i);
+    // Fisher–Yates with a seed derived from chipShuffle so re-rolls are
+    // deterministic per click and stable across re-renders within one roll.
+    let seed = (chipShuffle + 1) * 2654435761;
+    for (let i = indices.length - 1; i > 0; i--) {
+      seed = (seed * 1664525 + 1013904223) >>> 0;
+      const j = seed % (i + 1);
+      [indices[i], indices[j]] = [indices[j], indices[i]];
+    }
+    const picked = indices
+      .slice(0, CHIP_DISPLAY_COUNT - 1)
+      .map((idx) => rest[idx]);
+    return [head, ...picked];
+  }, [chipShuffle]);
 
   // Build options for the home-composer agent picker. Prepended "Auto"
   // sentinel (empty slug) clears `selectedAgentSlug` so the cascade kicks in.
@@ -612,7 +675,7 @@ export function HomeScreen() {
               const disabled = composer.submitting || quickRunning || daemonDown;
               return (
                 <button
-                  key={action.label}
+                  key={`${chipShuffle}-${action.label}`}
                   onClick={() => void runQuickAction(action)}
                   disabled={disabled}
                   title={action.prompt}
@@ -635,6 +698,29 @@ export function HomeScreen() {
                 </button>
               );
             })}
+          {chipsReady && QUICK_ACTIONS.length > CHIP_DISPLAY_COUNT && (
+            <button
+              type="button"
+              onClick={() => setChipShuffle((n) => n + 1)}
+              disabled={composer.submitting || quickRunning || daemonDown}
+              title="Show different suggestions"
+              aria-label="Show different suggestions"
+              className={cn(
+                "inline-flex items-center justify-center rounded-full border border-dashed border-border/70 bg-card/40 size-7",
+                "text-muted-foreground hover:bg-secondary hover:border-border hover:text-foreground",
+                "transition-colors",
+                "animate-in fade-in slide-in-from-top-1 duration-200 ease-out",
+                (composer.submitting || quickRunning || daemonDown) &&
+                  "opacity-50 cursor-not-allowed"
+              )}
+              style={{
+                animationDelay: `${Math.min(visibleActions.length, 12) * 50}ms`,
+                animationFillMode: "backwards",
+              }}
+            >
+              <RefreshCw className="size-3.5" />
+            </button>
+          )}
         </div>
       </div>
 
