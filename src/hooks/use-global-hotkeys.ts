@@ -41,6 +41,16 @@ export function useGlobalHotkeys(): void {
         return;
       }
 
+      // Audit #053: `?` (Shift+/) opens the keyboard shortcuts cheat sheet.
+      // Linear/GitHub/Stripe convention. Only fires outside editable
+      // targets so typing "?" in prose still works.
+      if (!mod && e.key === "?") {
+        if (isEditableTarget(target)) return;
+        e.preventDefault();
+        window.dispatchEvent(new CustomEvent("cabinet:open-shortcuts"));
+        return;
+      }
+
       // Ctrl+` — toggle terminal (VS Code / iTerm2 convention; avoids Cmd+`
       // which is "Cycle windows of same app" at macOS system level)
       if (e.ctrlKey && !e.metaKey && !e.shiftKey && e.key === "`") {

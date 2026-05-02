@@ -1178,8 +1178,19 @@ export function TaskRuntimePicker({
       ? "Loading providers..."
       : "No providers available";
 
+  // Audit #052: the prior tooltip "Task model: Claude Opus 4.7 · Medium ·
+  // Claude Code" read as a compound model identifier, sending users to
+  // search Anthropic for a non-existent product. Split the three concepts
+  // (model, effort tier, provider) explicitly so each is recognisable.
   const triggerTitle = currentProvider
-    ? `Task model: ${selectionSummary}`
+    ? `Model: ${currentModel?.name || currentProvider.name}` +
+      ` · Effort: ${
+        currentEffort?.name ||
+        (normalizedValue.effort
+          ? formatEffortName(normalizedValue.effort)
+          : "Default")
+      }` +
+      ` · via ${currentProvider.name}`
     : loading
       ? "Loading available providers…"
       : "Task model — using system default (click to pick)";

@@ -34,6 +34,8 @@ import { TerminalTabs } from "@/components/terminal/terminal-tabs";
 import { AIPanel } from "@/components/ai-panel/ai-panel";
 import { TaskDetailPanel } from "@/components/tasks/task-detail-panel";
 import { SearchPalette } from "@/components/search/search-palette";
+import { KeyboardShortcutsModal } from "@/components/help/keyboard-shortcuts-modal";
+import { WhatsNewCard } from "@/components/help/whats-new-card";
 import { ConfirmDialogHost } from "@/components/ui/confirm-dialog-host";
 import { useGlobalHotkeys } from "@/hooks/use-global-hotkeys";
 import { dedupFetch } from "@/lib/api/dedup-fetch";
@@ -774,6 +776,8 @@ export function AppShell() {
       {taskPanelConversation && <TaskDetailPanel />}
       {!aiPanelCollapsed && <AIPanel />}
       <SearchPalette />
+      <KeyboardShortcutsModal />
+      <WhatsNewCard />
       <ConfirmDialogHost />
       <UpdateDialog
         open={effectiveUpdateDialogOpen}
