@@ -922,3 +922,121 @@ em-emoji-picker {
   .fancy-card { transition: none; }
   .fancy-card:hover { box-shadow: none; }
 }
+
+/* ──────────────────────────────────────────────────────────────────────
+   Audit #044: era-theme signature surfaces.
+
+   These overrides activate only when [data-custom-theme] matches the era,
+   so they don't affect the default look. Each block targets the era's
+   *recognisable* element (Win 95 bevels, XP Luna pills, Apple Aqua
+   highlights, Matrix grid) — the bar set by the audit was "museum-grade
+   homage", not "tinted normal app".
+
+   Scoping notes:
+   - The buttons rule uses :where() to avoid bumping specificity past
+     theme-agnostic component overrides.
+   - We exclude inputs that look like buttons (avatar bubbles, list rows)
+     by requiring an explicit <button> tag with a class containing "rounded".
+   ────────────────────────────────────────────────────────────────────── */
+
+/* ─── Windows 95 ─────────────────────────────────────────────── */
+html[data-custom-theme="win95"] {
+  /* Snap, don't ease — Win 95 had no transitions. */
+  --win95-snap: 0ms;
+}
+html[data-custom-theme="win95"] :where(button:not([data-no-bevel])) {
+  border-radius: 0 !important;
+  box-shadow:
+    inset -1px -1px 0 #000,
+    inset 1px 1px 0 #fff,
+    inset -2px -2px 0 #808080,
+    inset 2px 2px 0 #dfdfdf;
+  transition-duration: 0ms !important;
+}
+html[data-custom-theme="win95"] :where(button:not([data-no-bevel])):active {
+  /* Press-in: invert the bevel. */
+  box-shadow:
+    inset 1px 1px 0 #000,
+    inset -1px -1px 0 #fff,
+    inset 2px 2px 0 #808080,
+    inset -2px -2px 0 #dfdfdf;
+}
+/* Title-bar style on dialog headers (Settings page heading, modal headers). */
+html[data-custom-theme="win95"] :where(h1, h2):first-child {
+  background: linear-gradient(to right, #00007b 0%, #1084d0 100%);
+  color: #fff !important;
+  padding: 4px 8px;
+  font-size: 14px;
+  font-weight: 700;
+  letter-spacing: 0.02em;
+  border-radius: 0;
+}
+html[data-custom-theme="win95"] body,
+html[data-custom-theme="win95"] {
+  font-size: 12px;
+}
+
+/* ─── Windows XP ─────────────────────────────────────────────── */
+html[data-custom-theme="winxp"] :where(button:not([data-no-bevel])) {
+  border-radius: 6px !important;
+  background-image: linear-gradient(
+    to bottom,
+    color-mix(in srgb, var(--primary) 88%, white 12%) 0%,
+    var(--primary) 50%,
+    color-mix(in srgb, var(--primary) 80%, black 8%) 100%
+  );
+  box-shadow:
+    inset 0 1px 0 rgba(255, 255, 255, 0.3),
+    0 1px 0 rgba(0, 0, 0, 0.3);
+}
+html[data-custom-theme="winxp"] :where(button:not([data-no-bevel])):hover {
+  background-image: linear-gradient(
+    to bottom,
+    color-mix(in srgb, var(--primary) 80%, white 20%) 0%,
+    var(--primary) 50%,
+    color-mix(in srgb, var(--primary) 75%, black 12%) 100%
+  );
+}
+
+/* ─── Apple (macOS Aqua-flavored) ────────────────────────────── */
+html[data-custom-theme="apple"] :where(button:not([data-no-bevel])) {
+  border-radius: 9999px !important;
+  background-image: linear-gradient(
+    to bottom,
+    color-mix(in srgb, var(--primary) 70%, white 30%) 0%,
+    var(--primary) 55%,
+    color-mix(in srgb, var(--primary) 85%, black 8%) 100%
+  );
+  box-shadow:
+    inset 0 1px 0 rgba(255, 255, 255, 0.55),
+    inset 0 -1px 0 rgba(0, 0, 0, 0.1),
+    0 1px 2px rgba(0, 0, 0, 0.18);
+}
+html[data-custom-theme="apple"] :where(button:not([data-no-bevel])):hover {
+  filter: brightness(1.05);
+}
+
+/* ─── Matrix (green grid backdrop) ──────────────────────────── */
+html[data-custom-theme="matrix"] body {
+  background-image:
+    linear-gradient(rgba(0, 255, 65, 0.04) 1px, transparent 1px),
+    linear-gradient(90deg, rgba(0, 255, 65, 0.04) 1px, transparent 1px);
+  background-size: 32px 32px;
+  background-attachment: fixed;
+}
+html[data-custom-theme="matrix"] :where(button:not([data-no-bevel])) {
+  text-transform: uppercase;
+  letter-spacing: 0.06em;
+}
+
+/* ─── Cyber (neon outline) ──────────────────────────────────── */
+html[data-custom-theme="cyber"] :where(button:not([data-no-bevel])):hover {
+  box-shadow: 0 0 0 1px var(--primary), 0 0 12px color-mix(in srgb, var(--primary) 50%, transparent);
+}
+
+/* Reduced motion: no extra animations on era themes either. */
+@media (prefers-reduced-motion: reduce) {
+  html[data-custom-theme="matrix"] body {
+    background-image: none;
+  }
+}

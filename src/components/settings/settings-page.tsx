@@ -53,7 +53,13 @@ import {
   applyTheme,
   getStoredThemeName,
   storeThemeName,
+  getStoredThemeMode,
+  storeThemeMode,
+  getStoredThemePair,
+  storeThemePair,
+  findThemeByName,
   type ThemeDefinition,
+  type ThemeMode,
 } from "@/lib/themes";
 import {
   RuntimeMatrixPicker,
@@ -300,6 +306,12 @@ export function SettingsPage() {
   const [saved, setSaved] = useState(false);
   const [revealedKeys, setRevealedKeys] = useState<Set<string>>(new Set());
   const [activeThemeName, setActiveThemeName] = useState<string | null>(null);
+  // Audit #045: theme mode state.
+  const [themeMode, setThemeModeState] = useState<ThemeMode>("manual");
+  const [themePair, setThemePairState] = useState<{ light: string; dark: string }>({
+    light: "paper",
+    dark: "claude",
+  });
   const [telemetryEnabled, setTelemetryEnabled] = useState<boolean | null>(null);
   const [telemetryEnvDisabled, setTelemetryEnvDisabled] = useState(false);
   const [telemetrySaving, setTelemetrySaving] = useState(false);
@@ -321,7 +333,41 @@ export function SettingsPage() {
   // Sync active theme name on mount
   useEffect(() => {
     setActiveThemeName(getStoredThemeName() || "paper");
+    // Audit #045: hydrate match-system state.
+    setThemeModeState(getStoredThemeMode());
+    setThemePairState(getStoredThemePair());
   }, []);
+
+  // Audit #045: applying a theme via the manual grid disables match-system,
+  // since the user has explicitly picked one. The pair stays stored so
+  // toggling system back on later picks up where they left off.
+  const setThemeModeAndApply = useCallback(
+    (nextMode: ThemeMode, nextPair?: { light?: string; dark?: string }) => {
+      setThemeModeState(nextMode);
+      storeThemeMode(nextMode);
+      if (nextPair) {
+        setThemePairState((prev) => ({
+          light: nextPair.light ?? prev.light,
+          dark: nextPair.dark ?? prev.dark,
+        }));
+        storeThemePair(nextPair);
+      }
+      if (nextMode === "system") {
+        const pair = nextPair
+          ? { ...themePair, ...nextPair }
+          : themePair;
+        const isDark = window.matchMedia("(prefers-color-scheme: dark)").matches;
+        const target = findThemeByName(isDark ? pair.dark : pair.light);
+        if (target) {
+          applyTheme(target);
+          setActiveThemeName(target.name);
+          storeThemeName(target.name);
+          setNextTheme(target.type as "light" | "dark");
+        }
+      }
+    },
+    [themePair, setNextTheme]
+  );
 
   useEffect(() => {
     let cancelled = false;
@@ -401,6 +447,11 @@ export function SettingsPage() {
     setActiveThemeName(themeDef.name);
     storeThemeName(themeDef.name);
     setNextTheme(themeDef.type);
+    // Audit #045: picking a manual theme disables system mode.
+    if (themeMode === "system") {
+      setThemeModeState("manual");
+      storeThemeMode("manual");
+    }
     sendTelemetry("theme.changed", { themeName: themeDef.name });
   };
 
@@ -698,6 +749,96 @@ export function SettingsPage() {
                 </p>
 
                 <div className="space-y-4">
+                  {/* Audit #045: Match system pair card sits at the top of
+                      the picker. When enabled, Cabinet listens to OS
+                      prefers-color-scheme and applies the chosen light or
+                      dark variant; the manual grids below dim out so the
+                      user understands they're inactive. */}
+                  <div
+                    className={cn(
+                      "rounded-lg border p-3 transition-colors",
+                      themeMode === "system"
+                        ? "border-primary bg-primary/5 ring-1 ring-primary/20"
+                        : "border-border"
+                    )}
+                  >
+                    <div className="flex items-start justify-between gap-3">
+                      <div className="flex items-start gap-2">
+                        <div
+                          className="mt-0.5 inline-flex h-7 w-7 shrink-0 items-center justify-center rounded-full border bg-background text-foreground"
+                          aria-hidden="true"
+                        >
+                          <span className="text-[11px]">☀ 🌙</span>
+                        </div>
+                        <div className="flex flex-col gap-0.5">
+                          <span className="text-[13px] font-semibold">
+                            Match system
+                          </span>
+                          <span className="text-[11px] text-muted-foreground">
+                            Switch automatically with your OS appearance.
+                          </span>
+                        </div>
+                      </div>
+                      <label className="inline-flex items-center gap-2">
+                        <span className="sr-only">Match system</span>
+                        <input
+                          type="checkbox"
+                          checked={themeMode === "system"}
+                          onChange={(e) =>
+                            setThemeModeAndApply(
+                              e.target.checked ? "system" : "manual"
+                            )
+                          }
+                          className="h-4 w-4 rounded border-border accent-primary"
+                        />
+                      </label>
+                    </div>
+                    {themeMode === "system" && (
+                      <div className="mt-3 grid gap-2 sm:grid-cols-2">
+                        <label className="flex flex-col gap-1 text-[11px]">
+                          <span className="font-medium text-muted-foreground">
+                            Light variant
+                          </span>
+                          <select
+                            value={themePair.light}
+                            onChange={(e) =>
+                              setThemeModeAndApply("system", {
+                                light: e.target.value,
+                              })
+                            }
+                            className="rounded-md border border-border bg-background px-2 py-1 text-[12px]"
+                          >
+                            {THEMES.filter((t) => t.type === "light").map((t) => (
+                              <option key={t.name} value={t.name}>
+                                {t.label}
+                              </option>
+                            ))}
+                          </select>
+                        </label>
+                        <label className="flex flex-col gap-1 text-[11px]">
+                          <span className="font-medium text-muted-foreground">
+                            Dark variant
+                          </span>
+                          <select
+                            value={themePair.dark}
+                            onChange={(e) =>
+                              setThemeModeAndApply("system", {
+                                dark: e.target.value,
+                              })
+                            }
+                            className="rounded-md border border-border bg-background px-2 py-1 text-[12px]"
+                          >
+                            {THEMES.filter((t) => t.type === "dark").map((t) => (
+                              <option key={t.name} value={t.name}>
+                                {t.label}
+                              </option>
+                            ))}
+                          </select>
+                        </label>
+                      </div>
+                    )}
+                  </div>
+
                   <div>
                     <p className="text-[11px] uppercase tracking-wider text-muted-foreground/60 mb-2">Light Themes</p>
                     <div className="grid grid-cols-2 sm:grid-cols-3 gap-2">
@@ -705,33 +846,37 @@ export function SettingsPage() {
                         <button
                           key={t.name}
                           onClick={() => selectTheme(t)}
+                          title={`Apply ${t.label} theme`}
                           className={cn(
-                            "flex items-center gap-2.5 rounded-lg border p-3 text-left transition-all",
+                            "flex flex-col gap-2 rounded-lg border p-2 text-left transition-all",
                             activeThemeName === t.name
                               ? "border-primary bg-primary/5 ring-1 ring-primary/20"
                               : "border-border hover:border-primary/30"
                           )}
                         >
-                          <div
-                            className="h-4 w-4 rounded-full shrink-0 border border-[#00000015]"
-                            style={{ backgroundColor: t.accent }}
-                          />
-                          <span
-                            className={cn(
-                              "text-[12px]",
-                              t.name === "paper" ? "italic" : "font-medium"
+                          <ThemeThumbnail theme={t} />
+                          <div className="flex items-center gap-2">
+                            <div
+                              className="h-3 w-3 rounded-full shrink-0 border border-[#00000015]"
+                              style={{ backgroundColor: t.accent }}
+                            />
+                            <span
+                              className={cn(
+                                "truncate text-[12px]",
+                                t.name === "paper" ? "italic" : "font-medium"
+                              )}
+                              style={{
+                                fontFamily: t.name === "paper"
+                                  ? "var(--font-logo), Georgia, serif"
+                                  : (t.headingFont || t.font),
+                              }}
+                            >
+                              {t.label}
+                            </span>
+                            {activeThemeName === t.name && (
+                              <Check className="h-3 w-3 text-primary ml-auto shrink-0" />
                             )}
-                            style={{
-                              fontFamily: t.name === "paper"
-                                ? "var(--font-logo), Georgia, serif"
-                                : (t.headingFont || t.font),
-                            }}
-                          >
-                            {t.label}
-                          </span>
-                          {activeThemeName === t.name && (
-                            <Check className="h-3 w-3 text-primary ml-auto shrink-0" />
-                          )}
+                          </div>
                         </button>
                       ))}
                     </div>
@@ -744,26 +889,30 @@ export function SettingsPage() {
                         <button
                           key={t.name}
                           onClick={() => selectTheme(t)}
+                          title={`Apply ${t.label} theme`}
                           className={cn(
-                            "flex items-center gap-2.5 rounded-lg border p-3 text-left transition-all",
+                            "flex flex-col gap-2 rounded-lg border p-2 text-left transition-all",
                             activeThemeName === t.name
                               ? "border-primary bg-primary/5 ring-1 ring-primary/20"
                               : "border-border hover:border-primary/30"
                           )}
                         >
-                          <div
-                            className="h-4 w-4 rounded-full shrink-0 border border-[#ffffff20]"
-                            style={{ backgroundColor: t.accent }}
-                          />
-                          <span
-                            className="text-[12px] font-medium"
-                            style={{ fontFamily: t.headingFont || t.font }}
-                          >
-                            {t.label}
-                          </span>
-                          {activeThemeName === t.name && (
-                            <Check className="h-3 w-3 text-primary ml-auto shrink-0" />
-                          )}
+                          <ThemeThumbnail theme={t} />
+                          <div className="flex items-center gap-2">
+                            <div
+                              className="h-3 w-3 rounded-full shrink-0 border border-[#ffffff20]"
+                              style={{ backgroundColor: t.accent }}
+                            />
+                            <span
+                              className="truncate text-[12px] font-medium"
+                              style={{ fontFamily: t.headingFont || t.font }}
+                            >
+                              {t.label}
+                            </span>
+                            {activeThemeName === t.name && (
+                              <Check className="h-3 w-3 text-primary ml-auto shrink-0" />
+                            )}
+                          </div>
                         </button>
                       ))}
                     </div>
@@ -1625,6 +1774,90 @@ export function SettingsPage() {
           </ScrollArea>
         </div>
       </div>
+    </div>
+  );
+}
+
+// Audit #042: theme picker now renders a miniature surface in each card
+// using the theme's actual CSS custom properties. Cheap to do — themes ship
+// the same `--background` / `--card` / `--primary` / `--sidebar-*` vars the
+// real app uses. The thumbnail mirrors the screenshot the audit asked for:
+// faux sidebar (with cabinet + page rows), a heading line, a primary button,
+// and a status-bar accent stripe.
+function ThemeThumbnail({ theme }: { theme: ThemeDefinition }) {
+  // Wrapper div carries all the theme's tokens. Inside, the mini-UI uses
+  // those tokens via var(--…).
+  const style = theme.vars as React.CSSProperties;
+  const headingFont = theme.headingFont || theme.font || "inherit";
+  const bodyFont = theme.font || "inherit";
+  return (
+    <div
+      style={style}
+      className="pointer-events-none relative h-[70px] w-full overflow-hidden rounded-md border border-[color:var(--border)]"
+      aria-hidden="true"
+    >
+      <div
+        className="flex h-full w-full"
+        style={{
+          background: "var(--background)",
+          color: "var(--foreground)",
+        }}
+      >
+        {/* Mini sidebar */}
+        <div
+          className="flex h-full w-[28%] flex-col gap-0.5 border-r p-1"
+          style={{
+            background: "var(--sidebar)",
+            color: "var(--sidebar-foreground)",
+            borderColor: "var(--sidebar-border)",
+          }}
+        >
+          <div
+            className="h-1.5 w-3/4 rounded"
+            style={{ background: "var(--sidebar-primary)" }}
+          />
+          <div
+            className="h-1 w-2/3 rounded opacity-60"
+            style={{ background: "var(--sidebar-accent)" }}
+          />
+          <div
+            className="h-1 w-1/2 rounded opacity-60"
+            style={{ background: "var(--sidebar-accent)" }}
+          />
+        </div>
+        {/* Mini main pane */}
+        <div className="flex h-full flex-1 flex-col gap-1 p-1.5">
+          <div
+            className="h-2 w-3/4 rounded"
+            style={{ background: "var(--foreground)", opacity: 0.85, fontFamily: headingFont }}
+          />
+          <div
+            className="h-1 w-1/2 rounded"
+            style={{ background: "var(--muted-foreground)", opacity: 0.6 }}
+          />
+          <div className="mt-auto flex items-center gap-1">
+            <div
+              className="h-2.5 w-8 rounded"
+              style={{ background: "var(--primary)" }}
+            />
+            <div
+              className="h-1.5 w-6 rounded"
+              style={{
+                background: "var(--secondary)",
+                color: "var(--secondary-foreground)",
+              }}
+            />
+          </div>
+        </div>
+      </div>
+      {/* Accent stripe along the bottom */}
+      <div
+        className="absolute bottom-0 left-0 h-0.5 w-full"
+        style={{ background: "var(--ring)" }}
+      />
+      <span className="sr-only" style={{ fontFamily: bodyFont }}>
+        {theme.label}
+      </span>
     </div>
   );
 }

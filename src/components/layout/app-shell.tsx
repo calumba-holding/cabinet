@@ -175,6 +175,34 @@ export function AppShell() {
   const editorFrontmatterTitle = useEditorStore((s) => s.frontmatter?.title);
   const editorCurrentPath = useEditorStore((s) => s.currentPath);
 
+  // Audit #045: when "Match system" is on, listen to OS color-scheme
+  // changes and re-apply the appropriate light/dark variant from the
+  // stored pair without a reload.
+  useEffect(() => {
+    let cancelled = false;
+    const apply = async () => {
+      const themesMod = await import("@/lib/themes");
+      if (cancelled) return;
+      const mode = themesMod.getStoredThemeMode();
+      if (mode !== "system") return;
+      const active = themesMod.resolveActiveTheme();
+      if (active) themesMod.applyTheme(active);
+    };
+    const mq =
+      typeof window !== "undefined"
+        ? window.matchMedia("(prefers-color-scheme: dark)")
+        : null;
+    const handler = () => {
+      void apply();
+    };
+    mq?.addEventListener("change", handler);
+    void apply();
+    return () => {
+      cancelled = true;
+      mq?.removeEventListener("change", handler);
+    };
+  }, []);
+
   useEffect(() => {
     loadTree();
   }, [loadTree]);

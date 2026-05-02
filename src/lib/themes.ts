@@ -802,3 +802,62 @@ export function storeThemeName(name: string | null) {
     localStorage.removeItem("cabinet-theme");
   }
 }
+
+// ─── Audit #045: "Match system" pair ──────────────────────────────
+// When the user picks "Match system", Cabinet stores a pair of theme
+// names — one to apply when prefers-color-scheme is light, one for dark
+// — and listens on matchMedia to swap between them. The mode flag lives
+// alongside so the picker UI knows which group to show as active.
+const THEME_MODE_KEY = "cabinet-theme-mode";
+const THEME_LIGHT_KEY = "cabinet-theme-light";
+const THEME_DARK_KEY = "cabinet-theme-dark";
+
+export type ThemeMode = "manual" | "system";
+
+export function getStoredThemeMode(): ThemeMode {
+  if (typeof window === "undefined") return "manual";
+  const raw = localStorage.getItem(THEME_MODE_KEY);
+  return raw === "system" ? "system" : "manual";
+}
+
+export function storeThemeMode(mode: ThemeMode) {
+  if (typeof window === "undefined") return;
+  localStorage.setItem(THEME_MODE_KEY, mode);
+}
+
+export function getStoredThemePair(): { light: string; dark: string } {
+  const defaults = { light: "paper", dark: "claude" };
+  if (typeof window === "undefined") return defaults;
+  return {
+    light: localStorage.getItem(THEME_LIGHT_KEY) || defaults.light,
+    dark: localStorage.getItem(THEME_DARK_KEY) || defaults.dark,
+  };
+}
+
+export function storeThemePair(pair: { light?: string; dark?: string }) {
+  if (typeof window === "undefined") return;
+  if (pair.light) localStorage.setItem(THEME_LIGHT_KEY, pair.light);
+  if (pair.dark) localStorage.setItem(THEME_DARK_KEY, pair.dark);
+}
+
+export function findThemeByName(name: string): ThemeDefinition | null {
+  return THEMES.find((t) => t.name === name) ?? null;
+}
+
+/**
+ * Resolve which named theme should be applied right now given the system's
+ * color scheme. When mode === "manual", returns the manually-chosen theme.
+ * When mode === "system", returns the user's chosen light or dark variant
+ * based on `prefers-color-scheme`. Returns null if no preferences are set.
+ */
+export function resolveActiveTheme(): ThemeDefinition | null {
+  if (typeof window === "undefined") return null;
+  const mode = getStoredThemeMode();
+  if (mode === "system") {
+    const isDark = window.matchMedia("(prefers-color-scheme: dark)").matches;
+    const pair = getStoredThemePair();
+    return findThemeByName(isDark ? pair.dark : pair.light);
+  }
+  const stored = getStoredThemeName();
+  return stored ? findThemeByName(stored) : null;
+}
