@@ -238,14 +238,22 @@ export function KanbanView({
   onRefresh?: () => Promise<void> | void;
   density?: "compact" | "comfortable";
 }) {
-  // Persisted set of collapsed lane keys. Default: Archive + Running collapsed,
-  // rest open. Running auto-toggles with its content (see effect below), but a
-  // manual toggle in between transitions still sticks.
+  // Persisted set of collapsed lane keys. Audit #035: Archive used to be
+  // collapsed by default, hiding "what the team did overnight" behind a
+  // narrow vertical rail on first open. Now the default is empty (all
+  // open); Running auto-toggles with its content (see effect below). Manual
+  // collapses still stick across reloads.
   const [collapsedCsv, setCollapsedCsv] = usePersistentState<string>(
     "cabinet.tasks.v2.collapsedLanes",
-    "archive",
+    "",
     (raw) => raw
   );
+
+  // Audit #035: Archive is the long-tail lane — when there are 50+ entries
+  // it shouldn't blow the column past the viewport. Default to showing the
+  // first ARCHIVE_PEEK and surface a "Show N more" affordance for the rest.
+  const ARCHIVE_PEEK = 8;
+  const [archiveExpanded, setArchiveExpanded] = useState(false);
   const collapsedLanes: Set<LaneKey> = new Set(
     collapsedCsv
       .split(",")
@@ -347,11 +355,21 @@ export function KanbanView({
   return (
     <div className="flex min-h-0 w-full min-w-0 flex-1 gap-3 overflow-x-auto overflow-y-hidden p-4">
       {LANES.map((lane) => {
-        const items = byLane[lane.key];
+        const allItems = byLane[lane.key];
+        const isArchive = lane.key === "archive";
+        // Audit #035: cap the archive lane to ARCHIVE_PEEK by default so a
+        // 50-item history doesn't crowd out the lanes that matter today.
+        // The header still shows the full count; "Show N more" reveals
+        // the rest within the same column.
+        const items =
+          isArchive && !archiveExpanded
+            ? allItems.slice(0, ARCHIVE_PEEK)
+            : allItems;
+        const archiveHidden = isArchive ? allItems.length - items.length : 0;
         const isInbox = lane.key === "inbox";
         const isRunning = lane.key === "running";
         const isNeeds = lane.key === "needs";
-        const failedCount = items.filter((t) => t.status === "failed").length;
+        const failedCount = allItems.filter((t) => t.status === "failed").length;
         const collapsed = collapsedLanes.has(lane.key);
         const LaneIcon = lane.icon;
         return (
@@ -384,7 +402,7 @@ export function KanbanView({
               <>
                 <LaneHeader
                   lane={lane}
-                  count={items.length}
+                  count={allItems.length}
                   onCollapse={isRunning && items.length > 0 ? undefined : () => toggleLane(lane.key)}
                   onAddTask={isInbox && onAddTask ? onAddTask : undefined}
                   onKillAll={
@@ -397,7 +415,7 @@ export function KanbanView({
                       ? isRunning && items.length > 0
                         ? () => void restartLane(lane.key, items)
                         : isNeeds && failedCount > 0
-                          ? () => void restartLane(lane.key, items.filter((t) => t.status === "failed"))
+                          ? () => void restartLane(lane.key, allItems.filter((t) => t.status === "failed"))
                           : undefined
                       : undefined
                   }
@@ -466,6 +484,24 @@ export function KanbanView({
                       className="mt-1 w-full rounded-md px-3 py-1.5 text-[11px] text-muted-foreground/50 hover:text-muted-foreground hover:bg-muted/30 transition-colors text-left"
                     >
                       + Add task
+                    </button>
+                  )}
+                  {isArchive && archiveHidden > 0 && (
+                    <button
+                      type="button"
+                      onClick={() => setArchiveExpanded(true)}
+                      className="mt-1 w-full rounded-md border border-dashed border-border/40 px-3 py-1.5 text-[11px] text-muted-foreground/70 hover:border-border hover:text-foreground hover:bg-muted/30 transition-colors text-center"
+                    >
+                      Show {archiveHidden} more →
+                    </button>
+                  )}
+                  {isArchive && archiveExpanded && allItems.length > ARCHIVE_PEEK && (
+                    <button
+                      type="button"
+                      onClick={() => setArchiveExpanded(false)}
+                      className="mt-1 w-full rounded-md px-3 py-1.5 text-[11px] text-muted-foreground/50 hover:text-muted-foreground hover:bg-muted/30 transition-colors text-center"
+                    >
+                      Show fewer
                     </button>
                   )}
                 </div>

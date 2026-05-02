@@ -38,7 +38,7 @@ import { ScheduleView } from "./schedule-view";
 import { DetailPanel } from "./detail-panel";
 import { ViewToggle, type BoardViewMode } from "./view-toggle";
 import { DensityToggle, type BoardDensity } from "./density-toggle";
-import { FilterBar, TriggerChip, type TriggerFilter } from "./filter-bar";
+import { AgentFilterDropdown, TriggerChip, type TriggerFilter } from "./filter-bar";
 import { UndoToast, type PendingUndo } from "./undo-toast";
 import { ConfirmPopover, type PendingConfirm } from "./confirm-popover";
 import { StartWorkDialog, type StartWorkMode } from "@/components/composer/start-work-dialog";
@@ -277,6 +277,17 @@ export function TasksBoard({
 
           <div className="h-3.5 w-px bg-border/60" />
 
+          {/* Audit #036: agent filter is now a dropdown beside the trigger
+              chips — single header row for all filtering. The dedicated
+              agent-pill row below the header is gone. */}
+          <AgentFilterDropdown
+            agents={overview?.agents ?? []}
+            agentFilter={agentFilter}
+            onAgentChange={setAgentFilter}
+          />
+
+          <div className="h-3.5 w-px bg-border/60" />
+
           {/* trigger filter chips — "All" carries the task count */}
           <div className="flex items-center gap-1">
             <TriggerChip
@@ -457,12 +468,6 @@ export function TasksBoard({
           <NewWorkButton onCreate={openComposer} />
         </div>
       </header>
-
-      <FilterBar
-        agents={overview?.agents ?? []}
-        agentFilter={agentFilter}
-        onAgentChange={setAgentFilter}
-      />
 
     <DndContext
       sensors={sensors}
