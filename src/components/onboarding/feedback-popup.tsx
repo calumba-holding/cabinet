@@ -340,25 +340,32 @@ function FeedbackForm({ trigger, launchCount, onClose }: PopupProps) {
               ))}
             </div>
           </div>
-          {/* Compact GitHub-star CTA — pinned to the right of the rating row.
-              Same store + count-up + burst as the status-bar chip. */}
-          <a
-            href={GITHUB_REPO_URL}
-            target="_blank"
-            rel="noreferrer"
-            title={
-              displayStars === null
-                ? "Star Cabinet on GitHub — if it's useful to you, a star really helps"
-                : `${formatGithubStars(displayStars)} GitHub stars — click to add yours`
-            }
-            className="relative inline-flex shrink-0 items-center gap-1 rounded-full border border-amber-500/30 bg-amber-500/10 px-2 py-1 text-[11px] font-medium text-amber-700 dark:text-amber-300 transition-colors hover:bg-amber-500/15 hover:border-amber-500/50"
-          >
-            {starsExploding && <StarExplosion />}
-            <Star className="h-3 w-3 fill-current" />
-            <span className="tabular-nums">
-              {displayStars === null ? "Star" : formatGithubStars(displayStars)}
+          {/* Compact GitHub-star CTA — pinned to the right of the rating row,
+              with a short prompt above mirroring the rating's "How's it going
+              so far?" question. Same store + count-up + burst as the
+              status-bar chip. */}
+          <div className="flex flex-col items-end gap-2">
+            <span className="text-[12px] font-medium text-muted-foreground">
+              Like Cabinet?
             </span>
-          </a>
+            <a
+              href={GITHUB_REPO_URL}
+              target="_blank"
+              rel="noreferrer"
+              title={
+                displayStars === null
+                  ? "Star Cabinet on GitHub — if it's useful to you, a star really helps"
+                  : `${formatGithubStars(displayStars)} GitHub stars — click to add yours`
+              }
+              className="relative inline-flex shrink-0 items-center gap-1 rounded-full border border-amber-500/30 bg-amber-500/10 px-2 py-1 text-[11px] font-medium text-amber-700 dark:text-amber-300 transition-colors hover:bg-amber-500/15 hover:border-amber-500/50"
+            >
+              {starsExploding && <StarExplosion />}
+              <Star className="h-3 w-3 fill-current" />
+              <span className="tabular-nums">
+                {displayStars === null ? "Star" : formatGithubStars(displayStars)}
+              </span>
+            </a>
+          </div>
         </div>
 
         <div className="mb-3">
