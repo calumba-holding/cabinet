@@ -7,6 +7,7 @@ import {
   Code2,
   ExternalLink,
   Globe,
+  Info,
   Loader2,
   RotateCcw,
   ShieldCheck,
@@ -39,6 +40,7 @@ export function DataLocationsSection() {
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
   const [browserOpen, setBrowserOpen] = useState(false);
+  const [privacyOpen, setPrivacyOpen] = useState(false);
 
   useEffect(() => {
     let cancelled = false;
@@ -144,10 +146,46 @@ export function DataLocationsSection() {
   return (
     <div className="space-y-3">
       <div>
-        <h3 className="text-[14px] font-semibold mb-1">Where your data lives</h3>
+        <div className="flex items-center gap-1.5 mb-1">
+          <h3 className="text-[14px] font-semibold">Where your data lives</h3>
+          <button
+            type="button"
+            onClick={() => setPrivacyOpen((v) => !v)}
+            aria-label="Why this matters"
+            aria-expanded={privacyOpen}
+            title="Why this matters"
+            className={cn(
+              "rounded-full p-0.5 transition-colors cursor-pointer",
+              privacyOpen
+                ? "text-foreground bg-accent"
+                : "text-muted-foreground/60 hover:text-muted-foreground hover:bg-accent/60"
+            )}
+          >
+            <Info className="h-3.5 w-3.5" />
+          </button>
+        </div>
         <p className="text-[12px] text-muted-foreground">
-          Every place Cabinet keeps state about you, on this machine.
+          Cabinet keeps everything on your computer. No cloud, no analytics,
+          no shadow copies. Here&apos;s exactly where each piece is stored.
         </p>
+        {privacyOpen && (
+          <div className="mt-3 rounded-md border border-border/60 bg-muted/30 px-3.5 py-3 text-[12.5px] leading-relaxed">
+            <p className="font-medium mb-1.5 flex items-center gap-1.5">
+              <ShieldCheck className="h-3.5 w-3.5 text-emerald-500" />
+              Why we show you all of this
+            </p>
+            <p className="text-muted-foreground">
+              Privacy and security aren&apos;t features we tack on; they&apos;re
+              the default. Most apps treat storage as an implementation detail
+              you don&apos;t need to know about. We treat it as a contract:
+              every byte Cabinet keeps about your work lives in a place you
+              can see, open, back up, copy, or delete yourself. If something
+              on this list ever changes, this page changes with it. If we
+              ever do start sending something off your machine, it&apos;ll
+              show up here clearly marked, before any data leaves.
+            </p>
+          </div>
+        )}
       </div>
 
       {loading && (
