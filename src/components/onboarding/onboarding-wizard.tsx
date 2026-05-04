@@ -301,7 +301,8 @@ function TeamCarousel({
   onSelect: (t: RegistryTemplate) => void;
 }) {
   const scrollRef = useRef<HTMLDivElement>(null);
-  const [isPaused, setIsPaused] = useState(false);
+  const isPausedRef = useRef(false);
+  const positionRef = useRef(0);
 
   // Use real templates if loaded, otherwise fall back to room-filtered starter teams.
   const fallbackTeams = STARTER_TEAMS.filter((t) => t.rooms.includes(roomType));
@@ -314,29 +315,28 @@ function TeamCarousel({
     if (!el) return;
 
     let animationId: number;
-    let position = 0;
 
     const animate = () => {
-      if (!isPaused) {
-        position += 1.2;
+      if (!isPausedRef.current) {
+        positionRef.current += 1.2;
         const halfWidth = el.scrollWidth / 2;
-        if (position >= halfWidth) position = 0;
-        el.style.transform = `translateX(-${position}px)`;
+        if (positionRef.current >= halfWidth) positionRef.current = 0;
+        el.style.transform = `translateX(-${positionRef.current}px)`;
       }
       animationId = requestAnimationFrame(animate);
     };
 
     animationId = requestAnimationFrame(animate);
     return () => cancelAnimationFrame(animationId);
-  }, [isPaused]);
+  }, []);
 
   const doubled = [...items, ...items];
 
   return (
     <div
       className="tilt-carousel relative w-full py-4"
-      onMouseEnter={() => setIsPaused(true)}
-      onMouseLeave={() => setIsPaused(false)}
+      onMouseEnter={() => { isPausedRef.current = true; }}
+      onMouseLeave={() => { isPausedRef.current = false; }}
     >
       <div ref={scrollRef} className="flex gap-2 will-change-transform">
         {doubled.map((item, i) => {
