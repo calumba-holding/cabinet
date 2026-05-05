@@ -309,11 +309,14 @@ async function runCabinet(opts: {
   // 6. Spawn Next.js dev server
   const nextBin = path.join(appDir, "node_modules", "next", "dist", "bin", "next");
   const appEnv = {
+    // Default CABINET_APP_ORIGIN to loopback, but let process.env override
+    // when the operator pinned a public hostname so next.config.ts can
+    // auto-allow it through Next 15's dev origin guard.
+    CABINET_APP_ORIGIN: appOrigin,
     ...process.env,
     CABINET_DATA_DIR: cabinetDir,
     PORT: String(appPort),
     CABINET_APP_PORT: String(appPort),
-    CABINET_APP_ORIGIN: appOrigin,
     CABINET_DAEMON_PORT: String(daemonPort),
     CABINET_DAEMON_URL: daemonOrigin,
     // Note: do not pin CABINET_PUBLIC_DAEMON_ORIGIN here. The /api/daemon/auth
