@@ -281,7 +281,22 @@ function parseProseBlocks(raw: string): Block[] {
 
     const nonEmpty = textBuf.filter((line) => line.trim());
     const diffLikeCount = nonEmpty.filter((line) => isDiffContentLine(line)).length;
-    if (nonEmpty.length > 0 && diffLikeCount / nonEmpty.length >= 0.5) {
+    // A header-less diff fragment still carries diff *structure* — a hunk
+    // header (@@ … @@) or the +++/--- file markers. Without that, a high
+    // +/- ratio is just a markdown bullet list ("- item") or prose with
+    // dashes, which must render as text, not a red diff block.
+    const hasDiffStructure = nonEmpty.some(
+      (line) =>
+        /^@@ /.test(line) ||
+        /^@@@ /.test(line) ||
+        /^\+\+\+ /.test(line) ||
+        /^--- /.test(line)
+    );
+    if (
+      hasDiffStructure &&
+      nonEmpty.length > 0 &&
+      diffLikeCount / nonEmpty.length >= 0.5
+    ) {
       const diffLines: DiffLine[] = textBuf
         .filter((line) => line.trim())
         .map((line) => {
