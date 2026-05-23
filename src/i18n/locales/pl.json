@@ -316,9 +316,7 @@
     "stopHint": "Zatrzymaj to uruchomienie teraz (wysyła SIGTERM)",
     "restart": "Uruchom ponownie",
     "restartHint": "Uruchom ponownie z oryginalnego monitu",
-    "runHint": "Rozpocznij to zadanie teraz",
-    "reassign": "Przekaż",
-    "reassignHint": "Przekaż to zadanie innemu agentowi"
+    "runHint": "Rozpocznij to zadanie teraz"
   },
   "schedulesPanel": {
     "title": "Zaplanowane zadania",
@@ -1021,6 +1019,18 @@
       "tagline1": "Twoja baza wiedzy.",
       "tagline2": "Twój zespół AI.",
       "getStarted": "Rozpocznij"
+    },
+    "blueprint": {
+      "rooms": {
+        "office": "Biuro",
+        "study": "Gabinet",
+        "lab": "Laboratorium",
+        "library": "Biblioteka",
+        "kitchen": "Kuchnia",
+        "family": "Rodzina",
+        "dining": "Jadalnia",
+        "studio": "Studio"
+      }
     },
     "welcome": {
       "paragraph": "Twój Dom jest Twój. W nim urządzisz pokoje dla różnych obszarów życia: pracy, drugiego mózgu, badań, rodziny. A każdy pokój ma szafki: Twoje notatki, pliki i zespół AI, który po cichu wykonuje zadania w tle.",

@@ -1,6 +1,6 @@
 "use client";
 
-import { useEffect, useLayoutEffect, useRef, useState, useCallback } from "react";
+import { useEffect, useLayoutEffect, useRef, useState, useCallback, useMemo } from "react";
 import { Sidebar } from "@/components/sidebar/sidebar";
 import { Header } from "@/components/layout/header";
 import { KBEditor } from "@/components/editor/editor";
@@ -54,6 +54,7 @@ import { StartWorkDialog, type StartWorkMode } from "@/components/composer/start
 import { ROOT_CABINET_PATH } from "@/lib/cabinets/paths";
 import { fetchCabinetOverviewClient } from "@/lib/cabinets/overview-client";
 import type { CabinetAgentSummary } from "@/types/cabinets";
+import { useUserProfile } from "@/hooks/use-user-profile";
 import { UpdateDialog } from "@/components/layout/update-dialog";
 import { NotificationToasts } from "@/components/layout/notification-toasts";
 import { SystemToasts } from "@/components/layout/system-toasts";
@@ -62,19 +63,13 @@ import { useIsMobile } from "@/hooks/use-is-mobile";
 
 // Section components are only rendered when the user navigates to them —
 // load them on demand to keep the first-paint bundle small. Previously all of
-// these (together ~15k lines of code including AgentsWorkspace and
-// OnboardingWizard) shipped in the home-page chunk.
+// these (together ~15k lines of code including OnboardingWizard) shipped in
+// the home-page chunk.
 const AgentsWorkspaceV2 = dynamic(
   () =>
     import("@/components/agents/v2/agents-workspace-v2").then(
       (m) => m.AgentsWorkspaceV2
     ),
-  { ssr: false }
-);
-// Legacy V1 — used for the "agent settings" sub-screen (which still lives in
-// the V1 workspace component). Phased out once that path lands in V2.
-const AgentsWorkspace = dynamic(
-  () => import("@/components/agents/agents-workspace").then((m) => m.AgentsWorkspace),
   { ssr: false }
 );
 const AgentDetailV2 = dynamic(
@@ -471,11 +466,9 @@ export function AppShell() {
   // CTA. We mount the dialog at AppShell level so the user can land on the
   // composer popup wherever they were — no jarring section change to /tasks.
   const [tourTaskOpen, setTourTaskOpen] = useState(false);
-  const [tourTaskPrompt, setTourTaskPrompt] = useState<string | undefined>(undefined);
   const [tourTaskAgents, setTourTaskAgents] = useState<CabinetAgentSummary[]>([]);
 
-  const handleLaunchTourTask = useCallback((initialPrompt: string) => {
-    setTourTaskPrompt(initialPrompt);
+  const handleLaunchTourTask = useCallback(() => {
     setTourTaskOpen(true);
     // Refresh the agent roster on each open so the agent picker reflects
     // whatever the user has installed.
@@ -514,6 +507,54 @@ export function AppShell() {
     window.addEventListener("cabinet:global-run-task", handler);
     return () => window.removeEventListener("cabinet:global-run-task", handler);
   }, [openGlobalTask]);
+
+  // ── Chat-editor handoff ────────────────────────────────────────────────
+  // After a file is created from the sidebar, open the right-side chat panel
+  // (compose mode, `editor` agent) greeting the user with a file-aware prompt
+  // — same surface as the editor's "Ask AI" button, not the task-prompt modal.
+  const profileState = useUserProfile();
+  const userFirstName = useMemo(() => {
+    if (profileState.status !== "ready") return "";
+    const raw =
+      profileState.data.profile.displayName ||
+      profileState.data.profile.name ||
+      "";
+    if (!raw || raw.toLowerCase() === "you") return "";
+    return raw.trim().split(/\s+/)[0];
+  }, [profileState]);
+
+  // Post-tour first task: a friendly, templated opener shown as the composer
+  // placeholder (a suggestion the user can send or rewrite, not a pre-filled
+  // value). The agent learns the user's goal by asking, so we don't need to
+  // interpolate it here.
+  const tourStarterPlaceholder = useMemo(() => {
+    const hi = userFirstName ? `Hi, I'm ${userFirstName}! ` : "Hi! ";
+    return (
+      `${hi}I just created this Cabinet and I want it to help me get my work done. ` +
+      "Tell me about your goals - what work would you like to accomplish? " +
+      "Create useful pages, beautiful dashboards, and web apps for me."
+    );
+  }, [userFirstName]);
+
+  useEffect(() => {
+    const handler = (e: Event) => {
+      const detail = (e as CustomEvent).detail as
+        | { pagePath?: string; fileName?: string }
+        | undefined;
+      const fileName = detail?.fileName || "this file";
+      const greeting = userFirstName
+        ? `Hi ${userFirstName} — what would you like to do in ${fileName}?`
+        : `What would you like to do in ${fileName}?`;
+      useAppStore.getState().openTaskPanelCompose({
+        source: "editor",
+        pinnedPagePath: detail?.pagePath ?? null,
+        defaultAgentSlug: "editor",
+        greeting,
+      });
+    };
+    window.addEventListener("cabinet:open-editor-chat", handler);
+    return () => window.removeEventListener("cabinet:open-editor-chat", handler);
+  }, [userFirstName]);
 
   const handleWizardComplete = useCallback(() => {
     setShowWizard(false);
@@ -673,11 +714,18 @@ export function AppShell() {
           />
         );
       }
+      // Slug-less "agent" section (not produced by routing today) falls back
+      // to the V2 agents list rather than the retired V1 workspace.
       return (
-        <AgentsWorkspace
-          selectedScope="agent"
-          selectedAgentSlug={section.slug || null}
+        <AgentsWorkspaceV2
           cabinetPath={section.cabinetPath}
+          onTabChange={(next) =>
+            setSection({
+              type: "agents",
+              cabinetPath: section.cabinetPath,
+              agentsTab: next,
+            })
+          }
         />
       );
     }
@@ -909,7 +957,7 @@ export function AppShell() {
         cabinetPath={ROOT_CABINET_PATH}
         agents={tourTaskAgents}
         initialMode="now"
-        initialPrompt={tourTaskPrompt}
+        placeholderOverride={tourStarterPlaceholder}
         onStarted={(conversationId) => {
           setTourTaskOpen(false);
           setSection({

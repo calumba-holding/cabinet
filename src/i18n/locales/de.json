@@ -316,9 +316,7 @@
     "stopHint": "Diesen Lauf jetzt stoppen (sendet SIGTERM)",
     "restart": "Neustarten",
     "restartHint": "Erneut vom ursprünglichen Prompt ausführen",
-    "runHint": "Diese Aufgabe jetzt starten",
-    "reassign": "Neu zuweisen",
-    "reassignHint": "Diese Aufgabe einem anderen Agenten übergeben"
+    "runHint": "Diese Aufgabe jetzt starten"
   },
   "schedulesPanel": {
     "title": "Geplante Jobs",
@@ -1021,6 +1019,18 @@
       "tagline1": "Ihre Wissensdatenbank.",
       "tagline2": "Ihr KI-Team.",
       "getStarted": "Los geht's"
+    },
+    "blueprint": {
+      "rooms": {
+        "office": "Büro",
+        "study": "Arbeitszimmer",
+        "lab": "Labor",
+        "library": "Bibliothek",
+        "kitchen": "Küche",
+        "family": "Familie",
+        "dining": "Esszimmer",
+        "studio": "Studio"
+      }
     },
     "welcome": {
       "paragraph": "Ihr Home gehört Ihnen. Darin richten Sie Räume für verschiedene Lebensbereiche ein: Arbeit, zweites Gehirn, Forschung, Familie. Und jeder Raum hat Cabinets: Ihre Notizen, Ihre Dateien und ein KI-Team, das im Hintergrund leise Dinge erledigt.",

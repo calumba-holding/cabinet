@@ -316,9 +316,7 @@
     "stopHint": "Bu çalıştırmayı şimdi durdur (SIGTERM gönderir)",
     "restart": "Yeniden Başlat",
     "restartHint": "Orijinal istemden tekrar çalıştır",
-    "runHint": "Bu görevi şimdi başlat",
-    "reassign": "Yeniden Ata",
-    "reassignHint": "Bu görevi farklı bir aracıya devret"
+    "runHint": "Bu görevi şimdi başlat"
   },
   "schedulesPanel": {
     "title": "Zamanlanmış işler",
@@ -1021,6 +1019,18 @@
       "tagline1": "Bilgi tabanınız.",
       "tagline2": "Yapay zeka ekibiniz.",
       "getStarted": "Başla"
+    },
+    "blueprint": {
+      "rooms": {
+        "office": "Ofis",
+        "study": "Çalışma",
+        "lab": "Laboratuvar",
+        "library": "Kütüphane",
+        "kitchen": "Mutfak",
+        "family": "Aile",
+        "dining": "Yemek",
+        "studio": "Stüdyo"
+      }
     },
     "welcome": {
       "paragraph": "Ana Sayfanız sizin. İçinde, hayatınızın farklı alanları için odalar kuracaksınız: iş, ikinci beyin, araştırma, aile. Ve her odada dolaplar bulunur: notlarınız, dosyalarınız ve arka planda sessizce işleri halleden bir yapay zeka ekibi.",

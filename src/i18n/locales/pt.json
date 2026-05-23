@@ -316,9 +316,7 @@
     "stopHint": "Parar esta execução agora (envia SIGTERM)",
     "restart": "Reiniciar",
     "restartHint": "Executar novamente a partir do prompt original",
-    "runHint": "Iniciar esta tarefa agora",
-    "reassign": "Reatribuir",
-    "reassignHint": "Atribuir esta tarefa a um agente diferente"
+    "runHint": "Iniciar esta tarefa agora"
   },
   "schedulesPanel": {
     "title": "Tarefas agendadas",
@@ -1021,6 +1019,18 @@
       "tagline1": "Sua base de conhecimento.",
       "tagline2": "Sua equipe de IA.",
       "getStarted": "Começar"
+    },
+    "blueprint": {
+      "rooms": {
+        "office": "Escritório",
+        "study": "Estudo",
+        "lab": "Laboratório",
+        "library": "Biblioteca",
+        "kitchen": "Cozinha",
+        "family": "Família",
+        "dining": "Jantar",
+        "studio": "Estúdio"
+      }
     },
     "welcome": {
       "paragraph": "Sua Home é sua. Nela, você configurará salas para diferentes partes da sua vida: trabalho, segundo cérebro, pesquisa, família. E cada sala tem cabinets: suas notas, seus arquivos e uma equipe de IA trabalhando discretamente em segundo plano.",

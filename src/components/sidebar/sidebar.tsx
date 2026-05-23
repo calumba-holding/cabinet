@@ -14,11 +14,11 @@ import {
   RefreshCw,
   Settings,
   UserPlus,
-  Home,
 } from "lucide-react";
 import { cn } from "@/lib/utils";
 import { Button } from "@/components/ui/button";
 import { NavArrows } from "@/components/layout/nav-arrows";
+import { RoomSwitcher } from "./room-switcher";
 import { TreeView } from "./tree-view";
 import { NewPageDialog } from "./new-page-dialog";
 import { NewCabinetDialog } from "./new-cabinet-dialog";
@@ -182,11 +182,11 @@ export function Sidebar() {
           className="flex h-full flex-col"
           style={{ width: panelWidth }}
         >
-        <div className="sidebar-header flex items-center justify-between px-4 py-3">
-          <div className="flex items-center gap-0.5">
+        <div className="sidebar-header flex items-center justify-between gap-1 px-3 py-3">
+          <div className="flex min-w-0 items-center gap-1">
             <button
               onClick={() => setSection({ type: "home" })}
-              className="group flex items-center gap-1.5 rounded px-1 font-logo text-[22px] italic tracking-[-0.01em] text-foreground hover:text-foreground/80 hover:bg-accent/60 transition-colors cursor-pointer"
+              className="group flex shrink-0 items-center gap-1.5 rounded px-1 font-logo text-[22px] italic tracking-[-0.01em] text-foreground hover:text-foreground/80 hover:bg-accent/60 transition-colors cursor-pointer"
               title={t("sidebar:goHome")}
               aria-label={t("sidebar:goHome")}
             >
@@ -206,11 +206,13 @@ export function Sidebar() {
                   {brandWord}
                 </span>
               )}
-              <Home className="size-3.5 not-italic opacity-0 group-hover:opacity-50 transition-opacity shrink-0" />
             </button>
-            <NavArrows />
+            {/* The room switcher is just the room's icon next to the logo;
+                the room/cabinet name already shows in the drawer + main view. */}
+            <RoomSwitcher />
           </div>
-          <div className="flex items-center gap-0.5">
+          <div className="flex shrink-0 items-center gap-0.5">
+            <NavArrows />
             <Button
               variant="ghost"
               size="icon"

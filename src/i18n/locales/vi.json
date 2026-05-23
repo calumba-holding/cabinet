@@ -316,9 +316,7 @@
     "stopHint": "Dừng chạy này ngay bây giờ (gửi SIGTERM)",
     "restart": "Khởi động lại",
     "restartHint": "Chạy lại từ lời nhắc ban đầu",
-    "runHint": "Bắt đầu tác vụ này ngay bây giờ",
-    "reassign": "Chỉ định lại",
-    "reassignHint": "Chuyển giao tác vụ này cho một tác nhân khác"
+    "runHint": "Bắt đầu tác vụ này ngay bây giờ"
   },
   "schedulesPanel": {
     "title": "Tác vụ đã lên lịch",
@@ -1021,6 +1019,18 @@
       "tagline1": "Cơ sở tri thức của bạn.",
       "tagline2": "Đội ngũ AI của bạn.",
       "getStarted": "Bắt đầu"
+    },
+    "blueprint": {
+      "rooms": {
+        "office": "Văn phòng",
+        "study": "Phòng làm việc",
+        "lab": "Phòng thí nghiệm",
+        "library": "Thư viện",
+        "kitchen": "Nhà bếp",
+        "family": "Gia đình",
+        "dining": "Phòng ăn",
+        "studio": "Studio"
+      }
     },
     "welcome": {
       "paragraph": "Trang chủ là của bạn. Tại đây, bạn sẽ thiết lập các phòng cho từng khía cạnh trong cuộc sống: công việc, bộ não thứ hai, nghiên cứu, gia đình. Và mỗi phòng đều có các tủ (cabinets): ghi chú, tệp của bạn và một đội ngũ AI âm thầm hoàn thành công việc ở chế độ nền.",
