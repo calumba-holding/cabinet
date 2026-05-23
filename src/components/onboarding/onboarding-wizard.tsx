@@ -1671,6 +1671,19 @@ export function OnboardingWizard({ onComplete }: { onComplete: () => void }) {
       recordWaitlistView("cabinet-onboarding");
     }
   }, [step]);
+
+  // "Keep in touch" funnel (source: onboarding-welcome), so the backend's
+  // Visits/Drop-offs panels have the full view -> start -> submit picture, not
+  // just submits. These two are anonymous (visitId + source only); the email
+  // itself is only sent on launch and only with the consent checkbox.
+  const welcomeStartedRef = useRef(false);
+  const welcomeViewedRef = useRef(false);
+  useEffect(() => {
+    if (step === STEP_WELCOME_HOME && !welcomeViewedRef.current) {
+      welcomeViewedRef.current = true;
+      recordWaitlistView("onboarding-welcome");
+    }
+  }, [step]);
   const handleCloudInput = useCallback((value: string) => {
     setCloudEmail(value);
     if (cloudStatus === "error" || cloudStatus === "already") setCloudStatus("idle");
@@ -2356,7 +2369,14 @@ export function OnboardingWizard({ onComplete }: { onComplete: () => void }) {
                   <input
                     type="email"
                     value={answers.email}
-                    onChange={(e) => setAnswers({ ...answers, email: e.target.value })}
+                    onChange={(e) => {
+                      const v = e.target.value;
+                      setAnswers({ ...answers, email: v });
+                      if (!welcomeStartedRef.current && v.length > 0) {
+                        welcomeStartedRef.current = true;
+                        recordWaitlistStart("onboarding-welcome");
+                      }
+                    }}
                     onKeyDown={(e) => {
                       if (e.key === "Enter" && answers.name.trim()) {
                         e.preventDefault();
