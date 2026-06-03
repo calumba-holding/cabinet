@@ -658,11 +658,14 @@ export function AppShell() {
 
   // Clear the Drive loading state after a short delay once the skeleton has
   // rendered — gives the viewer time to mount and start its own fetch/render.
+  // driveNode?.path is included so selecting a different file while a timer is
+  // already running cancels the old timer and starts a fresh one for the new file.
+  const driveNodePath = driveNode?.path;
   useEffect(() => {
     if (!driveLoading) return;
     const t = window.setTimeout(() => setDriveLoading(false), 400);
     return () => window.clearTimeout(t);
-  }, [driveLoading, setDriveLoading]);
+  }, [driveLoading, driveNodePath, setDriveLoading]);
 
   const localNode = selectedPath ? findNodeByPath(nodes, selectedPath) : null;
   // Fall back to the Drive node when the selected path is not in the local tree.
