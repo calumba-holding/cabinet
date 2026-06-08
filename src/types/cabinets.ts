@@ -72,6 +72,10 @@ export interface CabinetJobSummary {
   runAfter?: string;
   /** Per-occurrence exceptions (ISO instants) hidden from the calendar. */
   exceptions?: string[];
+  /** Recurring-series window (iCalendar DTSTART/UNTIL). Occurrences before
+   *  `since` or at/after `until` are hidden; set by "this and following". */
+  since?: string;
+  until?: string;
   cabinetPath: string;
   cabinetName: string;
   cabinetDepth: number;

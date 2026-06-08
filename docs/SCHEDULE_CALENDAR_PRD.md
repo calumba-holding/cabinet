@@ -11,8 +11,8 @@ mark-to-create, drag-to-move, resize, click-empty-to-add.
 > the custom grid (`schedule-calendar.tsx`) gained drag-to-move + click-to-create; one-off
 > tasks render off `runAfter` and create/move via `oneShot` jobs; recurring drag offers
 > "this occurrence / all events" with an `exceptions[]` (EXDATE) mechanism enforced
-> server-side in the jobs run handler. Phase 5 (resize/duration, "this and following",
-> ICS sync) remains future work. Verified flows: consolidation on all three routes,
+> server-side in the jobs run handler. Phase 5 (resize/duration, ICS sync) remains
+> future work. Verified flows: consolidation on all three routes,
 > create-by-marking, one-off drag, recurring "all events" cron rewrite, "this occurrence"
 > split (exception + separate one-off), and server-side exception suppression.
 >
@@ -66,8 +66,9 @@ three.
 - Adopting a third-party calendar library (react-big-calendar, FullCalendar). We extend the
   existing custom grid to preserve theming and the existing pill/dot/missed-run/now-line
   investment.
-- GCal's third recurrence option, **"this and following"** (series split). Deferred to a
-  stretch phase.
+- ~~GCal's third recurrence option, **"this and following"** (series split). Deferred to a
+  stretch phase.~~ **Implemented 2026-06-08** (Phase 5a, see §6.6). The remaining Phase 5
+  non-goals below still hold.
 - Event **duration / resize** as a real concept. Cabinet jobs have no duration today;
   resize is a documented stretch item only.
 - Cross-timezone correctness for remote daemons (calendar assumes daemon and browser share
@@ -325,6 +326,41 @@ Mirror the `agents-context.tsx` pattern so direct manipulation feels instant:
    the daemon's ~200 ms watcher has settled and the refetch returns the written value).
 4. On failure, roll the patch back (re-apply the original schedule) and toast.
 
+### 6.6 "This and following" — series split (Phase 5a, implemented 2026-06-08)
+
+Dragging a recurring occurrence now offers a **third** scope alongside "This occurrence"
+and "All events". Choosing **This and following** keeps every earlier run on the old
+schedule and moves this occurrence plus all later ones to the dropped time.
+
+- **Series window.** Added `since?` / `until?` (iCalendar **DTSTART** / **UNTIL**) to
+  `JobConfig` and `CabinetJobSummary`. A recurring job emits no occurrences **before
+  `since`** (inclusive) or **at/after `until`** (exclusive). `normalizeJob` /
+  `normalizeJobConfig` pass them through with the same conditional-spread pattern as
+  `exceptions`.
+- **Both bounds are required, not just `until`.** Capping the original series with `until`
+  alone would let the forked cadence's daily cron "leak" backward onto days *before* the
+  split and double-book them. The fork therefore carries `since` at the same instant, so the
+  two halves partition the timeline exactly: `[…, split)` on the old schedule, `[split, …)`
+  on the new one.
+- **Operation.** `until = splitInstant` is PUT onto the original job (optimistic patch);
+  a new sibling job is POSTed with an explicit unique id, `since = splitInstant`, and the
+  dropped cadence (`rescheduleCron`, same as "All events"). Rollback removes the patch and
+  the optimistic fork on failure.
+- **Rendering.** `getScheduleEvents` filters the window: an early `break` on `until` (safe
+  because occurrences are monotonic) and a `since` skip. The shared
+  `withinSeriesWindow(job, when)` helper (`one-off.ts`) is the single source of truth.
+- **Server enforcement (required).** node-cron has no end-date, so the original cron keeps
+  firing past `until` and the fork's cron can fire before `since`. The jobs run handler
+  suppresses out-of-window scheduler fires (`skipped: "series-window"`) using the same
+  helper — a UI-only hide would still execute them. When a capped series has **fully ended**
+  (its `until` is now in the past), the handler retires it inline (`enabled:false` + reload)
+  so the daemon stops firing the dead cron daily.
+- **Tests.** `test/cron-compute-series-window.test.ts` pins the bound semantics
+  (until-exclusive, since-inclusive, open-bounds), the capped-before-split count, the
+  no-backward-leak guarantee against an unbounded control, and a clean week partition.
+
+Still deferred to a later Phase 5: resize/duration and ICS/Google sync (§2 non-goals).
+
 ## 7. Phasing
 
 | Phase | Scope | Ships independently? |
@@ -334,7 +370,8 @@ Mirror the `agents-context.tsx` pattern so direct manipulation feels instant:
 | **2 — Drag-move recurring** | `onEventMove`, ghost pill, time-from-Y, "All events" cron rewrite, optimistic update (§6.3 all-events + §6.5). | Yes |
 | **3 — One-off + create-by-marking** | §6.1 primitive plumbing + §6.2 mark-to-create. | Yes |
 | **4 — Per-occurrence editing** | §6.4 `exceptions[]` + the "this occurrence / all events" prompt + server enforcement. | Yes |
-| **5 — Stretch** | Resize/duration (needs a job duration concept), "this and following" series split, ICS/Google sync. | Later |
+| **5a — Series split** | "This and following": `since`/`until` window + fork + server enforcement (§6.6). **Implemented 2026-06-08.** | Yes |
+| **5 — Stretch** | Resize/duration (needs a job duration concept), ICS/Google sync. | Later |
 
 ## 8. Risks & edge cases
 

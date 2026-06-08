@@ -40,6 +40,30 @@ export function isOneOffJob(job: {
 }
 
 /**
+ * True when an instant falls within a recurring series' `[since, until)` window.
+ * `since` is an inclusive lower bound, `until` an exclusive upper bound; either
+ * being absent means that side is unbounded. This is the single source of truth
+ * shared by the calendar (which hides out-of-window occurrences) and the run
+ * handler (which suppresses them server-side, since node-cron has no end-date).
+ */
+export function withinSeriesWindow(
+  job: { since?: string; until?: string },
+  when: Date | string,
+): boolean {
+  const t = (typeof when === "string" ? new Date(when) : when).getTime();
+  if (Number.isNaN(t)) return true;
+  if (job.since) {
+    const s = new Date(job.since).getTime();
+    if (!Number.isNaN(s) && t < s) return false;
+  }
+  if (job.until) {
+    const u = new Date(job.until).getTime();
+    if (!Number.isNaN(u) && t >= u) return false;
+  }
+  return true;
+}
+
+/**
  * Rewrite a recurring cron's time (minute+hour), optionally re-targeting the
  * weekday when a drag crosses into a different day column. Preserves the rest
  * of the cadence so the result re-parses cleanly in SchedulePicker.

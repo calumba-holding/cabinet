@@ -187,12 +187,24 @@ export function getScheduleEvents(
         ? new Set(job.exceptions.map((iso) => minuteIso(iso)))
         : null;
 
+    // Recurring-series window ("this and following"): emit nothing before
+    // `since` or at/after `until`. Occurrences walk forward in time, so `until`
+    // lets us stop early; `since` skips the leading occurrences.
+    const sinceMs = job.since ? new Date(job.since).getTime() : NaN;
+    const untilMs = job.until ? new Date(job.until).getTime() : NaN;
+
     let cursor = new Date(rangeStart.getTime() - 60000); // 1 minute before range
     let count = 0;
     while (count < MAX_EVENTS_PER_SOURCE) {
       const next = computeNextCronRun(job.schedule, cursor);
       if (!next || next.getTime() >= rangeEnd.getTime()) break;
+      if (!Number.isNaN(untilMs) && next.getTime() >= untilMs) break;
       if (next.getTime() >= rangeStart.getTime()) {
+        if (!Number.isNaN(sinceMs) && next.getTime() < sinceMs) {
+          cursor = next;
+          count++;
+          continue;
+        }
         // Per-occurrence exception (EXDATE): this occurrence was moved/suppressed.
         if (exceptionKeys && exceptionKeys.has(minuteIso(next))) {
           cursor = next;

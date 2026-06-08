@@ -227,6 +227,8 @@ function normalizeJob(
           (iso): iso is string => typeof iso === "string" && iso.trim().length > 0,
         )
       : undefined,
+    since: trimString(parsed.since) || undefined,
+    until: trimString(parsed.until) || undefined,
     cabinetPath,
     cabinetName,
     cabinetDepth,

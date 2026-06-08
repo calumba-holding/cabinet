@@ -124,6 +124,12 @@ export function normalizeJobConfig(
           ),
         }
       : {}),
+    ...(typeof input.since === "string" && input.since.trim()
+      ? { since: input.since.trim() }
+      : {}),
+    ...(typeof input.until === "string" && input.until.trim()
+      ? { until: input.until.trim() }
+      : {}),
     ...(typeof input.ownerTaskId === "string" && input.ownerTaskId.trim()
       ? { ownerTaskId: input.ownerTaskId.trim() }
       : {}),

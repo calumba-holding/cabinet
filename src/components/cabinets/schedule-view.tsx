@@ -119,6 +119,8 @@ function jobConfigToSummary(
     oneShot: job.oneShot,
     runAfter: job.runAfter,
     exceptions: job.exceptions,
+    since: job.since,
+    until: job.until,
     cabinetPath,
     cabinetName: template.cabinetName,
     cabinetDepth: template.cabinetDepth,
@@ -170,6 +172,8 @@ export function ScheduleView({
         const matches =
           (p.schedule === undefined || p.schedule === j.schedule) &&
           (p.runAfter === undefined || p.runAfter === j.runAfter) &&
+          (p.since === undefined || p.since === j.since) &&
+          (p.until === undefined || p.until === j.until) &&
           (p.exceptions === undefined ||
             JSON.stringify(p.exceptions) === JSON.stringify(j.exceptions ?? []));
         if (matches) {
@@ -227,7 +231,11 @@ export function ScheduleView({
 
   // ─── Mutations ───
   const performMove = useCallback(
-    async (event: ScheduleEvent, newTime: Date, scope: "all" | "occurrence") => {
+    async (
+      event: ScheduleEvent,
+      newTime: Date,
+      scope: "all" | "occurrence" | "following",
+    ) => {
       const job = event.jobRef;
       if (!job) return;
       const owner = job.ownerAgent;
@@ -281,6 +289,73 @@ export function ScheduleView({
         } catch {
           rollbackPatch(job.scopedId);
           showError("Couldn't update the series. Is the daemon running?");
+        }
+        return;
+      }
+
+      // Recurring → "This and following": cap the original series at the split
+      // instant (`until`) and fork a new recurring series that starts there
+      // (`since`) with the dropped cadence. The two halves partition the
+      // timeline with no overlap; both bounds are enforced server-side.
+      if (scope === "following") {
+        const splitIso = event.time.toISOString();
+        const changedDay = newTime.getDay() !== event.time.getDay();
+        const cron = rescheduleCron(job.schedule, newTime, changedDay);
+        const tempId = `series-${Date.now()}`;
+        const tempScopedId = `${cp}::job::${tempId}`;
+        const optimistic: CabinetJobSummary = {
+          scopedId: tempScopedId,
+          id: tempId,
+          name: job.name,
+          ownerAgent: owner,
+          ownerScopedId: `${cp}::agent::${owner}`,
+          enabled: true,
+          schedule: cron,
+          prompt: job.prompt,
+          since: splitIso,
+          cabinetPath: cp,
+          cabinetName: job.cabinetName,
+          cabinetDepth: job.cabinetDepth,
+          inherited: false,
+        };
+        setPatches((p) => ({ ...p, [job.scopedId]: { until: splitIso } }));
+        setCreatedJobs((c) => [...c, optimistic]);
+        try {
+          const [r1, r2] = await Promise.all([
+            fetch(`/api/agents/${owner}/jobs/${job.id}`, {
+              method: "PUT",
+              headers: { "Content-Type": "application/json" },
+              body: JSON.stringify({ action: "update", cabinetPath: cp, until: splitIso }),
+            }),
+            fetch(`/api/agents/${owner}/jobs`, {
+              method: "POST",
+              headers: { "Content-Type": "application/json" },
+              body: JSON.stringify({
+                // Explicit unique id so the fork is a sibling, not a rewrite of
+                // the series (whose id derives from its name).
+                id: tempId,
+                name: job.name,
+                prompt: job.prompt || job.name,
+                schedule: cron,
+                since: splitIso,
+                cabinetPath: cp,
+              }),
+            }),
+          ]);
+          if (!r1.ok || !r2.ok) throw new Error();
+          const data = (await r2.json()) as { job?: JobConfig };
+          if (data.job) {
+            const real = jobConfigToSummary(data.job, cp, job);
+            setCreatedJobs((c) =>
+              c.map((j) => (j.scopedId === tempScopedId ? real : j)),
+            );
+          }
+          showSuccess(`Moved this and following events to ${fmt(newTime)}.`);
+          scheduleRefresh();
+        } catch {
+          rollbackPatch(job.scopedId);
+          setCreatedJobs((c) => c.filter((j) => j.scopedId !== tempScopedId));
+          showError("Couldn't split the series. Is the daemon running?");
         }
         return;
       }
@@ -840,7 +915,7 @@ function MoveConfirmDialog({
   onCancel,
 }: {
   newTime: Date;
-  onChoose: (scope: "all" | "occurrence") => void;
+  onChoose: (scope: "all" | "occurrence" | "following") => void;
   onCancel: () => void;
 }) {
   return (
@@ -858,6 +933,16 @@ function MoveConfirmDialog({
           This occurrence only
           <span className="block text-[11px] font-normal text-muted-foreground">
             Skip the original slot and add a one-off at the new time.
+          </span>
+        </button>
+        <button
+          type="button"
+          onClick={() => onChoose("following")}
+          className="rounded-lg border border-border/70 px-3 py-2 text-left text-[12.5px] font-medium transition-colors hover:bg-muted/50"
+        >
+          This and following events
+          <span className="block text-[11px] font-normal text-muted-foreground">
+            Keep earlier runs; move this one and every later one to the new time.
           </span>
         </button>
         <button
