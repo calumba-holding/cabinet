@@ -175,78 +175,71 @@ function parseHash(hash: string): RouteState {
   }
 
   if (parts[0] === "cabinet") {
-    const cabinetPath = decodePathSegment(parts[1]);
-    const leaf = parts[2];
+    // Marker-scan (fixes the nested-cabinet reload bug): the cabinet path can
+    // be many segments (`a/b/c`), so we can't assume it's `parts[1]`. Scan for
+    // the FIRST structural marker (`data`/`agents`/`tasks`) — everything before
+    // it is the cabinet path, the marker says what view follows, everything
+    // after is the page/slug/id. Page paths that themselves contain the words
+    // `data`/`agents`/`tasks` round-trip because the FIRST marker is the
+    // structural one and the rest is taken verbatim. A cabinet must therefore
+    // not be named exactly `data`/`agents`/`tasks` (reserved). With no marker
+    // the whole tail is a cabinet path (a cabinet-root view) — this is what
+    // makes `#/cabinet/a/b/c` reload correctly instead of collapsing to `a`.
+    const CABINET_MARKERS = new Set(["data", "agents", "tasks"]);
+    const rest = parts.slice(1);
+    const markerIdx = rest.findIndex((seg) => CABINET_MARKERS.has(seg));
 
-    if (!leaf) {
+    if (markerIdx === -1) {
       return {
-        section: { type: "cabinet", cabinetPath },
+        section: { type: "cabinet", cabinetPath: decodePathSegment(rest.join("/")) },
         pagePath: null,
       };
     }
 
-    if (leaf === "agents" && parts[3] && isAgentsSubTab(parts[3])) {
-      return {
-        section: { type: "agents", cabinetPath, agentsTab: parts[3] },
-        pagePath: null,
-      };
-    }
+    const cabinetPath = decodePathSegment(rest.slice(0, markerIdx).join("/"));
+    const marker = rest[markerIdx];
+    const after = rest.slice(markerIdx + 1);
 
-    if (leaf === "agents" && parts[3]) {
-      const slug = decodePathSegment(parts[3]);
-      return {
-        section: {
-          type: "agent",
-          cabinetPath,
-          slug,
-          agentScopedId: `${cabinetPath}::agent::${slug}`,
-        },
-        pagePath: null,
-      };
-    }
-
-    if (leaf === "agents") {
-      return {
-        section: { type: "agents", cabinetPath },
-        pagePath: null,
-      };
-    }
-
-    if (leaf === "tasks" && parts[3]) {
-      return {
-        section: {
-          type: "task",
-          cabinetPath,
-          taskId: decodePathSegment(parts[3]),
-        },
-        pagePath: null,
-      };
-    }
-
-    if (leaf === "tasks") {
-      return {
-        section: { type: "tasks", cabinetPath },
-        pagePath: null,
-      };
-    }
-
-    if (leaf === "data" && parts[3]) {
-      const pagePath = decodePathSegment(parts.slice(3).join("/"));
+    if (marker === "data") {
+      if (after.length === 0) {
+        return { section: { type: "cabinet", cabinetPath }, pagePath: null };
+      }
       return {
         section: { type: "page", cabinetPath },
-        pagePath,
+        pagePath: decodePathSegment(after.join("/")),
       };
     }
 
-    // Audit #021: legacy / shorter form `#/cabinet/{cabinetPath}/{pagePath}`
-    // (no /data/ segment) used to fall through to the home route, which
-    // broke deep-links. Interpret the remaining segments as a page path
-    // under the cabinet so reload keeps the user on the page they were on.
-    const pagePath = decodePathSegment(parts.slice(2).join("/"));
-    return {
-      section: { type: "page", cabinetPath },
-      pagePath,
-    };
+    if (marker === "agents") {
+      if (after[0] && isAgentsSubTab(after[0])) {
+        return {
+          section: { type: "agents", cabinetPath, agentsTab: after[0] },
+          pagePath: null,
+        };
+      }
+      if (after[0]) {
+        const slug = decodePathSegment(after[0]);
+        return {
+          section: {
+            type: "agent",
+            cabinetPath,
+            slug,
+            agentScopedId: `${cabinetPath}::agent::${slug}`,
+          },
+          pagePath: null,
+        };
+      }
+      return { section: { type: "agents", cabinetPath }, pagePath: null };
+    }
+
+    // marker === "tasks"
+    if (after[0]) {
+      return {
+        section: { type: "task", cabinetPath, taskId: decodePathSegment(after[0]) },
+        pagePath: null,
+      };
+    }
+    return { section: { type: "tasks", cabinetPath }, pagePath: null };
   }
 
   if (parts[0] === "settings") {
@@ -379,9 +372,9 @@ async function applyRoute(route: RouteState) {
   clear();
 }
 
-// Re-exported for unit tests; the parser is otherwise an internal of the
-// hook implementation and shouldn't be used by app code.
-export { parseHash as parseHashForTest };
+// Re-exported for unit tests; the parser/builder are otherwise internals of
+// the hook implementation and shouldn't be used by app code.
+export { parseHash as parseHashForTest, buildHash as buildHashForTest };
 
 export function useHashRoute() {
   const suppressHashUpdate = useRef(false);
