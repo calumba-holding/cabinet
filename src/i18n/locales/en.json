@@ -1826,7 +1826,27 @@
       "showTerminal": "Show terminal",
       "hideTerminal": "Hide terminal",
       "copyLink": "Copy link",
-      "terminalLabel": "Terminal"
+      "terminalLabel": "Terminal",
+      "phaseInstall": "Install",
+      "phaseSignIn": "Sign in",
+      "phaseReady": "Ready",
+      "installHeading": "Install {{name}}",
+      "installBody": "Cabinet will install it for you. Just watch the console on the right.",
+      "installCta": "Install {{name}}",
+      "installingNow": "Installing… this can take a minute.",
+      "signInHeading": "Sign in to {{name}}",
+      "signInBody": "Connect your account so your agents can use {{name}}.",
+      "signInCta": "Sign in",
+      "signInWaiting": "Waiting for you to finish signing in…",
+      "verifyingNow": "Making sure everything works…",
+      "readyHeading": "{{name}} is ready",
+      "readyBody": "Your agents can use {{name}} now.",
+      "almostThere": "Almost there",
+      "tryAgain": "Try again",
+      "consoleLabel": "Live activity",
+      "manualToggle": "Set it up manually",
+      "manualHide": "Hide manual steps",
+      "whatNext": "You can close this and start a task."
     }
   },
   "sidebar": {

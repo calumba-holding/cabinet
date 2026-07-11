@@ -91,8 +91,18 @@ export const WebTerminal = forwardRef<WebTerminalHandle, WebTerminalProps>(funct
   useEffect(() => { onDataRef.current = onData; }, [onData]);
   const termRef = useRef<HTMLDivElement>(null);
   const wsRef = useRef<WebSocket | null>(null);
+  // Queue input sent before the socket is open (e.g. a "Run" click fired while
+  // the shell is still connecting) and flush it on open, so no command is lost.
+  const pendingInputRef = useRef<string[]>([]);
   useImperativeHandle(ref, () => ({
-    sendInput: (text: string) => { try { wsRef.current?.send(text); } catch { /* socket gone */ } },
+    sendInput: (text: string) => {
+      const ws = wsRef.current;
+      if (ws && ws.readyState === WebSocket.OPEN) {
+        try { ws.send(text); } catch { pendingInputRef.current.push(text); }
+      } else {
+        pendingInputRef.current.push(text);
+      }
+    },
   }), []);
   const xtermRef = useRef<import("@xterm/xterm").Terminal | null>(null);
   const fitAddonRef = useRef<import("@xterm/addon-fit").FitAddon | null>(null);
@@ -197,6 +207,13 @@ export const WebTerminal = forwardRef<WebTerminalHandle, WebTerminalProps>(funct
           if (disposed) return;
           setError(null);
           wsOpen = true;
+          // Flush any input queued before the socket opened.
+          if (pendingInputRef.current.length && ws) {
+            for (const text of pendingInputRef.current) {
+              try { ws.send(text); } catch { /* dropped */ }
+            }
+            pendingInputRef.current = [];
+          }
           // Only send resize if xterm is already alive — otherwise startTerminal
           // will send one itself once the fit addon has real dimensions.
           if (terminal && ws) {
